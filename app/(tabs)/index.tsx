@@ -215,11 +215,6 @@ export default function HomeScreen() {
       return;
     }
 
-    if (isPriority && (priorityTasks?.length || 0) >= 3) {
-      Alert.alert(t('error'), t('priorityLimitError'));
-      return;
-    }
-
     const newTask = {
       title: newTaskTitle,
       completed: false,
@@ -232,7 +227,9 @@ export default function HomeScreen() {
     if (isPriority) {
       addPriorityTask({
         title: newTaskTitle,
-        description: newTaskDescription
+        subject: newTaskDescription || 'General',
+        priority: 'high' as const,
+        completed: false
       });
     }
 
@@ -448,16 +445,16 @@ export default function HomeScreen() {
           </View>
           
           <View style={styles.tasksList}>
-            {priorityTasks?.slice(0, 3).map((task: { title: string; description?: string }, index: number) => (
-              <View key={index} style={styles.priorityTaskItem}>
+            {priorityTasks?.slice(0, 3).map((task) => (
+              <View key={task.id} style={styles.priorityTaskItem}>
                 <View style={styles.priorityTaskContent}>
                   <View style={styles.priorityCheckbox}>
                     <View style={styles.priorityDot} />
                   </View>
                   <View style={styles.priorityTaskText}>
                     <Text style={styles.priorityTaskTitle}>{task.title}</Text>
-                    {task.description && (
-                      <Text style={styles.priorityTaskDescription}>{task.description}</Text>
+                    {task.subject && (
+                      <Text style={styles.priorityTaskDescription}>{task.subject}</Text>
                     )}
                   </View>
                 </View>
@@ -635,19 +632,13 @@ export default function HomeScreen() {
               <View style={styles.inputGroup}>
                 <TouchableOpacity 
                   style={styles.priorityCheckboxContainer}
-                  onPress={() => {
-                    if ((priorityTasks?.length || 0) >= 3 && !isPriority) {
-                      Alert.alert(t('notification'), t('priorityLimitError'));
-                      return;
-                    }
-                    setIsPriority(!isPriority);
-                  }}
+                  onPress={() => setIsPriority(!isPriority)}
                 >
                   <View style={[styles.checkbox, isPriority && styles.checkboxChecked]}>
                     {isPriority && <Check size={14} color="#FFFFFF" />}
                   </View>
                   <Text style={styles.priorityCheckboxLabel}>
-                    {t('setPriority')} ({priorityTasks?.length || 0}/3)
+                    {t('setPriority')}
                   </Text>
                 </TouchableOpacity>
               </View>

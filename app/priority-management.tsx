@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -12,22 +12,20 @@ import {
   Platform,
 } from 'react-native';
 import { Plus, Edit2, Trash2, X, Check, ChevronLeft } from 'lucide-react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLanguage } from '@/hooks/language-context';
 import { useRouter, Stack } from 'expo-router';
-
-interface PriorityTask {
-  id: string;
-  title: string;
-  subject: string;
-  priority: 'high' | 'medium' | 'low';
-  completed: boolean;
-}
+import { useStudyStore } from '@/hooks/study-store';
 
 export default function PriorityManagementScreen() {
-  const [tasks, setTasks] = useState<PriorityTask[]>([]);
+  const { 
+    priorityTasks, 
+    addPriorityTask, 
+    removePriorityTask, 
+    updatePriorityTask, 
+    togglePriorityTask 
+  } = useStudyStore();
   const [modalVisible, setModalVisible] = useState(false);
-  const [editingTask, setEditingTask] = useState<PriorityTask | null>(null);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [taskTitle, setTaskTitle] = useState('');
   const [taskSubject, setTaskSubject] = useState('');
   const [taskPriority, setTaskPriority] = useState<'high' | 'medium' | 'low'>('high');
@@ -73,78 +71,25 @@ export default function PriorityManagementScreen() {
 
   const t = translations[language];
 
-  useEffect(() => {
-    loadTasks();
-  }, []);
 
-  const loadTasks = async () => {
-    try {
-      // Load from the main study data storage
-      const studyData = await AsyncStorage.getItem('focusflow_study_data');
-      if (studyData) {
-        const parsed = JSON.parse(studyData);
-        // Convert priority tasks from study store format to our format
-        const priorityTasks = parsed.priorityTasks || [];
-        const convertedTasks: PriorityTask[] = priorityTasks.map((task: any, index: number) => ({
-          id: task.id || `task_${index}_${Date.now()}`,
-          title: task.title || '',
-          subject: task.subject || task.description || '',
-          priority: task.priority || 'high',
-          completed: task.completed || false,
-        }));
-        setTasks(convertedTasks);
-      }
-      
-      // Also check for legacy priority tasks storage
-      const legacyStored = await AsyncStorage.getItem('priorityTasks');
-      if (legacyStored && !studyData) {
-        setTasks(JSON.parse(legacyStored));
-      }
-    } catch (error) {
-      console.error('Error loading tasks:', error);
-    }
-  };
-
-  const saveTasks = async (newTasks: PriorityTask[]) => {
-    try {
-      // Save to both storages for compatibility
-      await AsyncStorage.setItem('priorityTasks', JSON.stringify(newTasks));
-      
-      // Also update the main study data storage
-      const studyData = await AsyncStorage.getItem('focusflow_study_data');
-      if (studyData) {
-        const parsed = JSON.parse(studyData);
-        // Convert our format to study store format
-        parsed.priorityTasks = newTasks.map(task => ({
-          id: task.id,
-          title: task.title,
-          description: task.subject,
-          priority: task.priority,
-          completed: task.completed,
-        }));
-        await AsyncStorage.setItem('focusflow_study_data', JSON.stringify(parsed));
-      }
-      
-      setTasks(newTasks);
-    } catch (error) {
-      console.error('Error saving tasks:', error);
-    }
-  };
 
   const handleAddTask = () => {
-    setEditingTask(null);
+    setEditingTaskId(null);
     setTaskTitle('');
     setTaskSubject('');
     setTaskPriority('high');
     setModalVisible(true);
   };
 
-  const handleEditTask = (task: PriorityTask) => {
-    setEditingTask(task);
-    setTaskTitle(task.title);
-    setTaskSubject(task.subject);
-    setTaskPriority(task.priority);
-    setModalVisible(true);
+  const handleEditTask = (taskId: string) => {
+    const task = priorityTasks?.find(t => t.id === taskId);
+    if (task) {
+      setEditingTaskId(taskId);
+      setTaskTitle(task.title);
+      setTaskSubject(task.subject);
+      setTaskPriority(task.priority);
+      setModalVisible(true);
+    }
   };
 
   const handleSaveTask = () => {
@@ -153,22 +98,21 @@ export default function PriorityManagementScreen() {
       return;
     }
 
-    const newTask: PriorityTask = {
-      id: editingTask?.id || Date.now().toString(),
-      title: taskTitle,
-      subject: taskSubject,
-      priority: taskPriority,
-      completed: editingTask?.completed || false,
-    };
-
-    let updatedTasks;
-    if (editingTask) {
-      updatedTasks = tasks.map(task => task.id === editingTask.id ? newTask : task);
+    if (editingTaskId) {
+      updatePriorityTask(editingTaskId, {
+        title: taskTitle,
+        subject: taskSubject,
+        priority: taskPriority,
+      });
     } else {
-      updatedTasks = [...tasks, newTask];
+      addPriorityTask({
+        title: taskTitle,
+        subject: taskSubject,
+        priority: taskPriority,
+        completed: false,
+      });
     }
 
-    saveTasks(updatedTasks);
     setModalVisible(false);
   };
 
@@ -181,20 +125,14 @@ export default function PriorityManagementScreen() {
         {
           text: t.delete,
           style: 'destructive',
-          onPress: () => {
-            const updatedTasks = tasks.filter(task => task.id !== taskId);
-            saveTasks(updatedTasks);
-          },
+          onPress: () => removePriorityTask(taskId),
         },
       ]
     );
   };
 
   const handleToggleComplete = (taskId: string) => {
-    const updatedTasks = tasks.map(task =>
-      task.id === taskId ? { ...task, completed: !task.completed } : task
-    );
-    saveTasks(updatedTasks);
+    togglePriorityTask(taskId);
   };
 
   const getPriorityColor = (priority: string) => {
@@ -227,7 +165,7 @@ export default function PriorityManagementScreen() {
       <View style={styles.container}>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {tasks.length === 0 ? (
+        {(!priorityTasks || priorityTasks.length === 0) ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyTitle}>{t.noTasks}</Text>
             <Text style={styles.emptySubtitle}>{t.addFirstTask}</Text>
@@ -238,7 +176,7 @@ export default function PriorityManagementScreen() {
           </View>
         ) : (
           <View style={styles.tasksList}>
-            {tasks.map((task) => (
+            {priorityTasks.map((task) => (
               <View key={task.id} style={styles.taskCard}>
                 <TouchableOpacity
                   style={styles.taskContent}
@@ -278,7 +216,7 @@ export default function PriorityManagementScreen() {
                 <View style={styles.taskActions}>
                   <TouchableOpacity
                     style={styles.actionButton}
-                    onPress={() => handleEditTask(task)}
+                    onPress={() => handleEditTask(task.id)}
                   >
                     <Edit2 size={18} color="#007AFF" />
                   </TouchableOpacity>
@@ -308,7 +246,7 @@ export default function PriorityManagementScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
-                {editingTask ? t.editTask : t.addTask}
+                {editingTaskId ? t.editTask : t.addTask}
               </Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
                 <X size={24} color="#000" />

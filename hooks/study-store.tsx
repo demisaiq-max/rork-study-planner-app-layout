@@ -14,7 +14,11 @@ interface Task {
 }
 
 interface PriorityTask {
+  id: string;
   title: string;
+  subject: string;
+  priority: 'high' | 'medium' | 'low';
+  completed: boolean;
   description?: string;
 }
 
@@ -77,9 +81,9 @@ const defaultData: StudyData = {
   },
   visibleSubjects: ["국어", "영어", "수학"],
   priorityTasks: [
-    { title: "아침 조정하기" },
-    { title: "2025년 6월 모의고사 풀기" },
-    { title: "학원가기" }
+    { id: "p1", title: "아침 조정하기", subject: "일반", priority: "high", completed: false },
+    { id: "p2", title: "2025년 6월 모의고사 풀기", subject: "수학", priority: "high", completed: false },
+    { id: "p3", title: "학원가기", subject: "일반", priority: "medium", completed: false }
   ],
   brainDumpItems: [
     { id: "1", title: "Morning Adjustment", completed: false, createdAt: new Date().toISOString() },
@@ -194,15 +198,34 @@ export const [StudyProvider, useStudyStore] = createContextHook(() => {
     saveData({ ...data, visibleSubjects: updatedVisibleSubjects });
   }, [data]);
 
-  const addPriorityTask = useCallback((task: PriorityTask) => {
+  const addPriorityTask = useCallback((task: Omit<PriorityTask, 'id'>) => {
     const currentPriorityTasks = data.priorityTasks || [];
-    if (currentPriorityTasks.length >= 3) return;
-    saveData({ ...data, priorityTasks: [...currentPriorityTasks, task] });
+    const newTask: PriorityTask = {
+      ...task,
+      id: `p_${Date.now()}`,
+    };
+    saveData({ ...data, priorityTasks: [...currentPriorityTasks, newTask] });
   }, [data]);
 
-  const removePriorityTask = useCallback((index: number) => {
+  const removePriorityTask = useCallback((taskId: string) => {
     const currentPriorityTasks = data.priorityTasks || [];
-    const updatedPriorityTasks = currentPriorityTasks.filter((_, i) => i !== index);
+    const updatedPriorityTasks = currentPriorityTasks.filter(task => task.id !== taskId);
+    saveData({ ...data, priorityTasks: updatedPriorityTasks });
+  }, [data]);
+
+  const updatePriorityTask = useCallback((taskId: string, updates: Partial<PriorityTask>) => {
+    const currentPriorityTasks = data.priorityTasks || [];
+    const updatedPriorityTasks = currentPriorityTasks.map(task =>
+      task.id === taskId ? { ...task, ...updates } : task
+    );
+    saveData({ ...data, priorityTasks: updatedPriorityTasks });
+  }, [data]);
+
+  const togglePriorityTask = useCallback((taskId: string) => {
+    const currentPriorityTasks = data.priorityTasks || [];
+    const updatedPriorityTasks = currentPriorityTasks.map(task =>
+      task.id === taskId ? { ...task, completed: !task.completed } : task
+    );
     saveData({ ...data, priorityTasks: updatedPriorityTasks });
   }, [data]);
 
@@ -262,9 +285,11 @@ export const [StudyProvider, useStudyStore] = createContextHook(() => {
     updateSubjectGrade,
     addPriorityTask,
     removePriorityTask,
+    updatePriorityTask,
+    togglePriorityTask,
     addBrainDumpItem,
     updateBrainDumpItem,
     deleteBrainDumpItem,
     toggleBrainDumpItem,
-  }), [data, isLoading, toggleTask, addTask, updateTask, deleteTask, updateStudyTime, addDDay, updateDDay, removeDDay, toggleSubjectVisibility, updateSubjectGrade, addPriorityTask, removePriorityTask, addBrainDumpItem, updateBrainDumpItem, deleteBrainDumpItem, toggleBrainDumpItem]);
+  }), [data, isLoading, toggleTask, addTask, updateTask, deleteTask, updateStudyTime, addDDay, updateDDay, removeDDay, toggleSubjectVisibility, updateSubjectGrade, addPriorityTask, removePriorityTask, updatePriorityTask, togglePriorityTask, addBrainDumpItem, updateBrainDumpItem, deleteBrainDumpItem, toggleBrainDumpItem]);
 });
