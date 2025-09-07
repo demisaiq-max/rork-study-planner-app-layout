@@ -17,7 +17,7 @@ import { ArrowLeft, Plus, Trash2, Edit3 } from 'lucide-react-native';
 import { useUser } from '@/hooks/user-context';
 import { useLanguage } from '@/hooks/language-context';
 import { trpc } from '@/lib/trpc';
-import CircularProgress from '@/components/CircularProgress';
+
 
 const { width } = Dimensions.get('window');
 
@@ -64,6 +64,12 @@ export default function SubjectGradesScreen() {
   });
 
   const deleteGradeMutation = trpc.grades.deleteSubjectGrade.useMutation({
+    onSuccess: () => {
+      gradesQuery.refetch();
+    },
+  });
+
+  const seedDummyDataMutation = trpc.grades.seedDummyData.useMutation({
     onSuccess: () => {
       gradesQuery.refetch();
     },
@@ -127,6 +133,15 @@ export default function SubjectGradesScreen() {
     
     return { target: 89, average, recent };
   }, [selectedTest, subjectGrades]);
+
+  const seedDummyData = async () => {
+    if (!user?.id) return;
+    try {
+      await seedDummyDataMutation.mutateAsync({ userId: user.id });
+    } catch (error) {
+      Alert.alert(t('error'), t('failedToSeedData'));
+    }
+  };
 
   const updateGrade = async (subject: string, examType: ExamType, grade: number | null) => {
     if (!user?.id) return;
@@ -310,39 +325,21 @@ export default function SubjectGradesScreen() {
         {/* Score Meters */}
         <View style={styles.scoreMetersContainer}>
           <View style={styles.scoreMeter}>
-            <CircularProgress
-              size={80}
-              strokeWidth={8}
-              percentage={statistics.target}
-              color="#000000"
-              backgroundColor="#E5E5EA"
-              showPercentage={false}
-            />
-            <Text style={styles.scoreMeterValue}>{statistics.target}</Text>
+            <View style={styles.scoreMeterCircle}>
+              <Text style={styles.scoreMeterValue}>{statistics.target}</Text>
+            </View>
             <Text style={styles.scoreMeterLabel}>{t('targetPercentile')}</Text>
           </View>
           <View style={styles.scoreMeter}>
-            <CircularProgress
-              size={80}
-              strokeWidth={8}
-              percentage={statistics.average}
-              color="#C7C7CC"
-              backgroundColor="#E5E5EA"
-              showPercentage={false}
-            />
-            <Text style={styles.scoreMeterValue}>{statistics.average}</Text>
+            <View style={styles.scoreMeterCircle}>
+              <Text style={styles.scoreMeterValue}>{statistics.average}</Text>
+            </View>
             <Text style={styles.scoreMeterLabel}>{t('averagePercentile')}</Text>
           </View>
           <View style={styles.scoreMeter}>
-            <CircularProgress
-              size={80}
-              strokeWidth={8}
-              percentage={statistics.recent}
-              color="#8E8E93"
-              backgroundColor="#E5E5EA"
-              showPercentage={false}
-            />
-            <Text style={styles.scoreMeterValue}>{statistics.recent}</Text>
+            <View style={styles.scoreMeterCircle}>
+              <Text style={styles.scoreMeterValue}>{statistics.recent}</Text>
+            </View>
             <Text style={styles.scoreMeterLabel}>{t('recentPercentile')}</Text>
           </View>
         </View>
@@ -371,6 +368,15 @@ export default function SubjectGradesScreen() {
               >
                 <Plus size={20} color="#FFFFFF" />
                 <Text style={styles.addFirstButtonText}>{t('addSubject')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.addFirstButton, styles.seedButton]}
+                onPress={seedDummyData}
+                disabled={seedDummyDataMutation.isPending}
+              >
+                <Text style={styles.addFirstButtonText}>
+                  {seedDummyDataMutation.isPending ? t('loading') : 'Load Sample Data'}
+                </Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -583,11 +589,18 @@ const styles = StyleSheet.create({
   },
   scoreMeter: {
     alignItems: 'center',
-    position: 'relative',
+  },
+  scoreMeterCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#F2F2F7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#E5E5EA',
   },
   scoreMeterValue: {
-    position: 'absolute',
-    top: 28,
     fontSize: 24,
     fontWeight: '700',
     color: '#000000',
@@ -655,6 +668,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     gap: 8,
+    marginBottom: 12,
+  },
+  seedButton: {
+    backgroundColor: '#34C759',
   },
   addFirstButtonText: {
     color: '#FFFFFF',
