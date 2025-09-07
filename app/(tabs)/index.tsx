@@ -192,17 +192,10 @@ export default function HomeScreen() {
           activeOpacity={0.8}
           onPress={() => router.push('/exam-management')}
         >
-          <TouchableOpacity 
-            style={styles.mockExamHeader} 
-            activeOpacity={0.7}
-            onPress={(e) => {
-              e.stopPropagation();
-              router.push('/exam-selection');
-            }}
-          >
-            <Text style={styles.mockExamTitle}>실시간 모의고사 채점하기</Text>
+          <View style={styles.mockExamHeader}>
+            <Text style={styles.mockExamTitle}>모의고사 관리</Text>
             <ArrowUpRight size={18} color="#666666" />
-          </TouchableOpacity>
+          </View>
           
           <View style={styles.progressSection}>
             <View style={styles.leftTextContainer}>
@@ -854,18 +847,13 @@ const styles = StyleSheet.create({
   mockExamHeader: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#F2F2F7",
-    borderRadius: 8,
-    padding: 10,
+    justifyContent: "space-between",
     marginBottom: 16,
-    position: "relative",
   },
   mockExamTitle: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#333333",
-    marginRight: 6,
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#000000",
   },
   progressSection: {
     flexDirection: "row",
