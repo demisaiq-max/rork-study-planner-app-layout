@@ -1163,6 +1163,14 @@ const styles = StyleSheet.create({
     color: "#007AFF",
     fontWeight: "600",
   },
+  subjectTestName: {
+    fontSize: 10,
+    color: "#8E8E93",
+    marginTop: 2,
+  },
+  subjectTestNameSelected: {
+    color: "#007AFF",
+  },
   subjectIndicator: {
     width: 4,
     height: 4,
@@ -1176,22 +1184,27 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
   },
-  expectedGradeCard: {
-    backgroundColor: "#007AFF",
+  noResultsCard: {
+    backgroundColor: "#F8F9FA",
     borderRadius: 8,
     padding: 12,
-    minWidth: 60,
+    minWidth: 100,
     alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#E5E5EA",
+    borderStyle: "dashed",
   },
-  expectedGradeText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#FFFFFF",
-    marginBottom: 4,
-  },
-  expectedGradeValue: {
+  noResultsText: {
     fontSize: 12,
-    color: "#FFFFFF",
+    fontWeight: "600",
+    color: "#8E8E93",
+    marginBottom: 2,
+    textAlign: "center",
+  },
+  noResultsSubtext: {
+    fontSize: 10,
+    color: "#C7C7CC",
+    textAlign: "center",
   },
   priorityTaskItem: {
     backgroundColor: "#F8F9FA",
