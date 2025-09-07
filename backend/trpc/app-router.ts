@@ -30,6 +30,7 @@ import getTestById from "./routes/tests/get-test-by-id/route";
 import createSubject from "./routes/tests/create-subject/route";
 import deleteSubject from "./routes/tests/delete-subject/route";
 import updateSubject from "./routes/tests/update-subject/route";
+import seedTestData from "./routes/tests/seed-test-data/route";
 
 export const appRouter = createTRPCRouter({
   example: createTRPCRouter({
@@ -64,6 +65,7 @@ export const appRouter = createTRPCRouter({
     createSubject,
     deleteSubject,
     updateSubject,
+    seedTestData,
   }),
 });
 

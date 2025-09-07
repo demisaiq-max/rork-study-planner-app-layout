@@ -67,9 +67,9 @@ export default function TestListScreen() {
 
   const getTestTypeLabel = (testTypeValue: TestType): string => {
     switch (testTypeValue) {
-      case 'mock': return t('mockTests');
-      case 'midterm': return t('midtermTests');
-      case 'final': return t('finalTests');
+      case 'mock': return 'Mock Tests';
+      case 'midterm': return 'Mid Term Tests';
+      case 'final': return 'Final Tests';
       default: return '';
     }
   };
@@ -182,7 +182,7 @@ export default function TestListScreen() {
                         {hasResult ? (
                           <View style={styles.resultInfo}>
                             <Text style={styles.gradeText}>
-                              {result.grade}{t('gradeUnit')}
+                              {result.grade}Grade
                             </Text>
                             <Text style={styles.percentileText}>
                               {result.percentile}%
