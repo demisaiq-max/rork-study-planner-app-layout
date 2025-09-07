@@ -48,10 +48,7 @@ export default function HomeScreen() {
     updateBrainDumpItem,
     deleteBrainDumpItem,
     toggleBrainDumpItem,
-    isLoading,
-    selectedExamId,
-    selectExam,
-    updateExamScores
+    isLoading
   } = useStudyStore();
   const { user } = useUser();
   const { t } = useLanguage();
@@ -87,14 +84,6 @@ export default function HomeScreen() {
   }, [showEditGradesModal, subjectGrades]);
 
   const progressPercentage = (todayStudyTime / targetStudyTime) * 100;
-  
-  // Get selected exam data
-  const selectedExam = dDays?.find(exam => exam.id === selectedExamId);
-  const examScores = selectedExam?.scores || {
-    targetPercentile: 89,
-    averagePercentile: 50,
-    recentPercentile: 68
-  };
 
   if (isLoading) {
     return (
@@ -210,64 +199,43 @@ export default function HomeScreen() {
           
           <View style={styles.progressSection}>
             <View style={styles.leftTextContainer}>
-              <Text style={styles.leftText}>{selectedExam ? selectedExam.title : '전체'}</Text>
+              <Text style={styles.leftText}>아구몬 님의</Text>
               <Text style={styles.leftText}>현재 성적</Text>
             </View>
             
             <View style={styles.circlesContainer}>
-              <TouchableOpacity 
-                style={styles.circleItem}
-                onPress={() => {
-                  if (selectedExam) {
-                    router.push('/exam-score-edit');
-                  }
-                }}
-              >
+              <View style={styles.circleItem}>
                 <CircularProgress 
-                  percentage={examScores.targetPercentile}
+                  percentage={89}
                   size={70}
                   strokeWidth={6}
                   color="#333333"
-                  centerText={examScores.targetPercentile.toString()}
+                  centerText="89"
                 />
                 <Text style={styles.circleLabel}>목표 백분위</Text>
-              </TouchableOpacity>
+              </View>
               
-              <TouchableOpacity 
-                style={styles.circleItem}
-                onPress={() => {
-                  if (selectedExam) {
-                    router.push('/exam-score-edit');
-                  }
-                }}
-              >
+              <View style={styles.circleItem}>
                 <CircularProgress 
-                  percentage={examScores.averagePercentile}
+                  percentage={50}
                   size={70}
                   strokeWidth={6}
                   color="#E5E5EA"
-                  centerText={examScores.averagePercentile.toString()}
+                  centerText="50"
                 />
                 <Text style={styles.circleLabel}>평균 백분위</Text>
-              </TouchableOpacity>
+              </View>
               
-              <TouchableOpacity 
-                style={styles.circleItem}
-                onPress={() => {
-                  if (selectedExam) {
-                    router.push('/exam-score-edit');
-                  }
-                }}
-              >
+              <View style={styles.circleItem}>
                 <CircularProgress 
-                  percentage={examScores.recentPercentile}
+                  percentage={68}
                   size={70}
                   strokeWidth={6}
                   color="#8E8E93"
-                  centerText={examScores.recentPercentile.toString()}
+                  centerText="68"
                 />
                 <Text style={styles.circleLabel}>최근 백분위</Text>
-              </TouchableOpacity>
+              </View>
             </View>
           </View>
         </View>
@@ -349,24 +317,16 @@ export default function HomeScreen() {
               const calculatedDaysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24));
               const validDaysLeft = !isNaN(calculatedDaysLeft) && isFinite(calculatedDaysLeft) ? calculatedDaysLeft : dDay.daysLeft || 0;
               
-              const isSelected = selectedExamId === dDay.id;
               return (
                 <TouchableOpacity
                   key={dDay.id}
-                  onPress={() => selectExam(isSelected ? undefined : dDay.id)}
-                  onLongPress={() => router.push('/exam-management')}
-                  style={isSelected ? styles.selectedExamCard : undefined}
+                  onPress={() => router.push('/exam-management')}
                 >
                   <DayCard 
                     {...dDay} 
                     daysLeft={validDaysLeft}
                     priority={dDay.priority}
                   />
-                  {isSelected && (
-                    <View style={styles.selectedIndicator}>
-                      <Check size={16} color="#FFFFFF" />
-                    </View>
-                  )}
                 </TouchableOpacity>
               );
             })}
@@ -1411,20 +1371,6 @@ const styles = StyleSheet.create({
   gradeOptionTextSelected: {
     color: "#007AFF",
     fontWeight: "600",
-  },
-  selectedExamCard: {
-    transform: [{ scale: 1.05 }],
-  },
-  selectedIndicator: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "#007AFF",
-    justifyContent: "center",
-    alignItems: "center",
   },
   priorityTaskActions: {
     flexDirection: "row",

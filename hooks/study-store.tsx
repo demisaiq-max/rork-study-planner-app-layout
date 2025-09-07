@@ -25,13 +25,6 @@ interface BrainDumpItem {
   createdAt: string;
 }
 
-interface ExamScore {
-  targetPercentile: number;
-  averagePercentile: number;
-  recentPercentile: number;
-  date: string;
-}
-
 interface DDay {
   id: string;
   title: string;
@@ -39,8 +32,6 @@ interface DDay {
   daysLeft: number;
   description?: string;
   priority?: "high" | "medium" | "low";
-  scores?: ExamScore;
-  subject?: string;
 }
 
 interface StudyData {
@@ -55,7 +46,6 @@ interface StudyData {
   visibleSubjects: string[];
   priorityTasks: PriorityTask[];
   brainDumpItems: BrainDumpItem[];
-  selectedExamId?: string;
 }
 
 const STORAGE_KEY = "focusflow_study_data";
@@ -71,36 +61,9 @@ const defaultData: StudyData = {
     { id: "7", title: "ebs 수능특강 강의 듣기", completed: false, subject: "사회" },
   ],
   dDays: [
-    { 
-      id: "1", 
-      title: "대학수학능력시험", 
-      date: "2025.11.13", 
-      daysLeft: 180, 
-      description: "National college entrance exam", 
-      priority: "high",
-      scores: {
-        targetPercentile: 95,
-        averagePercentile: 85,
-        recentPercentile: 88,
-        date: new Date().toISOString()
-      }
-    },
-    { 
-      id: "2", 
-      title: "9월 모의평가", 
-      date: "2025.09.15", 
-      daysLeft: 21, 
-      description: "September mock exam", 
-      priority: "medium",
-      scores: {
-        targetPercentile: 90,
-        averagePercentile: 75,
-        recentPercentile: 80,
-        date: new Date().toISOString()
-      }
-    },
+    { id: "1", title: "대학수학능력시험", date: "2025.11.13", daysLeft: 180, description: "National college entrance exam", priority: "high" },
+    { id: "2", title: "9월 모의평가", date: "2025.09.15", daysLeft: 21, description: "September mock exam", priority: "medium" },
   ],
-  selectedExamId: "1",
   todayStudyTime: 185,
   targetStudyTime: 360,
   weeklyStudyTime: 28,
@@ -284,27 +247,6 @@ export const [StudyProvider, useStudyStore] = createContextHook(() => {
     saveData({ ...data, subjectGrades: updatedGrades });
   }, [data]);
 
-  const updateExamScores = useCallback((examId: string, scores: Partial<ExamScore>) => {
-    const updatedDDays = data.dDays.map(exam => {
-      if (exam.id === examId) {
-        return {
-          ...exam,
-          scores: {
-            ...exam.scores,
-            ...scores,
-            date: new Date().toISOString()
-          } as ExamScore
-        };
-      }
-      return exam;
-    });
-    saveData({ ...data, dDays: updatedDDays });
-  }, [data]);
-
-  const selectExam = useCallback((examId: string | undefined) => {
-    saveData({ ...data, selectedExamId: examId });
-  }, [data]);
-
   return useMemo(() => ({
     ...data,
     isLoading,
@@ -324,7 +266,5 @@ export const [StudyProvider, useStudyStore] = createContextHook(() => {
     updateBrainDumpItem,
     deleteBrainDumpItem,
     toggleBrainDumpItem,
-    updateExamScores,
-    selectExam,
-  }), [data, isLoading, toggleTask, addTask, updateTask, deleteTask, updateStudyTime, addDDay, updateDDay, removeDDay, toggleSubjectVisibility, updateSubjectGrade, addPriorityTask, removePriorityTask, addBrainDumpItem, updateBrainDumpItem, deleteBrainDumpItem, toggleBrainDumpItem, updateExamScores, selectExam]);
+  }), [data, isLoading, toggleTask, addTask, updateTask, deleteTask, updateStudyTime, addDDay, updateDDay, removeDDay, toggleSubjectVisibility, updateSubjectGrade, addPriorityTask, removePriorityTask, addBrainDumpItem, updateBrainDumpItem, deleteBrainDumpItem, toggleBrainDumpItem]);
 });
