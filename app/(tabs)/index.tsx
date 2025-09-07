@@ -77,7 +77,7 @@ export default function HomeScreen() {
   const [showEditGradesModal, setShowEditGradesModal] = useState(false);
   const [editingGrades, setEditingGrades] = useState<Record<string, number>>({});
   const [currentStats, setCurrentStats] = useState({
-    targetPercentile: 95,
+    targetPercentile: 130,
     averagePercentile: 0,
     recentPercentile: 0,
   });
@@ -102,44 +102,44 @@ export default function HomeScreen() {
       // Use the percentile from the selected exam
       const selectedPercentile = selectedGradedExam.percentile || 0;
       
-      // Calculate average from all graded exams
-      const allPercentiles = gradedExams.map((exam: any) => exam.percentile || 0).filter(p => p > 0);
-      const averagePercentile = allPercentiles.length > 0 
-        ? Math.round(allPercentiles.reduce((sum, percentile) => sum + percentile, 0) / allPercentiles.length)
+      // Calculate average standard score from all graded exams
+      const allStandardScores = gradedExams.map((exam: any) => exam.standard_score || 0).filter(s => s > 0);
+      const averageStandardScore = allStandardScores.length > 0 
+        ? Math.round(allStandardScores.reduce((sum, score) => sum + score, 0) / allStandardScores.length)
         : 0;
       
-      // Calculate target percentile (highest achieved + 5, or 95 max)
-      const maxPercentile = Math.max(...allPercentiles);
-      const targetPercentile = Math.min(maxPercentile + 5, 95);
+      // Calculate target score (highest achieved standard score + 10, or max 150)
+      const maxStandardScore = allStandardScores.length > 0 ? Math.max(...allStandardScores) : 0;
+      const targetScore = maxStandardScore > 0 ? Math.min(maxStandardScore + 10, 150) : 130;
       
       setCurrentStats({
-        targetPercentile: targetPercentile,
-        averagePercentile: averagePercentile,
+        targetPercentile: targetScore,
+        averagePercentile: averageStandardScore,
         recentPercentile: selectedPercentile,
       });
     } else if (gradedExams && gradedExams.length > 0) {
       // Show overall stats when no specific exam is selected
-      const allPercentiles = gradedExams.map((exam: any) => exam.percentile || 0).filter(p => p > 0);
-      const averagePercentile = allPercentiles.length > 0 
-        ? Math.round(allPercentiles.reduce((sum, percentile) => sum + percentile, 0) / allPercentiles.length)
+      const allStandardScores = gradedExams.map((exam: any) => exam.standard_score || 0).filter(s => s > 0);
+      const averageStandardScore = allStandardScores.length > 0 
+        ? Math.round(allStandardScores.reduce((sum, score) => sum + score, 0) / allStandardScores.length)
         : 0;
       
       // Most recent exam percentile (first in the sorted array)
       const recentPercentile = gradedExams[0]?.percentile || 0;
       
-      // Calculate target percentile (highest achieved + 5, or 95 max)
-      const maxPercentile = Math.max(...allPercentiles);
-      const targetPercentile = allPercentiles.length > 0 ? Math.min(maxPercentile + 5, 95) : 95;
+      // Calculate target score (highest achieved standard score + 10, or max 150)
+      const maxStandardScore = allStandardScores.length > 0 ? Math.max(...allStandardScores) : 0;
+      const targetScore = maxStandardScore > 0 ? Math.min(maxStandardScore + 10, 150) : 130;
       
       setCurrentStats({
-        targetPercentile: targetPercentile,
-        averagePercentile: averagePercentile,
+        targetPercentile: targetScore,
+        averagePercentile: averageStandardScore,
         recentPercentile: recentPercentile,
       });
     } else {
       // Reset to default stats when no data
       setCurrentStats({
-        targetPercentile: 95,
+        targetPercentile: 130,
         averagePercentile: 0,
         recentPercentile: 0,
       });
@@ -269,24 +269,24 @@ export default function HomeScreen() {
             <View style={styles.circlesContainer}>
               <View style={styles.circleItem}>
                 <CircularProgress 
-                  percentage={currentStats.targetPercentile}
+                  percentage={Math.min((currentStats.targetPercentile / 150) * 100, 100)}
                   size={70}
                   strokeWidth={6}
                   color="#333333"
                   centerText={currentStats.targetPercentile.toString()}
                 />
-                <Text style={styles.circleLabel}>목표 백분위</Text>
+                <Text style={styles.circleLabel}>목표 표준점수</Text>
               </View>
               
               <View style={styles.circleItem}>
                 <CircularProgress 
-                  percentage={currentStats.averagePercentile}
+                  percentage={Math.min((currentStats.averagePercentile / 150) * 100, 100)}
                   size={70}
                   strokeWidth={6}
                   color="#E5E5EA"
                   centerText={currentStats.averagePercentile.toString()}
                 />
-                <Text style={styles.circleLabel}>평균 백분위</Text>
+                <Text style={styles.circleLabel}>평균 표준점수</Text>
               </View>
               
               <View style={styles.circleItem}>
@@ -1201,10 +1201,10 @@ const styles = StyleSheet.create({
     borderColor: "#E5E5EA",
   },
   subjectCardSelected: {
-    backgroundColor: "#FFF3E0",
-    borderColor: "#FF9500",
+    backgroundColor: "#E8F5E8",
+    borderColor: "#34C759",
     borderWidth: 3,
-    shadowColor: "#FF9500",
+    shadowColor: "#34C759",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -1220,7 +1220,7 @@ const styles = StyleSheet.create({
     color: "#8E8E93",
   },
   subjectNameSelected: {
-    color: "#FF9500",
+    color: "#34C759",
     fontWeight: "700",
   },
   subjectGrade: {
@@ -1231,7 +1231,7 @@ const styles = StyleSheet.create({
     color: "#8E8E93",
   },
   subjectGradeSelected: {
-    color: "#FF9500",
+    color: "#34C759",
     fontWeight: "600",
   },
   subjectTestName: {
@@ -1240,7 +1240,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   subjectTestNameSelected: {
-    color: "#FF9500",
+    color: "#34C759",
   },
   subjectIndicator: {
     width: 4,
@@ -1250,7 +1250,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   subjectIndicatorSelected: {
-    backgroundColor: "#FF9500",
+    backgroundColor: "#34C759",
     width: 6,
     height: 6,
     borderRadius: 3,
