@@ -48,6 +48,7 @@ export default function HomeScreen() {
     updateBrainDumpItem,
     deleteBrainDumpItem,
     toggleBrainDumpItem,
+    homeStats,
     isLoading
   } = useStudyStore();
   const { user } = useUser();
@@ -209,38 +210,50 @@ export default function HomeScreen() {
             </View>
             
             <View style={styles.circlesContainer}>
-              <View style={styles.circleItem}>
+              <TouchableOpacity 
+                style={styles.circleItem}
+                onPress={() => router.push('/test-results')}
+                activeOpacity={0.7}
+              >
                 <CircularProgress 
-                  percentage={89}
+                  percentage={homeStats?.targetPercentile || 89}
                   size={70}
                   strokeWidth={6}
                   color="#333333"
-                  centerText="89"
+                  centerText={(homeStats?.targetPercentile || 89).toString()}
                 />
                 <Text style={styles.circleLabel}>목표 백분위</Text>
-              </View>
+              </TouchableOpacity>
               
-              <View style={styles.circleItem}>
+              <TouchableOpacity 
+                style={styles.circleItem}
+                onPress={() => router.push('/test-results')}
+                activeOpacity={0.7}
+              >
                 <CircularProgress 
-                  percentage={50}
+                  percentage={homeStats?.averagePercentile || 50}
                   size={70}
                   strokeWidth={6}
                   color="#E5E5EA"
-                  centerText="50"
+                  centerText={(homeStats?.averagePercentile || 50).toString()}
                 />
                 <Text style={styles.circleLabel}>평균 백분위</Text>
-              </View>
+              </TouchableOpacity>
               
-              <View style={styles.circleItem}>
+              <TouchableOpacity 
+                style={styles.circleItem}
+                onPress={() => router.push('/test-results')}
+                activeOpacity={0.7}
+              >
                 <CircularProgress 
-                  percentage={68}
+                  percentage={homeStats?.recentPercentile || 68}
                   size={70}
                   strokeWidth={6}
                   color="#8E8E93"
-                  centerText="68"
+                  centerText={(homeStats?.recentPercentile || 68).toString()}
                 />
                 <Text style={styles.circleLabel}>최근 백분위</Text>
-              </View>
+              </TouchableOpacity>
             </View>
           </View>
         </View>

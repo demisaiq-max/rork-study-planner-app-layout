@@ -34,6 +34,12 @@ interface DDay {
   priority?: "high" | "medium" | "low";
 }
 
+interface HomeStats {
+  targetPercentile: number;
+  averagePercentile: number;
+  recentPercentile: number;
+}
+
 interface StudyData {
   tasks: Task[];
   dDays: DDay[];
@@ -46,6 +52,7 @@ interface StudyData {
   visibleSubjects: string[];
   priorityTasks: PriorityTask[];
   brainDumpItems: BrainDumpItem[];
+  homeStats: HomeStats;
 }
 
 const STORAGE_KEY = "focusflow_study_data";
@@ -92,6 +99,11 @@ const defaultData: StudyData = {
     { id: "8", title: "dfg", completed: false, createdAt: new Date().toISOString() },
     { id: "9", title: "gdfgdf", completed: false, createdAt: new Date().toISOString() }
   ],
+  homeStats: {
+    targetPercentile: 89,
+    averagePercentile: 50,
+    recentPercentile: 68,
+  },
 };
 
 export const [StudyProvider, useStudyStore] = createContextHook(() => {
@@ -116,6 +128,7 @@ export const [StudyProvider, useStudyStore] = createContextHook(() => {
           subjects: parsedData.subjects || defaultData.subjects,
           subjectGrades: parsedData.subjectGrades || defaultData.subjectGrades,
           brainDumpItems: parsedData.brainDumpItems || defaultData.brainDumpItems,
+          homeStats: parsedData.homeStats || defaultData.homeStats,
         };
         setData(mergedData);
       }
@@ -247,6 +260,10 @@ export const [StudyProvider, useStudyStore] = createContextHook(() => {
     saveData({ ...data, subjectGrades: updatedGrades });
   }, [data]);
 
+  const updateHomeStats = useCallback((stats: HomeStats) => {
+    saveData({ ...data, homeStats: stats });
+  }, [data]);
+
   return useMemo(() => ({
     ...data,
     isLoading,
@@ -260,11 +277,12 @@ export const [StudyProvider, useStudyStore] = createContextHook(() => {
     removeDDay,
     toggleSubjectVisibility,
     updateSubjectGrade,
+    updateHomeStats,
     addPriorityTask,
     removePriorityTask,
     addBrainDumpItem,
     updateBrainDumpItem,
     deleteBrainDumpItem,
     toggleBrainDumpItem,
-  }), [data, isLoading, toggleTask, addTask, updateTask, deleteTask, updateStudyTime, addDDay, updateDDay, removeDDay, toggleSubjectVisibility, updateSubjectGrade, addPriorityTask, removePriorityTask, addBrainDumpItem, updateBrainDumpItem, deleteBrainDumpItem, toggleBrainDumpItem]);
+  }), [data, isLoading, toggleTask, addTask, updateTask, deleteTask, updateStudyTime, addDDay, updateDDay, removeDDay, toggleSubjectVisibility, updateSubjectGrade, updateHomeStats, addPriorityTask, removePriorityTask, addBrainDumpItem, updateBrainDumpItem, deleteBrainDumpItem, toggleBrainDumpItem]);
 });
