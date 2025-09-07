@@ -6,10 +6,9 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, ChevronRight, Database } from 'lucide-react-native';
+import { ArrowLeft, ChevronRight, Plus } from 'lucide-react-native';
 import { useUser } from '@/hooks/user-context';
 import { useLanguage } from '@/hooks/language-context';
 import { trpc } from '@/lib/trpc';
@@ -27,17 +26,6 @@ export default function SubjectTestsScreen() {
     { userId: user?.id || '', subject: subject || '' },
     { enabled: !!user?.id && !!subject }
   );
-
-  // Seed test data mutation
-  const seedTestDataMutation = trpc.tests.seedTestData.useMutation({
-    onSuccess: () => {
-      testsQuery.refetch();
-      Alert.alert('Success', 'Test data has been seeded successfully!');
-    },
-    onError: (error) => {
-      Alert.alert('Error', `Failed to seed test data: ${error.message}`);
-    },
-  });
 
   useEffect(() => {
     if (testsQuery.data !== undefined) {
@@ -64,9 +52,9 @@ export default function SubjectTestsScreen() {
 
   const getTestTypeLabel = (testType: TestType): string => {
     switch (testType) {
-      case 'mock': return 'Mock Tests';
-      case 'midterm': return 'Mid Term Tests';
-      case 'final': return 'Final Tests';
+      case 'mock': return t('mockTests');
+      case 'midterm': return t('midtermTests');
+      case 'final': return t('finalTests');
       default: return '';
     }
   };
@@ -120,21 +108,7 @@ export default function SubjectTestsScreen() {
           <ArrowLeft size={24} color="#000000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{getSubjectName(subject || '')}</Text>
-        <TouchableOpacity 
-          onPress={() => {
-            if (user?.id) {
-              seedTestDataMutation.mutate({ userId: user.id });
-            }
-          }}
-          style={styles.seedButton}
-          disabled={seedTestDataMutation.isPending}
-        >
-          {seedTestDataMutation.isPending ? (
-            <ActivityIndicator size="small" color="#007AFF" />
-          ) : (
-            <Database size={20} color="#007AFF" />
-          )}
-        </TouchableOpacity>
+        <View style={styles.headerRight} />
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -214,12 +188,6 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     width: 40,
-  },
-  seedButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   scrollView: {
     flex: 1,

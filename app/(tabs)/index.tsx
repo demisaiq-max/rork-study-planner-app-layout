@@ -22,7 +22,6 @@ import { useStudyStore } from "@/hooks/study-store";
 import { useUser } from "@/hooks/user-context";
 import { useLanguage } from "@/hooks/language-context";
 import FormattedDateInput from "@/components/FormattedDateInput";
-import { trpc } from "@/lib/trpc";
 
 const { width } = Dimensions.get("window");
 
@@ -75,12 +74,6 @@ export default function HomeScreen() {
     averagePercentile: 50,
     recentPercentile: 68,
   });
-
-  // Fetch latest test results
-  const latestTestResultsQuery = trpc.tests.getLatestTestResults.useQuery(
-    { userId: user?.id || '' },
-    { enabled: !!user?.id }
-  );
   
   useEffect(() => {
     const timer = setInterval(() => {
@@ -94,25 +87,6 @@ export default function HomeScreen() {
       setEditingGrades({...subjectGrades});
     }
   }, [showEditGradesModal, subjectGrades]);
-
-  // Update stats based on latest test results
-  useEffect(() => {
-    if (latestTestResultsQuery.data && latestTestResultsQuery.data.length > 0) {
-      const results = latestTestResultsQuery.data;
-      const percentiles = results.map(r => r.percentile).filter(p => p != null);
-      
-      if (percentiles.length > 0) {
-        const avgPercentile = Math.round(percentiles.reduce((sum, p) => sum + p, 0) / percentiles.length);
-        const recentPercentile = percentiles[0] || 68; // Most recent result
-        
-        setCurrentStats(prev => ({
-          ...prev,
-          averagePercentile: avgPercentile,
-          recentPercentile: recentPercentile
-        }));
-      }
-    }
-  }, [latestTestResultsQuery.data]);
 
   const progressPercentage = (todayStudyTime / targetStudyTime) * 100;
 
@@ -237,33 +211,33 @@ export default function HomeScreen() {
             <View style={styles.circlesContainer}>
               <View style={styles.circleItem}>
                 <CircularProgress 
-                  percentage={currentStats.targetPercentile}
+                  percentage={89}
                   size={70}
                   strokeWidth={6}
                   color="#333333"
-                  centerText={currentStats.targetPercentile.toString()}
+                  centerText="89"
                 />
                 <Text style={styles.circleLabel}>목표 백분위</Text>
               </View>
               
               <View style={styles.circleItem}>
                 <CircularProgress 
-                  percentage={currentStats.averagePercentile}
+                  percentage={50}
                   size={70}
                   strokeWidth={6}
                   color="#E5E5EA"
-                  centerText={currentStats.averagePercentile.toString()}
+                  centerText="50"
                 />
                 <Text style={styles.circleLabel}>평균 백분위</Text>
               </View>
               
               <View style={styles.circleItem}>
                 <CircularProgress 
-                  percentage={currentStats.recentPercentile}
+                  percentage={68}
                   size={70}
                   strokeWidth={6}
                   color="#8E8E93"
-                  centerText={currentStats.recentPercentile.toString()}
+                  centerText="68"
                 />
                 <Text style={styles.circleLabel}>최근 백분위</Text>
               </View>
