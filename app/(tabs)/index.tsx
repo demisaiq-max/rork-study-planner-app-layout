@@ -187,15 +187,15 @@ export default function HomeScreen() {
         </View>
 
         {/* Study Progress Card */}
-        <TouchableOpacity 
-          style={styles.timerCard}
-          activeOpacity={0.8}
-          onPress={() => router.push('/exam-management')}
-        >
-          <View style={styles.mockExamHeader}>
-            <Text style={styles.mockExamTitle}>모의고사 관리</Text>
+        <View style={styles.timerCard}>
+          <TouchableOpacity 
+            style={styles.mockExamHeader} 
+            activeOpacity={0.7}
+            onPress={() => router.push('/exam-selection')}
+          >
+            <Text style={styles.mockExamTitle}>실시간 모의고사 채점하기</Text>
             <ArrowUpRight size={18} color="#666666" />
-          </View>
+          </TouchableOpacity>
           
           <View style={styles.progressSection}>
             <View style={styles.leftTextContainer}>
@@ -238,7 +238,7 @@ export default function HomeScreen() {
               </View>
             </View>
           </View>
-        </TouchableOpacity>
+        </View>
 
         {/* Subject Grades Section */}
         <View style={styles.subjectsCard}>
@@ -837,7 +837,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginTop: 15,
     borderRadius: 12,
-    padding: 16,
+    padding: 20,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -847,13 +847,18 @@ const styles = StyleSheet.create({
   mockExamHeader: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "center",
+    backgroundColor: "#F2F2F7",
+    borderRadius: 8,
+    padding: 10,
     marginBottom: 16,
+    position: "relative",
   },
   mockExamTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#000000",
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#333333",
+    marginRight: 6,
   },
   progressSection: {
     flexDirection: "row",
