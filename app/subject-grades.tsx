@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -33,7 +33,7 @@ type SubjectGrade = {
 
 export default function SubjectGradesScreen() {
   const { user } = useUser();
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const [selectedExamType, setSelectedExamType] = useState<ExamType>('mock');
   const [subjectGrades, setSubjectGrades] = useState<SubjectGrade[]>([]);
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
@@ -80,43 +80,7 @@ export default function SubjectGradesScreen() {
     }
   }, [gradesQuery.data]);
 
-  // Calculate statistics
-  const stats = useMemo(() => {
-    const allGrades = subjectGrades.flatMap(sg => {
-      const grades = [];
-      if (sg.grades.mock) grades.push(sg.grades.mock);
-      if (sg.grades.midterm) grades.push(sg.grades.midterm);
-      if (sg.grades.final) grades.push(sg.grades.final);
-      return grades;
-    });
 
-    const currentExamGrades = subjectGrades
-      .map(sg => sg.grades[selectedExamType])
-      .filter(g => g !== undefined && g !== null) as number[];
-
-    if (currentExamGrades.length === 0) {
-      return {
-        targetPercentile: 89,
-        averagePercentile: 50,
-        recentPercentile: 0,
-      };
-    }
-
-    // Calculate percentiles (lower grade number = better = higher percentile)
-    const avgGrade = currentExamGrades.reduce((sum, g) => sum + g, 0) / currentExamGrades.length;
-    const recentPercentile = Math.round(Math.max(10, Math.min(99, (10 - avgGrade) * 11 + 50)));
-    
-    const allAvgGrade = allGrades.length > 0 
-      ? allGrades.reduce((sum, g) => sum + g, 0) / allGrades.length 
-      : 5;
-    const averagePercentile = Math.round(Math.max(10, Math.min(99, (10 - allAvgGrade) * 11 + 50)));
-
-    return {
-      targetPercentile: 89,
-      averagePercentile,
-      recentPercentile,
-    };
-  }, [subjectGrades, selectedExamType]);
 
   const updateGrade = async (subject: string, grade: number | null) => {
     if (!user?.id) return;
@@ -208,14 +172,32 @@ export default function SubjectGradesScreen() {
 
   // Translate subject names
   const getSubjectName = (subject: string): string => {
-    const subjectMap: { [key: string]: string } = {
-      '국어': t('korean'),
-      '영어': t('english'),
-      '수학': t('math'),
-      '탐구': t('science'),
-      '예체능': t('arts'),
+    // Map Korean subject names to translation keys
+    const koreanToKey: { [key: string]: string } = {
+      '국어': 'korean',
+      '영어': 'english', 
+      '수학': 'math',
+      '탐구': 'science',
+      '예체능': 'arts',
     };
-    return subjectMap[subject] || subject;
+    
+    // Map English subject names to translation keys
+    const englishToKey: { [key: string]: string } = {
+      'Korean': 'korean',
+      'English': 'english',
+      'Math': 'math',
+      'Science': 'science',
+      'Arts & PE': 'arts',
+    };
+    
+    // Check if it's a known Korean or English subject name
+    const key = koreanToKey[subject] || englishToKey[subject];
+    if (key) {
+      return t(key);
+    }
+    
+    // Return original if not found in mappings
+    return subject;
   };
 
   const examTypes = [
@@ -260,22 +242,6 @@ export default function SubjectGradesScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Stats Cards */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>{stats.targetPercentile}</Text>
-            <Text style={styles.statLabel}>{t('targetPercentile')}</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>{stats.averagePercentile}</Text>
-            <Text style={styles.statLabel}>{t('averagePercentile')}</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>{stats.recentPercentile || '-'}</Text>
-            <Text style={styles.statLabel}>{t('recentPercentile')}</Text>
-          </View>
-        </View>
-
         {/* Exam Type Selector */}
         <View style={styles.examTypeContainer}>
           <Text style={styles.sectionTitle}>{t('examTypeLabel')}</Text>
@@ -333,7 +299,7 @@ export default function SubjectGradesScreen() {
                 <View key={subjectGrade.subject} style={styles.subjectGradeCard}>
                   <View style={styles.subjectHeader}>
                     <Text style={styles.subjectName}>
-                      {language === 'en' ? getSubjectName(subjectGrade.subject) : subjectGrade.subject}
+                      {getSubjectName(subjectGrade.subject)}
                     </Text>
                     <View style={styles.gradeInfo}>
                       <Text style={styles.currentGrade}>
@@ -518,38 +484,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  statsContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    gap: 12,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#000000',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#8E8E93',
-    textAlign: 'center',
-  },
+
   examTypeContainer: {
     paddingHorizontal: 20,
-    paddingTop: 24,
+    paddingTop: 20,
   },
   sectionTitle: {
     fontSize: 18,
