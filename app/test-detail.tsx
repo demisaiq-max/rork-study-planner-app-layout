@@ -187,63 +187,180 @@ export default function TestDetailScreen() {
         {hasResult ? (
           /* Results Display */
           <View style={styles.resultsCard}>
-            <Text style={styles.resultsTitle}>{t('testResults')}</Text>
+            <Text style={styles.reportTitle}>성적표</Text>
+            <Text style={styles.reportSubtitle}>고3 평가원 실전 2025년 3월 28일 학력평가</Text>
             
-            {/* Score Summary */}
-            <View style={styles.scoreSection}>
-              <View style={styles.circlesContainer}>
-                <View style={styles.circleItem}>
-                  <CircularProgress 
-                    percentage={89}
-                    size={80}
-                    strokeWidth={6}
-                    color="#333333"
-                    centerText="89"
-                  />
-                  <Text style={styles.circleLabel}>{t('targetPercentile')}</Text>
+            {/* Grade Table */}
+            <View style={styles.gradeTable}>
+              {/* Header Row */}
+              <View style={styles.tableRow}>
+                <View style={[styles.tableCell, styles.headerCell]}>
+                  <Text style={styles.headerText}>영역</Text>
                 </View>
-                
-                <View style={styles.circleItem}>
-                  <CircularProgress 
-                    percentage={result.percentile}
-                    size={80}
-                    strokeWidth={6}
-                    color="#007AFF"
-                    centerText={result.percentile.toString()}
-                  />
-                  <Text style={styles.circleLabel}>{t('yourPercentile')}</Text>
+                <View style={[styles.tableCell, styles.headerCell]}>
+                  <Text style={styles.headerText}>국어</Text>
                 </View>
-                
-                <View style={styles.circleItem}>
-                  <CircularProgress 
-                    percentage={68}
-                    size={80}
-                    strokeWidth={6}
-                    color="#8E8E93"
-                    centerText="68"
-                  />
-                  <Text style={styles.circleLabel}>{t('averagePercentile')}</Text>
+                <View style={[styles.tableCell, styles.headerCell]}>
+                  <Text style={styles.headerText}>수학</Text>
+                </View>
+                <View style={[styles.tableCell, styles.headerCell]}>
+                  <Text style={styles.headerText}>영어</Text>
+                </View>
+                <View style={[styles.tableCell, styles.headerCell]}>
+                  <Text style={styles.headerText}>한국사</Text>
+                </View>
+                <View style={[styles.tableCell, styles.headerCell]}>
+                  <Text style={styles.headerText}>탐구</Text>
                 </View>
               </View>
-            </View>
 
-            {/* Detailed Scores */}
-            <View style={styles.detailsSection}>
-              <View style={styles.scoreRow}>
-                <Text style={styles.scoreLabel}>{t('grade')}</Text>
-                <Text style={styles.scoreValue}>{result.grade}{t('gradeUnit')}</Text>
+              {/* Subject Row */}
+              <View style={styles.tableRow}>
+                <View style={[styles.tableCell, styles.labelCell]}>
+                  <Text style={styles.labelText}>선택</Text>
+                  <Text style={styles.labelText}>과목</Text>
+                </View>
+                <View style={styles.tableCell}>
+                  <Text style={styles.cellText}>화법과</Text>
+                  <Text style={styles.cellText}>작문</Text>
+                </View>
+                <View style={styles.tableCell}>
+                  <Text style={styles.cellText}>미적분</Text>
+                </View>
+                <View style={styles.tableCell}>
+                  <View style={styles.diagonalCell}>
+                    <View style={styles.diagonalLine} />
+                  </View>
+                </View>
+                <View style={styles.tableCell}>
+                  <View style={styles.diagonalCell}>
+                    <View style={styles.diagonalLine} />
+                  </View>
+                </View>
+                <View style={styles.tableCell}>
+                  <Text style={styles.cellText}>생활과</Text>
+                  <Text style={styles.cellText}>윤리</Text>
+                  <Text style={styles.cellText}>세계사</Text>
+                </View>
               </View>
-              <View style={styles.scoreRow}>
-                <Text style={styles.scoreLabel}>{t('rawScore')}</Text>
-                <Text style={styles.scoreValue}>{result.raw_score}</Text>
+
+              {/* Status Row */}
+              <View style={styles.tableRow}>
+                <View style={[styles.tableCell, styles.labelCell]}>
+                  <Text style={styles.labelText}>채점</Text>
+                </View>
+                <View style={styles.tableCell}>
+                  <Text style={styles.completedText}>채점완</Text>
+                </View>
+                <View style={styles.tableCell}>
+                  <Text style={styles.completedText}>채점완</Text>
+                </View>
+                <View style={styles.tableCell}>
+                  <Text style={styles.incompleteText}>채점</Text>
+                </View>
+                <View style={styles.tableCell}>
+                  <Text style={styles.incompleteText}>채점</Text>
+                </View>
+                <View style={styles.tableCell}>
+                  <Text style={styles.incompleteText}>채점</Text>
+                </View>
               </View>
-              <View style={styles.scoreRow}>
-                <Text style={styles.scoreLabel}>{t('standardScore')}</Text>
-                <Text style={styles.scoreValue}>{result.standard_score}</Text>
+
+              {/* Raw Score Row */}
+              <View style={styles.tableRow}>
+                <View style={[styles.tableCell, styles.labelCell]}>
+                  <Text style={styles.labelText}>원점수</Text>
+                </View>
+                <View style={styles.tableCell}>
+                  <Text style={styles.scoreText}>80</Text>
+                </View>
+                <View style={styles.tableCell}>
+                  <Text style={styles.scoreText}>86</Text>
+                </View>
+                <View style={styles.tableCell}>
+                  <Text style={styles.scoreText}>-</Text>
+                </View>
+                <View style={styles.tableCell}>
+                  <Text style={styles.scoreText}>-</Text>
+                </View>
+                <View style={styles.tableCell}>
+                  <Text style={styles.scoreText}>-</Text>
+                </View>
               </View>
-              <View style={styles.scoreRow}>
-                <Text style={styles.scoreLabel}>{t('percentile')}</Text>
-                <Text style={styles.scoreValue}>{result.percentile}%</Text>
+
+              {/* Standard Score Row */}
+              <View style={styles.tableRow}>
+                <View style={[styles.tableCell, styles.labelCell]}>
+                  <Text style={styles.labelText}>표준</Text>
+                  <Text style={styles.labelText}>점수</Text>
+                </View>
+                <View style={styles.tableCell}>
+                  <Text style={styles.scoreText}>131</Text>
+                </View>
+                <View style={styles.tableCell}>
+                  <Text style={styles.scoreText}>137</Text>
+                </View>
+                <View style={styles.tableCell}>
+                  <View style={styles.diagonalCell}>
+                    <View style={styles.diagonalLine} />
+                  </View>
+                </View>
+                <View style={styles.tableCell}>
+                  <View style={styles.diagonalCell}>
+                    <View style={styles.diagonalLine} />
+                  </View>
+                </View>
+                <View style={styles.tableCell}>
+                  <Text style={styles.scoreText}>-</Text>
+                </View>
+              </View>
+
+              {/* Percentile Row */}
+              <View style={styles.tableRow}>
+                <View style={[styles.tableCell, styles.labelCell]}>
+                  <Text style={styles.labelText}>백분위</Text>
+                </View>
+                <View style={styles.tableCell}>
+                  <Text style={styles.scoreText}>93</Text>
+                </View>
+                <View style={styles.tableCell}>
+                  <Text style={styles.scoreText}>95</Text>
+                </View>
+                <View style={styles.tableCell}>
+                  <View style={styles.diagonalCell}>
+                    <View style={styles.diagonalLine} />
+                  </View>
+                </View>
+                <View style={styles.tableCell}>
+                  <View style={styles.diagonalCell}>
+                    <View style={styles.diagonalLine} />
+                  </View>
+                </View>
+                <View style={styles.tableCell}>
+                  <Text style={styles.scoreText}>-</Text>
+                </View>
+              </View>
+
+              {/* Grade Row */}
+              <View style={styles.tableRow}>
+                <View style={[styles.tableCell, styles.labelCell]}>
+                  <Text style={styles.labelText}>등급</Text>
+                </View>
+                <View style={styles.tableCell}>
+                  <Text style={styles.scoreText}>2</Text>
+                </View>
+                <View style={styles.tableCell}>
+                  <Text style={styles.scoreText}>2</Text>
+                </View>
+                <View style={styles.tableCell}>
+                  <Text style={styles.scoreText}>-</Text>
+                </View>
+                <View style={styles.tableCell}>
+                  <Text style={styles.scoreText}>-</Text>
+                </View>
+                <View style={styles.tableCell}>
+                  <Text style={styles.scoreText}>-</Text>
+                </View>
               </View>
             </View>
 
@@ -378,50 +495,93 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  resultsTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+  reportTitle: {
+    fontSize: 24,
+    fontWeight: '700',
     color: '#000000',
-    marginBottom: 20,
+    textAlign: 'center',
+    marginBottom: 8,
   },
-  scoreSection: {
-    marginBottom: 24,
-  },
-  circlesContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-  },
-  circleItem: {
-    alignItems: 'center',
-  },
-  circleLabel: {
-    fontSize: 12,
+  reportSubtitle: {
+    fontSize: 14,
     color: '#666666',
     textAlign: 'center',
-    marginTop: 8,
+    marginBottom: 24,
   },
-  detailsSection: {
-    borderTopWidth: 1,
-    borderTopColor: '#F2F2F7',
-    paddingTop: 20,
+  gradeTable: {
+    borderWidth: 1,
+    borderColor: '#000000',
+    marginBottom: 20,
   },
-  scoreRow: {
+  tableRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F8F9FA',
+    borderBottomColor: '#000000',
   },
-  scoreLabel: {
-    fontSize: 16,
-    color: '#000000',
+  tableCell: {
+    flex: 1,
+    borderRightWidth: 1,
+    borderRightColor: '#000000',
+    padding: 8,
+    minHeight: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  scoreValue: {
-    fontSize: 16,
+  headerCell: {
+    backgroundColor: '#F8F9FA',
+  },
+  labelCell: {
+    backgroundColor: '#F8F9FA',
+    flex: 0.8,
+  },
+  headerText: {
+    fontSize: 14,
     fontWeight: '600',
+    color: '#000000',
+    textAlign: 'center',
+  },
+  labelText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#000000',
+    textAlign: 'center',
+  },
+  cellText: {
+    fontSize: 11,
+    color: '#000000',
+    textAlign: 'center',
+    lineHeight: 14,
+  },
+  scoreText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#000000',
+    textAlign: 'center',
+  },
+  completedText: {
+    fontSize: 12,
     color: '#007AFF',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  incompleteText: {
+    fontSize: 12,
+    color: '#FF3B30',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  diagonalCell: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  diagonalLine: {
+    position: 'absolute',
+    width: '70%',
+    height: 1,
+    backgroundColor: '#000000',
+    transform: [{ rotate: '45deg' }],
   },
   imageSection: {
     marginTop: 20,
