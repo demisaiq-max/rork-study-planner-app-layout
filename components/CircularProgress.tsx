@@ -7,7 +7,9 @@ interface CircularProgressProps {
   size: number;
   strokeWidth: number;
   color?: string;
+  backgroundColor?: string;
   showMultipleRings?: boolean;
+  showPercentage?: boolean;
   centerText?: string;
   selectedSubject?: string | null;
   subjectGrades?: Record<string, number>;
@@ -18,7 +20,9 @@ export default function CircularProgress({
   size, 
   strokeWidth,
   color = "#007AFF",
+  backgroundColor = "#E5E5EA",
   showMultipleRings = false,
+  showPercentage = true,
   centerText,
   selectedSubject,
   subjectGrades
@@ -94,7 +98,7 @@ export default function CircularProgress({
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="#E5E5EA"
+          stroke={backgroundColor}
           strokeWidth={strokeWidth}
           fill="none"
         />
