@@ -18,7 +18,7 @@ import { useLanguage } from "@/hooks/language-context";
 import FormattedDateInput from "@/components/FormattedDateInput";
 
 export default function ExamManagementScreen() {
-  const { dDays, addDDay, updateDDay, removeDDay } = useStudyStore();
+  const { dDays, addDDay, updateDDay, removeDDay, selectExam, updateExamScores } = useStudyStore();
   const { t } = useLanguage();
   
   const [showAddModal, setShowAddModal] = useState(false);
@@ -33,6 +33,11 @@ export default function ExamManagementScreen() {
   const [editExamDate, setEditExamDate] = useState("");
   const [editExamDescription, setEditExamDescription] = useState("");
   const [editExamPriority, setEditExamPriority] = useState<"high" | "medium" | "low">("medium");
+  const [showScoreModal, setShowScoreModal] = useState(false);
+  const [scoreExam, setScoreExam] = useState<any>(null);
+  const [targetScore, setTargetScore] = useState("");
+  const [averageScore, setAverageScore] = useState("");
+  const [recentScore, setRecentScore] = useState("");
   
   // Calculate days left for display
   const calculateDaysLeft = (dateString: string) => {
@@ -69,7 +74,13 @@ export default function ExamManagementScreen() {
       date: newExamDate,
       daysLeft: daysLeft,
       description: newExamDescription,
-      priority: newExamPriority
+      priority: newExamPriority,
+      scores: {
+        targetPercentile: 90,
+        averagePercentile: 75,
+        recentPercentile: 80,
+        date: new Date().toISOString()
+      }
     });
 
     setNewExamTitle("");
@@ -144,6 +155,41 @@ export default function ExamManagementScreen() {
     setShowEditModal(true);
   };
 
+  const openScoreModal = (exam: any) => {
+    setScoreExam(exam);
+    setTargetScore(exam.scores?.targetPercentile?.toString() || "90");
+    setAverageScore(exam.scores?.averagePercentile?.toString() || "75");
+    setRecentScore(exam.scores?.recentPercentile?.toString() || "80");
+    setShowScoreModal(true);
+  };
+
+  const handleUpdateScores = () => {
+    const target = parseInt(targetScore);
+    const average = parseInt(averageScore);
+    const recent = parseInt(recentScore);
+    
+    if (isNaN(target) || isNaN(average) || isNaN(recent)) {
+      Alert.alert(t('error'), "Please enter valid percentile values");
+      return;
+    }
+    
+    if (target < 0 || target > 100 || average < 0 || average > 100 || recent < 0 || recent > 100) {
+      Alert.alert(t('error'), "Percentile values must be between 0 and 100");
+      return;
+    }
+    
+    if (updateExamScores && scoreExam) {
+      updateExamScores(scoreExam.id, {
+        targetPercentile: target,
+        averagePercentile: average,
+        recentPercentile: recent,
+      });
+    }
+    
+    setShowScoreModal(false);
+    setScoreExam(null);
+  };
+
   const getPriorityColor = (priority?: string) => {
     switch (priority) {
       case "high":
@@ -206,6 +252,15 @@ export default function ExamManagementScreen() {
                   </View>
                   
                   <View style={styles.examActions}>
+                    <TouchableOpacity 
+                      style={styles.actionButton}
+                      onPress={() => {
+                        selectExam(exam.id);
+                        openScoreModal(exam);
+                      }}
+                    >
+                      <Text style={styles.scoreButtonText}>Scores</Text>
+                    </TouchableOpacity>
                     <TouchableOpacity 
                       style={styles.actionButton}
                       onPress={() => openEditModal(exam)}
@@ -437,6 +492,87 @@ export default function ExamManagementScreen() {
             </ScrollView>
           </SafeAreaView>
         </Modal>
+
+        {/* Score Edit Modal */}
+        <Modal
+          visible={showScoreModal}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setShowScoreModal(false)}
+        >
+          <SafeAreaView style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => setShowScoreModal(false)}>
+                <X size={24} color="#8E8E93" />
+              </TouchableOpacity>
+              <Text style={styles.modalTitle}>{t('editScores')}</Text>
+              <TouchableOpacity onPress={handleUpdateScores}>
+                <Text style={styles.saveButton}>{t('save')}</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView 
+              style={styles.modalScrollView}
+              contentContainerStyle={styles.modalScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.modalContent}>
+                <View style={styles.scorePreview}>
+                  <Text style={styles.scoreExamTitle}>{scoreExam?.title}</Text>
+                  <Text style={styles.scoreExamDate}>{scoreExam?.date}</Text>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Target Percentile</Text>
+                  <View style={styles.scoreInputContainer}>
+                    <TextInput
+                      style={styles.scoreInput}
+                      value={targetScore}
+                      onChangeText={setTargetScore}
+                      placeholder="0-100"
+                      placeholderTextColor="#8E8E93"
+                      keyboardType="numeric"
+                      maxLength={3}
+                    />
+                    <Text style={styles.percentSymbol}>%</Text>
+                  </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Average Percentile</Text>
+                  <View style={styles.scoreInputContainer}>
+                    <TextInput
+                      style={styles.scoreInput}
+                      value={averageScore}
+                      onChangeText={setAverageScore}
+                      placeholder="0-100"
+                      placeholderTextColor="#8E8E93"
+                      keyboardType="numeric"
+                      maxLength={3}
+                    />
+                    <Text style={styles.percentSymbol}>%</Text>
+                  </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Recent Percentile</Text>
+                  <View style={styles.scoreInputContainer}>
+                    <TextInput
+                      style={styles.scoreInput}
+                      value={recentScore}
+                      onChangeText={setRecentScore}
+                      placeholder="0-100"
+                      placeholderTextColor="#8E8E93"
+                      keyboardType="numeric"
+                      maxLength={3}
+                    />
+                    <Text style={styles.percentSymbol}>%</Text>
+                  </View>
+                </View>
+              </View>
+            </ScrollView>
+          </SafeAreaView>
+        </Modal>
     </>
   );
 }
@@ -657,5 +793,45 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#FFFFFF",
+  },
+  scoreButtonText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#007AFF",
+  },
+  scorePreview: {
+    backgroundColor: "#F8F9FA",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+  },
+  scoreExamTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#000000",
+    marginBottom: 4,
+  },
+  scoreExamDate: {
+    fontSize: 14,
+    color: "#8E8E93",
+  },
+  scoreInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E5E5EA",
+  },
+  scoreInput: {
+    flex: 1,
+    padding: 16,
+    fontSize: 18,
+    color: "#000000",
+  },
+  percentSymbol: {
+    fontSize: 18,
+    color: "#8E8E93",
+    marginRight: 16,
   },
 });
