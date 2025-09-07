@@ -77,9 +77,9 @@ export default function HomeScreen() {
   const [showEditGradesModal, setShowEditGradesModal] = useState(false);
   const [editingGrades, setEditingGrades] = useState<Record<string, number>>({});
   const [currentStats, setCurrentStats] = useState({
-    targetPercentile: 89,
-    averagePercentile: 50,
-    recentPercentile: 68,
+    targetPercentile: 95,
+    averagePercentile: 0,
+    recentPercentile: 0,
   });
   const [selectedGradedExam, setSelectedGradedExam] = useState<any>(null);
   
@@ -100,33 +100,47 @@ export default function HomeScreen() {
   useEffect(() => {
     if (selectedGradedExam && gradedExams) {
       // Use the percentile from the selected exam
-      const percentile = selectedGradedExam.percentile || 0;
+      const selectedPercentile = selectedGradedExam.percentile || 0;
       
       // Calculate average from all graded exams
-      const allPercentiles = gradedExams.map((exam: any) => exam.percentile || 0);
-      const averagePercentile = Math.round(allPercentiles.reduce((sum, percentile) => sum + percentile, 0) / allPercentiles.length);
+      const allPercentiles = gradedExams.map((exam: any) => exam.percentile || 0).filter(p => p > 0);
+      const averagePercentile = allPercentiles.length > 0 
+        ? Math.round(allPercentiles.reduce((sum, percentile) => sum + percentile, 0) / allPercentiles.length)
+        : 0;
+      
+      // Calculate target percentile (highest achieved + 5, or 95 max)
+      const maxPercentile = Math.max(...allPercentiles);
+      const targetPercentile = Math.min(maxPercentile + 5, 95);
       
       setCurrentStats({
-        targetPercentile: 89, // Keep target the same
+        targetPercentile: targetPercentile,
         averagePercentile: averagePercentile,
-        recentPercentile: percentile,
+        recentPercentile: selectedPercentile,
       });
     } else if (gradedExams && gradedExams.length > 0) {
       // Show overall stats when no specific exam is selected
-      const allPercentiles = gradedExams.map((exam: any) => exam.percentile || 0);
-      const averagePercentile = Math.round(allPercentiles.reduce((sum, percentile) => sum + percentile, 0) / allPercentiles.length);
-      const recentPercentile = allPercentiles[0] || 0; // Most recent exam percentile
+      const allPercentiles = gradedExams.map((exam: any) => exam.percentile || 0).filter(p => p > 0);
+      const averagePercentile = allPercentiles.length > 0 
+        ? Math.round(allPercentiles.reduce((sum, percentile) => sum + percentile, 0) / allPercentiles.length)
+        : 0;
+      
+      // Most recent exam percentile (first in the sorted array)
+      const recentPercentile = gradedExams[0]?.percentile || 0;
+      
+      // Calculate target percentile (highest achieved + 5, or 95 max)
+      const maxPercentile = Math.max(...allPercentiles);
+      const targetPercentile = allPercentiles.length > 0 ? Math.min(maxPercentile + 5, 95) : 95;
       
       setCurrentStats({
-        targetPercentile: 89,
+        targetPercentile: targetPercentile,
         averagePercentile: averagePercentile,
         recentPercentile: recentPercentile,
       });
     } else {
       // Reset to default stats when no data
       setCurrentStats({
-        targetPercentile: 89,
-        averagePercentile: 30,
+        targetPercentile: 95,
+        averagePercentile: 0,
         recentPercentile: 0,
       });
     }
@@ -1180,17 +1194,17 @@ const styles = StyleSheet.create({
     minWidth: 60,
     alignItems: "center",
     borderWidth: 2,
-    borderColor: "#007AFF",
+    borderColor: "#E5E5EA",
   },
   subjectCardHidden: {
     backgroundColor: "#F2F2F7",
     borderColor: "#E5E5EA",
   },
   subjectCardSelected: {
-    backgroundColor: "#E8F5E8",
-    borderColor: "#34C759",
+    backgroundColor: "#FFF3E0",
+    borderColor: "#FF9500",
     borderWidth: 3,
-    shadowColor: "#34C759",
+    shadowColor: "#FF9500",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -1199,25 +1213,25 @@ const styles = StyleSheet.create({
   subjectName: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#007AFF",
+    color: "#333333",
     marginBottom: 4,
   },
   subjectNameHidden: {
     color: "#8E8E93",
   },
   subjectNameSelected: {
-    color: "#34C759",
+    color: "#FF9500",
     fontWeight: "700",
   },
   subjectGrade: {
     fontSize: 12,
-    color: "#007AFF",
+    color: "#333333",
   },
   subjectGradeHidden: {
     color: "#8E8E93",
   },
   subjectGradeSelected: {
-    color: "#34C759",
+    color: "#FF9500",
     fontWeight: "600",
   },
   subjectTestName: {
@@ -1226,7 +1240,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   subjectTestNameSelected: {
-    color: "#34C759",
+    color: "#FF9500",
   },
   subjectIndicator: {
     width: 4,
@@ -1236,7 +1250,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   subjectIndicatorSelected: {
-    backgroundColor: "#34C759",
+    backgroundColor: "#FF9500",
     width: 6,
     height: 6,
     borderRadius: 3,
