@@ -9,9 +9,11 @@ import {
   Modal,
   TextInput,
   Alert,
+  ActionSheetIOS,
+  Platform,
 } from 'react-native';
 import { router } from 'expo-router';
-import { ArrowLeft, ChevronRight, Plus } from 'lucide-react-native';
+import { ArrowLeft, ChevronRight, Plus, MoreVertical } from 'lucide-react-native';
 import { useUser } from '@/hooks/user-context';
 import { useLanguage } from '@/hooks/language-context';
 import { trpc } from '@/lib/trpc';
@@ -24,7 +26,10 @@ export default function SubjectGradesScreen() {
   const { t } = useLanguage();
   const [isLoading, setIsLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [newSubjectName, setNewSubjectName] = useState('');
+  const [editingSubject, setEditingSubject] = useState<string | null>(null);
+  const [editSubjectName, setEditSubjectName] = useState('');
 
   // Fetch subjects from backend
   const subjectsQuery = trpc.tests.getUserSubjects.useQuery(
@@ -46,6 +51,29 @@ export default function SubjectGradesScreen() {
     },
     onError: (error) => {
       Alert.alert(t('error'), error.message === 'Subject already exists' ? t('subjectAlreadyExists') : t('failedToAddSubject'));
+    },
+  });
+
+  const deleteSubjectMutation = trpc.tests.deleteSubject.useMutation({
+    onSuccess: () => {
+      subjectsQuery.refetch();
+      latestResultsQuery.refetch();
+    },
+    onError: (error) => {
+      Alert.alert(t('error'), t('failedToDeleteSubject'));
+    },
+  });
+
+  const updateSubjectMutation = trpc.tests.updateSubject.useMutation({
+    onSuccess: () => {
+      subjectsQuery.refetch();
+      latestResultsQuery.refetch();
+      setShowEditModal(false);
+      setEditingSubject(null);
+      setEditSubjectName('');
+    },
+    onError: (error) => {
+      Alert.alert(t('error'), error.message === 'Subject already exists' ? t('subjectAlreadyExists') : t('failedToUpdateSubject'));
     },
   });
 
@@ -84,6 +112,94 @@ export default function SubjectGradesScreen() {
     } catch {
       // Error is handled in the mutation's onError callback
     }
+  };
+
+  const handleEditSubject = async () => {
+    if (!editSubjectName.trim() || !editingSubject) {
+      Alert.alert(t('error'), t('enterSubjectName'));
+      return;
+    }
+
+    if (!user?.id) return;
+
+    try {
+      await updateSubjectMutation.mutateAsync({
+        userId: user.id,
+        oldSubject: editingSubject,
+        newSubject: editSubjectName.trim(),
+      });
+    } catch {
+      // Error is handled in the mutation's onError callback
+    }
+  };
+
+  const handleSubjectOptions = (subject: string) => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: [t('cancel'), t('edit'), t('delete')],
+          destructiveButtonIndex: 2,
+          cancelButtonIndex: 0,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) {
+            // Edit
+            setEditingSubject(subject);
+            setEditSubjectName(subject);
+            setShowEditModal(true);
+          } else if (buttonIndex === 2) {
+            // Delete
+            handleDeleteSubject(subject);
+          }
+        }
+      );
+    } else {
+      Alert.alert(
+        t('subjectOptions'),
+        t('chooseAction'),
+        [
+          { text: t('cancel'), style: 'cancel' },
+          {
+            text: t('edit'),
+            onPress: () => {
+              setEditingSubject(subject);
+              setEditSubjectName(subject);
+              setShowEditModal(true);
+            },
+          },
+          {
+            text: t('delete'),
+            style: 'destructive',
+            onPress: () => handleDeleteSubject(subject),
+          },
+        ]
+      );
+    }
+  };
+
+  const handleDeleteSubject = (subject: string) => {
+    Alert.alert(
+      t('deleteSubject'),
+      t('deleteSubjectConfirmation'),
+      [
+        { text: t('cancel'), style: 'cancel' },
+        {
+          text: t('delete'),
+          style: 'destructive',
+          onPress: async () => {
+            if (!user?.id) return;
+            try {
+              await deleteSubjectMutation.mutateAsync({
+                userId: user.id,
+                subject,
+              });
+            } catch {
+              // Error is handled in the mutation's onError callback
+            }
+          },
+        },
+      ]
+    );
   };
 
   const getSubjectName = (subject: string): string => {
@@ -154,13 +270,12 @@ export default function SubjectGradesScreen() {
               const latestGrade = getLatestGradeForSubject(subject);
               
               return (
-                <TouchableOpacity
-                  key={subject}
-                  style={styles.subjectCard}
-                  onPress={() => handleSubjectPress(subject)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.subjectContent}>
+                <View key={subject} style={styles.subjectCard}>
+                  <TouchableOpacity
+                    style={styles.subjectContent}
+                    onPress={() => handleSubjectPress(subject)}
+                    activeOpacity={0.7}
+                  >
                     <View style={styles.subjectInfo}>
                       <Text style={styles.subjectName}>
                         {getSubjectName(subject)}
@@ -170,8 +285,15 @@ export default function SubjectGradesScreen() {
                       </Text>
                     </View>
                     <ChevronRight size={20} color="#8E8E93" />
-                  </View>
-                </TouchableOpacity>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.optionsButton}
+                    onPress={() => handleSubjectOptions(subject)}
+                    activeOpacity={0.7}
+                  >
+                    <MoreVertical size={20} color="#8E8E93" />
+                  </TouchableOpacity>
+                </View>
               );
             })
           )}
@@ -217,6 +339,53 @@ export default function SubjectGradesScreen() {
               >
                 <Text style={styles.saveButtonText}>
                   {createSubjectMutation.isPending ? t('creating') : t('create')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Edit Subject Modal */}
+      <Modal
+        visible={showEditModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowEditModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>{t('editSubject')}</Text>
+            
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>{t('subjectName')}</Text>
+              <TextInput
+                style={styles.textInput}
+                value={editSubjectName}
+                onChangeText={setEditSubjectName}
+                placeholder={t('enterSubjectName')}
+                placeholderTextColor="#8E8E93"
+              />
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setShowEditModal(false);
+                  setEditingSubject(null);
+                  setEditSubjectName('');
+                }}
+              >
+                <Text style={styles.cancelButtonText}>{t('cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.saveButton]}
+                onPress={handleEditSubject}
+                disabled={updateSubjectMutation.isPending}
+              >
+                <Text style={styles.saveButtonText}>
+                  {updateSubjectMutation.isPending ? t('updating') : t('update')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -319,12 +488,19 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   subjectContent: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 16,
+  },
+  optionsButton: {
+    padding: 16,
+    paddingLeft: 8,
   },
   subjectInfo: {
     flex: 1,

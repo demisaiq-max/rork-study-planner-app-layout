@@ -202,6 +202,15 @@ const translations: Record<Language, Translation> = {
     failedToCreateTest: '시험 생성에 실패했습니다',
     uploadAnswerSheet: '답안지 업로드',
     createSubject: '과목 생성',
+    editSubject: '과목 수정',
+    deleteSubject: '과목 삭제',
+    deleteSubjectConfirmation: '이 과목과 관련된 모든 시험 데이터가 삭제됩니다. 계속하시겠습니까?',
+    failedToDeleteSubject: '과목 삭제에 실패했습니다',
+    failedToUpdateSubject: '과목 수정에 실패했습니다',
+    subjectOptions: '과목 옵션',
+    chooseAction: '작업을 선택하세요',
+    edit: '수정',
+    updating: '수정 중',
   },
   en: {
     // Header
@@ -396,6 +405,15 @@ const translations: Record<Language, Translation> = {
     failedToCreateTest: 'Failed to create test',
     uploadAnswerSheet: 'Upload Answer Sheet',
     createSubject: 'Create Subject',
+    editSubject: 'Edit Subject',
+    deleteSubject: 'Delete Subject',
+    deleteSubjectConfirmation: 'This will delete all test data related to this subject. Do you want to continue?',
+    failedToDeleteSubject: 'Failed to delete subject',
+    failedToUpdateSubject: 'Failed to update subject',
+    subjectOptions: 'Subject Options',
+    chooseAction: 'Choose an action',
+    edit: 'Edit',
+    updating: 'Updating',
   },
 };
 

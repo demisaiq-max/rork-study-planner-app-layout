@@ -28,6 +28,8 @@ import getUserSubjects from "./routes/tests/get-user-subjects/route";
 import getLatestTestResults from "./routes/tests/get-latest-test-results/route";
 import getTestById from "./routes/tests/get-test-by-id/route";
 import createSubject from "./routes/tests/create-subject/route";
+import deleteSubject from "./routes/tests/delete-subject/route";
+import updateSubject from "./routes/tests/update-subject/route";
 
 export const appRouter = createTRPCRouter({
   example: createTRPCRouter({
@@ -60,6 +62,8 @@ export const appRouter = createTRPCRouter({
     getLatestTestResults,
     getTestById,
     createSubject,
+    deleteSubject,
+    updateSubject,
   }),
 });
 
