@@ -254,7 +254,7 @@ export default function HomeScreen() {
           <View style={styles.subjectsHeader}>
             <Text style={styles.subjectsTitle}>{t('subjectsTitle')}</Text>
             <View style={styles.subjectsHeaderRight}>
-              <TouchableOpacity onPress={() => setShowEditGradesModal(true)}>
+              <TouchableOpacity onPress={() => router.push('/subject-grades')}>
                 <Text style={styles.subjectsEditButton}>{t('editButton')}</Text>
               </TouchableOpacity>
               <ArrowUpRight size={18} color="#8E8E93" style={{ marginLeft: 8 }} />
