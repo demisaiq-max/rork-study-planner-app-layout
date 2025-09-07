@@ -73,7 +73,12 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Create triggers for updated_at
+-- Create triggers for updated_at (drop existing ones first to avoid conflicts)
+DROP TRIGGER IF EXISTS update_users_updated_at ON users;
+DROP TRIGGER IF EXISTS update_exams_updated_at ON exams;
+DROP TRIGGER IF EXISTS update_subject_grades_updated_at ON subject_grades;
+DROP TRIGGER IF EXISTS update_user_settings_updated_at ON user_settings;
+
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_exams_updated_at BEFORE UPDATE ON exams FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_subject_grades_updated_at BEFORE UPDATE ON subject_grades FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -140,7 +145,10 @@ CREATE INDEX IF NOT EXISTS idx_tests_type ON tests(test_type);
 CREATE INDEX IF NOT EXISTS idx_test_results_test_id ON test_results(test_id);
 CREATE INDEX IF NOT EXISTS idx_test_results_user_id ON test_results(user_id);
 
--- Create triggers for updated_at
+-- Create triggers for updated_at (drop existing ones first to avoid conflicts)
+DROP TRIGGER IF EXISTS update_tests_updated_at ON tests;
+DROP TRIGGER IF EXISTS update_test_results_updated_at ON test_results;
+
 CREATE TRIGGER update_tests_updated_at BEFORE UPDATE ON tests FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_test_results_updated_at BEFORE UPDATE ON test_results FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
