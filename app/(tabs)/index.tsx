@@ -21,7 +21,6 @@ import TaskItem from "@/components/TaskItem";
 import { useStudyStore } from "@/hooks/study-store";
 import { useUser } from "@/hooks/user-context";
 import { useLanguage } from "@/hooks/language-context";
-import { trpc } from "@/lib/trpc";
 import FormattedDateInput from "@/components/FormattedDateInput";
 
 const { width } = Dimensions.get("window");
@@ -53,12 +52,6 @@ export default function HomeScreen() {
   } = useStudyStore();
   const { user } = useUser();
   const { t } = useLanguage();
-  
-  // Fetch latest test results for graded subjects
-  const latestTestResultsQuery = trpc.tests.getLatestTestResults.useQuery(
-    { userId: user?.id || '550e8400-e29b-41d4-a716-446655440000' },
-    { enabled: !!user?.id }
-  );
   
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showAddExamModal, setShowAddExamModal] = useState(false);
@@ -252,60 +245,71 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Graded Subjects Section */}
+        {/* Subject Grades Section */}
         <TouchableOpacity 
           style={styles.subjectsCard}
-          onPress={() => router.push('/subject-tests')}
+          onPress={() => router.push('/subject-grades')}
           activeOpacity={0.7}
         >
           <View style={styles.subjectsHeader}>
-            <Text style={styles.subjectsTitle}>과목별 성적</Text>
+            <Text style={styles.subjectsTitle}>{t('subjectsTitle')}</Text>
             <View style={styles.subjectsHeaderRight}>
-              <TouchableOpacity onPress={() => router.push('/subject-tests')}>
-                <Text style={styles.subjectsEditButton}>편집</Text>
+              <TouchableOpacity onPress={() => router.push('/subject-grades')}>
+                <Text style={styles.subjectsEditButton}>{t('editButton')}</Text>
               </TouchableOpacity>
               <ArrowUpRight size={18} color="#8E8E93" style={{ marginLeft: 8 }} />
             </View>
           </View>
           
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.subjectsScroll}>
-            {latestTestResultsQuery.data?.map((result: any) => {
-              const testTypeMap: Record<string, string> = {
-                'mock': 'Mock',
-                'midterm': 'Mid Term',
-                'final': 'Final Exam'
-              };
-              
-              const testTypeName = testTypeMap[result.tests.test_type] || result.tests.test_type;
-              const testNumber = result.tests.test_name.match(/\d+/)?.[0] || '1';
-              const displayTestName = `${testTypeName} ${testNumber}`;
+            {subjects?.map((subject) => {
+              const currentVisibleSubjects = visibleSubjects || [];
+              const isVisible = currentVisibleSubjects.includes(subject);
+              const gradeValue = subjectGrades?.[subject];
+              const grade = gradeValue ? gradeValue.toString() : t('undetermined');
+              const isSelected = selectedSubject === subject;
               
               return (
                 <TouchableOpacity 
-                  key={`${result.tests.subject}-${result.id}`}
-                  style={styles.gradedSubjectCard}
-                  onPress={() => router.push(`/test-detail?testId=${result.test_id}`)}
+                  key={subject}
+                  style={[
+                    styles.subjectCard, 
+                    !isVisible && styles.subjectCardHidden,
+                    isSelected && styles.subjectCardSelected
+                  ]}
+                  onPress={() => {
+                    if (currentVisibleSubjects.includes(subject)) {
+                      setSelectedSubject(isSelected ? null : subject);
+                    } else {
+                      toggleSubjectVisibility(subject);
+                    }
+                  }}
                 >
-                  <Text style={styles.gradedSubjectName}>
-                    {result.tests.subject}
+                  <Text style={[
+                    styles.subjectName, 
+                    !isVisible && styles.subjectNameHidden,
+                    isSelected && styles.subjectNameSelected
+                  ]}>
+                    {t(subject.toLowerCase())}
                   </Text>
-                  <Text style={styles.gradedSubjectTestType}>
-                    {displayTestName}
+                  <Text style={[
+                    styles.subjectGrade, 
+                    !isVisible && styles.subjectGradeHidden,
+                    isSelected && styles.subjectGradeSelected
+                  ]}>
+                    {gradeValue ? `${grade}${t('gradeUnit')}` : grade}
                   </Text>
-                  <Text style={styles.gradedSubjectGrade}>
-                    {result.grade}등급
-                  </Text>
-                  <View style={styles.gradedSubjectIndicator} />
+                  {isVisible && (
+                    <View style={[styles.subjectIndicator, isSelected && styles.subjectIndicatorSelected]} />
+                  )}
                 </TouchableOpacity>
               );
             })}
             
-            {(!latestTestResultsQuery.data || latestTestResultsQuery.data.length === 0) && (
-              <View style={styles.noGradedSubjectsCard}>
-                <Text style={styles.noGradedSubjectsText}>채점된</Text>
-                <Text style={styles.noGradedSubjectsText}>시험 없음</Text>
-              </View>
-            )}
+            <TouchableOpacity style={styles.expectedGradeCard}>
+              <Text style={styles.expectedGradeText}>{t('expectedGrade')}</Text>
+              <Text style={styles.expectedGradeValue}>2{t('gradeUnit')}</Text>
+            </TouchableOpacity>
           </ScrollView>
         </TouchableOpacity>
 
@@ -1439,53 +1443,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 4,
   },
-  gradedSubjectCard: {
+  expectedGradeCard: {
     backgroundColor: "#F8F9FA",
     borderRadius: 8,
     padding: 12,
-    marginRight: 12,
-    minWidth: 80,
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#007AFF",
-  },
-  gradedSubjectName: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#007AFF",
-    marginBottom: 4,
-  },
-  gradedSubjectTestType: {
-    fontSize: 10,
-    color: "#8E8E93",
-    marginBottom: 4,
-  },
-  gradedSubjectGrade: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#007AFF",
-  },
-  gradedSubjectIndicator: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#007AFF",
-    marginTop: 4,
-  },
-  noGradedSubjectsCard: {
-    backgroundColor: "#F8F9FA",
-    borderRadius: 8,
-    padding: 12,
-    minWidth: 100,
+    minWidth: 60,
     alignItems: "center",
     borderWidth: 2,
     borderColor: "#E5E5EA",
     borderStyle: "dashed",
   },
-  noGradedSubjectsText: {
+  expectedGradeText: {
     fontSize: 12,
     fontWeight: "600",
     color: "#8E8E93",
+    marginBottom: 2,
     textAlign: "center",
+  },
+  expectedGradeValue: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#8E8E93",
   },
 });
