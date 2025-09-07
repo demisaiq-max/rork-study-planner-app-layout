@@ -187,11 +187,18 @@ export default function HomeScreen() {
         </View>
 
         {/* Study Progress Card */}
-        <View style={styles.timerCard}>
+        <TouchableOpacity 
+          style={styles.timerCard}
+          activeOpacity={0.8}
+          onPress={() => router.push('/exam-management')}
+        >
           <TouchableOpacity 
             style={styles.mockExamHeader} 
             activeOpacity={0.7}
-            onPress={() => router.push('/exam-selection')}
+            onPress={(e) => {
+              e.stopPropagation();
+              router.push('/exam-selection');
+            }}
           >
             <Text style={styles.mockExamTitle}>실시간 모의고사 채점하기</Text>
             <ArrowUpRight size={18} color="#666666" />
@@ -238,7 +245,7 @@ export default function HomeScreen() {
               </View>
             </View>
           </View>
-        </View>
+        </TouchableOpacity>
 
         {/* Subject Grades Section */}
         <View style={styles.subjectsCard}>
@@ -837,7 +844,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginTop: 15,
     borderRadius: 12,
-    padding: 20,
+    padding: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
