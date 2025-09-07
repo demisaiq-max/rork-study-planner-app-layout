@@ -281,7 +281,7 @@ export default function HomeScreen() {
           <View style={styles.subjectsHeader}>
             <Text style={styles.subjectsTitle}>Graded Exams</Text>
             <View style={styles.subjectsHeaderRight}>
-              <TouchableOpacity onPress={() => router.push('/subject-tests')}>
+              <TouchableOpacity onPress={() => router.push('/all-subjects')}>
                 <Text style={styles.subjectsEditButton}>View All</Text>
               </TouchableOpacity>
               <ArrowUpRight size={18} color="#8E8E93" style={{ marginLeft: 8 }} />
