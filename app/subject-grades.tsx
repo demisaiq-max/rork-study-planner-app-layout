@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,9 +8,12 @@ import {
   SafeAreaView,
   Alert,
   Dimensions,
+  TextInput,
+  Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
-import { ArrowLeft, TrendingUp, TrendingDown, Minus } from 'lucide-react-native';
+import { ArrowLeft, TrendingUp, TrendingDown, Plus, Trash2, Edit3 } from 'lucide-react-native';
 import { useUser } from '@/hooks/user-context';
 import { useLanguage } from '@/hooks/language-context';
 import { trpc } from '@/lib/trpc';
@@ -19,104 +22,226 @@ const { width } = Dimensions.get('window');
 
 type ExamType = 'mock' | 'midterm' | 'final';
 type SubjectGrade = {
+  id?: string;
   subject: string;
-  mockGrade?: number;
-  midtermGrade?: number;
-  finalGrade?: number;
+  grades: {
+    mock?: number;
+    midterm?: number;
+    final?: number;
+  };
 };
-
-const SUBJECTS = ['국어', '영어', '수학', '탐구', '예체능'];
-const EXAM_TYPES: { key: ExamType; label: string; color: string }[] = [
-  { key: 'mock', label: '모의고사', color: '#007AFF' },
-  { key: 'midterm', label: '중간고사', color: '#34C759' },
-  { key: 'final', label: '기말고사', color: '#FF9500' },
-];
 
 export default function SubjectGradesScreen() {
   const { user } = useUser();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [selectedExamType, setSelectedExamType] = useState<ExamType>('mock');
   const [subjectGrades, setSubjectGrades] = useState<SubjectGrade[]>([]);
-  const [stats, setStats] = useState({
-    targetPercentile: 89,
-    averagePercentile: 50,
-    recentPercentile: 68,
+  const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+  const [newSubjectName, setNewSubjectName] = useState('');
+  const [editingSubject, setEditingSubject] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch grades from backend
+  const gradesQuery = trpc.grades.getSubjectGrades.useQuery(
+    { userId: user?.id || '' },
+    { enabled: !!user?.id }
+  );
+
+  const updateGradeMutation = trpc.grades.updateSubjectGrade.useMutation({
+    onSuccess: () => {
+      gradesQuery.refetch();
+    },
   });
 
-  // Initialize subject grades
-  useEffect(() => {
-    const initialGrades: SubjectGrade[] = SUBJECTS.map(subject => ({
-      subject,
-      mockGrade: Math.floor(Math.random() * 9) + 1, // Random grade 1-9 for demo
-      midtermGrade: Math.floor(Math.random() * 9) + 1,
-      finalGrade: Math.floor(Math.random() * 9) + 1,
-    }));
-    setSubjectGrades(initialGrades);
-  }, []);
+  const deleteGradeMutation = trpc.grades.deleteSubjectGrade.useMutation({
+    onSuccess: () => {
+      gradesQuery.refetch();
+    },
+  });
 
-  // Update stats based on selected exam type and grades
+  // Process grades data
   useEffect(() => {
-    const currentGrades = subjectGrades.map(sg => {
-      switch (selectedExamType) {
-        case 'mock': return sg.mockGrade || 5;
-        case 'midterm': return sg.midtermGrade || 5;
-        case 'final': return sg.finalGrade || 5;
-        default: return 5;
-      }
-    });
-    
-    const average = currentGrades.reduce((sum, grade) => sum + grade, 0) / currentGrades.length;
-    const percentile = Math.max(10, Math.min(99, Math.round((10 - average) * 10 + 50)));
-    
-    setStats(prev => ({
-      ...prev,
-      recentPercentile: percentile,
-      averagePercentile: Math.round((prev.averagePercentile + percentile) / 2),
-    }));
-  }, [selectedExamType, subjectGrades]);
-
-  const updateGrade = (subject: string, grade: number) => {
-    setSubjectGrades(prev => prev.map(sg => {
-      if (sg.subject === subject) {
+    if (gradesQuery.data) {
+      const processedGrades: SubjectGrade[] = gradesQuery.data.map((grade: any) => {
+        let grades = {};
+        try {
+          grades = grade.grades ? JSON.parse(grade.grades) : {};
+        } catch (e) {
+          console.error('Failed to parse grades:', e);
+        }
         return {
-          ...sg,
-          [`${selectedExamType}Grade`]: grade,
+          id: grade.id,
+          subject: grade.subject,
+          grades: grades,
         };
-      }
-      return sg;
-    }));
+      });
+      setSubjectGrades(processedGrades);
+      setIsLoading(false);
+    }
+  }, [gradesQuery.data]);
+
+  // Calculate statistics
+  const stats = useMemo(() => {
+    const allGrades = subjectGrades.flatMap(sg => {
+      const grades = [];
+      if (sg.grades.mock) grades.push(sg.grades.mock);
+      if (sg.grades.midterm) grades.push(sg.grades.midterm);
+      if (sg.grades.final) grades.push(sg.grades.final);
+      return grades;
+    });
+
+    const currentExamGrades = subjectGrades
+      .map(sg => sg.grades[selectedExamType])
+      .filter(g => g !== undefined && g !== null) as number[];
+
+    if (currentExamGrades.length === 0) {
+      return {
+        targetPercentile: 89,
+        averagePercentile: 50,
+        recentPercentile: 0,
+      };
+    }
+
+    // Calculate percentiles (lower grade number = better = higher percentile)
+    const avgGrade = currentExamGrades.reduce((sum, g) => sum + g, 0) / currentExamGrades.length;
+    const recentPercentile = Math.round(Math.max(10, Math.min(99, (10 - avgGrade) * 11 + 50)));
+    
+    const allAvgGrade = allGrades.length > 0 
+      ? allGrades.reduce((sum, g) => sum + g, 0) / allGrades.length 
+      : 5;
+    const averagePercentile = Math.round(Math.max(10, Math.min(99, (10 - allAvgGrade) * 11 + 50)));
+
+    return {
+      targetPercentile: 89,
+      averagePercentile,
+      recentPercentile,
+    };
+  }, [subjectGrades, selectedExamType]);
+
+  const updateGrade = async (subject: string, grade: number | null) => {
+    if (!user?.id) return;
+
+    try {
+      await updateGradeMutation.mutateAsync({
+        userId: user.id,
+        subject,
+        examType: selectedExamType,
+        grade,
+      });
+    } catch (error) {
+      Alert.alert(t('error'), t('failedToUpdateGrade'));
+    }
+  };
+
+  const deleteSubject = (subject: string) => {
+    Alert.alert(
+      t('deleteGrade'),
+      t('deleteGradeConfirm'),
+      [
+        { text: t('cancel'), style: 'cancel' },
+        {
+          text: t('delete'),
+          style: 'destructive',
+          onPress: async () => {
+            if (!user?.id) return;
+            try {
+              await deleteGradeMutation.mutateAsync({
+                userId: user.id,
+                subject,
+              });
+            } catch (error) {
+              Alert.alert(t('error'), t('failedToDeleteGrade'));
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const addNewSubject = async () => {
+    if (!newSubjectName.trim() || !user?.id) {
+      Alert.alert(t('error'), t('enterSubjectName'));
+      return;
+    }
+
+    // Check if subject already exists
+    if (subjectGrades.some(sg => sg.subject === newSubjectName.trim())) {
+      Alert.alert(t('error'), t('subjectAlreadyExists'));
+      return;
+    }
+
+    try {
+      await updateGradeMutation.mutateAsync({
+        userId: user.id,
+        subject: newSubjectName.trim(),
+        examType: 'mock',
+        grade: null,
+      });
+      setNewSubjectName('');
+      setIsAddModalVisible(false);
+    } catch (error) {
+      Alert.alert(t('error'), t('failedToAddSubject'));
+    }
   };
 
   const getCurrentGrade = (subjectGrade: SubjectGrade): number | undefined => {
-    switch (selectedExamType) {
-      case 'mock': return subjectGrade.mockGrade;
-      case 'midterm': return subjectGrade.midtermGrade;
-      case 'final': return subjectGrade.finalGrade;
-      default: return undefined;
-    }
+    return subjectGrade.grades[selectedExamType];
   };
 
   const getGradeTrend = (subjectGrade: SubjectGrade): 'up' | 'down' | 'same' => {
-    const mock = subjectGrade.mockGrade || 5;
-    const midterm = subjectGrade.midtermGrade || 5;
-    const final = subjectGrade.finalGrade || 5;
+    const mock = subjectGrade.grades.mock;
+    const midterm = subjectGrade.grades.midterm;
+    const final = subjectGrade.grades.final;
     
-    if (selectedExamType === 'midterm') {
-      if (midterm < mock) return 'up'; // Lower grade number = better
+    if (selectedExamType === 'midterm' && mock && midterm) {
+      if (midterm < mock) return 'up';
       if (midterm > mock) return 'down';
-      return 'same';
     }
     
-    if (selectedExamType === 'final') {
+    if (selectedExamType === 'final' && midterm && final) {
       if (final < midterm) return 'up';
       if (final > midterm) return 'down';
-      return 'same';
     }
     
     return 'same';
   };
 
-  const selectedExamInfo = EXAM_TYPES.find(et => et.key === selectedExamType)!;
+  // Translate subject names
+  const getSubjectName = (subject: string): string => {
+    const subjectMap: { [key: string]: string } = {
+      '국어': t('korean'),
+      '영어': t('english'),
+      '수학': t('math'),
+      '탐구': t('science'),
+      '예체능': t('arts'),
+    };
+    return subjectMap[subject] || subject;
+  };
+
+  const examTypes = [
+    { key: 'mock' as ExamType, label: t('mockTest'), color: '#007AFF' },
+    { key: 'midterm' as ExamType, label: t('midterm'), color: '#34C759' },
+    { key: 'final' as ExamType, label: t('finalExam'), color: '#FF9500' },
+  ];
+
+  const selectedExamInfo = examTypes.find(et => et.key === selectedExamType)!;
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <ArrowLeft size={24} color="#000000" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{t('subjectGrades')}</Text>
+          <View style={styles.headerRight} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -125,8 +250,13 @@ export default function SubjectGradesScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ArrowLeft size={24} color="#000000" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>과목별 성적</Text>
-        <View style={styles.headerRight} />
+        <Text style={styles.headerTitle}>{t('subjectGrades')}</Text>
+        <TouchableOpacity 
+          onPress={() => setIsAddModalVisible(true)} 
+          style={styles.addButton}
+        >
+          <Plus size={24} color="#007AFF" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -134,23 +264,23 @@ export default function SubjectGradesScreen() {
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{stats.targetPercentile}</Text>
-            <Text style={styles.statLabel}>목표 백분위</Text>
+            <Text style={styles.statLabel}>{t('targetPercentile')}</Text>
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{stats.averagePercentile}</Text>
-            <Text style={styles.statLabel}>평균 백분위</Text>
+            <Text style={styles.statLabel}>{t('averagePercentile')}</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>{stats.recentPercentile}</Text>
-            <Text style={styles.statLabel}>최근 백분위</Text>
+            <Text style={styles.statValue}>{stats.recentPercentile || '-'}</Text>
+            <Text style={styles.statLabel}>{t('recentPercentile')}</Text>
           </View>
         </View>
 
         {/* Exam Type Selector */}
         <View style={styles.examTypeContainer}>
-          <Text style={styles.sectionTitle}>시험 유형</Text>
+          <Text style={styles.sectionTitle}>{t('examTypeLabel')}</Text>
           <View style={styles.examTypeButtons}>
-            {EXAM_TYPES.map((examType) => (
+            {examTypes.map((examType) => (
               <TouchableOpacity
                 key={examType.key}
                 style={[
@@ -177,87 +307,170 @@ export default function SubjectGradesScreen() {
         {/* Subject Grades */}
         <View style={styles.gradesContainer}>
           <Text style={styles.sectionTitle}>
-            {selectedExamInfo.label} 성적
+            {selectedExamType === 'mock' && t('mockTestGrades')}
+            {selectedExamType === 'midterm' && t('midtermGrades')}
+            {selectedExamType === 'final' && t('finalGrades')}
           </Text>
           
-          {subjectGrades.map((subjectGrade) => {
-            const currentGrade = getCurrentGrade(subjectGrade);
-            const trend = getGradeTrend(subjectGrade);
-            
-            return (
-              <View key={subjectGrade.subject} style={styles.subjectGradeCard}>
-                <View style={styles.subjectHeader}>
-                  <Text style={styles.subjectName}>{subjectGrade.subject}</Text>
-                  <View style={styles.gradeInfo}>
-                    <Text style={styles.currentGrade}>
-                      {currentGrade ? `${currentGrade}등급` : '미정'}
+          {subjectGrades.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>{t('noSubjectsAdded')}</Text>
+              <TouchableOpacity 
+                style={styles.addFirstButton}
+                onPress={() => setIsAddModalVisible(true)}
+              >
+                <Plus size={20} color="#FFFFFF" />
+                <Text style={styles.addFirstButtonText}>{t('addSubject')}</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            subjectGrades.map((subjectGrade) => {
+              const currentGrade = getCurrentGrade(subjectGrade);
+              const trend = getGradeTrend(subjectGrade);
+              const isEditing = editingSubject === subjectGrade.subject;
+              
+              return (
+                <View key={subjectGrade.subject} style={styles.subjectGradeCard}>
+                  <View style={styles.subjectHeader}>
+                    <Text style={styles.subjectName}>
+                      {language === 'en' ? getSubjectName(subjectGrade.subject) : subjectGrade.subject}
                     </Text>
-                    {trend !== 'same' && (
-                      <View style={styles.trendIcon}>
-                        {trend === 'up' ? (
-                          <TrendingUp size={16} color="#34C759" />
-                        ) : (
-                          <TrendingDown size={16} color="#FF3B30" />
-                        )}
-                      </View>
-                    )}
-                  </View>
-                </View>
-                
-                <View style={styles.gradeSelector}>
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((grade) => (
-                    <TouchableOpacity
-                      key={grade}
-                      style={[
-                        styles.gradeOption,
-                        currentGrade === grade && {
-                          backgroundColor: selectedExamInfo.color,
-                          borderColor: selectedExamInfo.color,
-                        },
-                      ]}
-                      onPress={() => updateGrade(subjectGrade.subject, grade)}
-                    >
-                      <Text
-                        style={[
-                          styles.gradeOptionText,
-                          currentGrade === grade && styles.gradeOptionTextSelected,
-                        ]}
+                    <View style={styles.gradeInfo}>
+                      <Text style={styles.currentGrade}>
+                        {currentGrade ? `${t(`grade${currentGrade}`)}` : t('noGrade')}
+                      </Text>
+                      {trend !== 'same' && currentGrade && (
+                        <View style={styles.trendIcon}>
+                          {trend === 'up' ? (
+                            <TrendingUp size={16} color="#34C759" />
+                          ) : (
+                            <TrendingDown size={16} color="#FF3B30" />
+                          )}
+                        </View>
+                      )}
+                      <TouchableOpacity
+                        onPress={() => setEditingSubject(isEditing ? null : subjectGrade.subject)}
+                        style={styles.editButton}
                       >
-                        {grade}
-                      </Text>
+                        <Edit3 size={16} color="#8E8E93" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                  
+                  {isEditing && (
+                    <View style={styles.editActions}>
+                      <TouchableOpacity
+                        style={styles.deleteButton}
+                        onPress={() => {
+                          setEditingSubject(null);
+                          deleteSubject(subjectGrade.subject);
+                        }}
+                      >
+                        <Trash2 size={18} color="#FF3B30" />
+                        <Text style={styles.deleteButtonText}>{t('deleteGrade')}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                  
+                  <View style={styles.gradeSelector}>
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((grade) => (
+                      <TouchableOpacity
+                        key={grade}
+                        style={[
+                          styles.gradeOption,
+                          currentGrade === grade && {
+                            backgroundColor: selectedExamInfo.color,
+                            borderColor: selectedExamInfo.color,
+                          },
+                        ]}
+                        onPress={() => updateGrade(subjectGrade.subject, grade)}
+                      >
+                        <Text
+                          style={[
+                            styles.gradeOptionText,
+                            currentGrade === grade && styles.gradeOptionTextSelected,
+                          ]}
+                        >
+                          {grade}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                    <TouchableOpacity
+                      style={styles.gradeOption}
+                      onPress={() => updateGrade(subjectGrade.subject, null)}
+                    >
+                      <Text style={styles.gradeOptionText}>X</Text>
                     </TouchableOpacity>
-                  ))}
-                </View>
-                
-                {/* Grade History */}
-                <View style={styles.gradeHistory}>
-                  <Text style={styles.historyLabel}>성적 변화:</Text>
-                  <View style={styles.historyGrades}>
-                    <View style={styles.historyItem}>
-                      <Text style={styles.historyType}>모의</Text>
-                      <Text style={styles.historyGrade}>
-                        {subjectGrade.mockGrade ? `${subjectGrade.mockGrade}등급` : '-'}
-                      </Text>
-                    </View>
-                    <View style={styles.historyItem}>
-                      <Text style={styles.historyType}>중간</Text>
-                      <Text style={styles.historyGrade}>
-                        {subjectGrade.midtermGrade ? `${subjectGrade.midtermGrade}등급` : '-'}
-                      </Text>
-                    </View>
-                    <View style={styles.historyItem}>
-                      <Text style={styles.historyType}>기말</Text>
-                      <Text style={styles.historyGrade}>
-                        {subjectGrade.finalGrade ? `${subjectGrade.finalGrade}등급` : '-'}
-                      </Text>
+                  </View>
+                  
+                  {/* Grade History */}
+                  <View style={styles.gradeHistory}>
+                    <Text style={styles.historyLabel}>{t('gradeHistory')}:</Text>
+                    <View style={styles.historyGrades}>
+                      <View style={styles.historyItem}>
+                        <Text style={styles.historyType}>{t('mockShort')}</Text>
+                        <Text style={styles.historyGrade}>
+                          {subjectGrade.grades.mock ? `${subjectGrade.grades.mock}` : '-'}
+                        </Text>
+                      </View>
+                      <View style={styles.historyItem}>
+                        <Text style={styles.historyType}>{t('midtermShort')}</Text>
+                        <Text style={styles.historyGrade}>
+                          {subjectGrade.grades.midterm ? `${subjectGrade.grades.midterm}` : '-'}
+                        </Text>
+                      </View>
+                      <View style={styles.historyItem}>
+                        <Text style={styles.historyType}>{t('finalShort')}</Text>
+                        <Text style={styles.historyGrade}>
+                          {subjectGrade.grades.final ? `${subjectGrade.grades.final}` : '-'}
+                        </Text>
+                      </View>
                     </View>
                   </View>
                 </View>
-              </View>
-            );
-          })}
+              );
+            })
+          )}
         </View>
       </ScrollView>
+
+      {/* Add Subject Modal */}
+      <Modal
+        visible={isAddModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setIsAddModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>{t('addSubject')}</Text>
+            <TextInput
+              style={styles.input}
+              placeholder={t('enterSubjectName')}
+              value={newSubjectName}
+              onChangeText={setNewSubjectName}
+              autoFocus
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setNewSubjectName('');
+                  setIsAddModalVisible(false);
+                }}
+              >
+                <Text style={styles.cancelButtonText}>{t('cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.saveButton]}
+                onPress={addNewSubject}
+              >
+                <Text style={styles.saveButtonText}>{t('add')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -291,8 +504,19 @@ const styles = StyleSheet.create({
   headerRight: {
     width: 40,
   },
+  addButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   scrollView: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -359,6 +583,36 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 40,
   },
+  emptyState: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 32,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#8E8E93',
+    marginBottom: 20,
+  },
+  addFirstButton: {
+    flexDirection: 'row',
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    gap: 8,
+  },
+  addFirstButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   subjectGradeCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
@@ -397,6 +651,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  editButton: {
+    padding: 4,
+  },
+  editActions: {
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F2F2F7',
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#FFF2F2',
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  deleteButtonText: {
+    color: '#FF3B30',
+    fontSize: 14,
+    fontWeight: '500',
+  },
   gradeSelector: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -404,7 +682,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   gradeOption: {
-    width: (width - 40 - 32 - 64) / 9, // Responsive width
+    width: (width - 40 - 32 - 80) / 10,
     height: 36,
     borderRadius: 6,
     backgroundColor: '#F2F2F7',
@@ -434,7 +712,7 @@ const styles = StyleSheet.create({
   },
   historyGrades: {
     flexDirection: 'row',
-    gap: 16,
+    gap: 24,
   },
   historyItem: {
     alignItems: 'center',
@@ -445,8 +723,63 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   historyGrade: {
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: 14,
+    fontWeight: '600',
     color: '#000000',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 24,
+    width: width - 48,
+    maxWidth: 400,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#F2F2F7',
+  },
+  cancelButtonText: {
+    color: '#8E8E93',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  saveButton: {
+    backgroundColor: '#007AFF',
+  },
+  saveButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

@@ -9,6 +9,7 @@ import getPriorityExams from "./routes/exams/get-priority-exams/route";
 // Grade routes
 import getSubjectGrades from "./routes/grades/get-subject-grades/route";
 import updateSubjectGrade from "./routes/grades/update-subject-grade/route";
+import deleteSubjectGrade from "./routes/grades/delete-subject-grade/route";
 
 // Settings routes
 import getUserSettings from "./routes/settings/get-user-settings/route";
@@ -30,6 +31,7 @@ export const appRouter = createTRPCRouter({
   grades: createTRPCRouter({
     getSubjectGrades,
     updateSubjectGrade,
+    deleteSubjectGrade,
   }),
   settings: createTRPCRouter({
     getUserSettings,

@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS subject_grades (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     subject VARCHAR(100) NOT NULL,
     grade VARCHAR(10) NOT NULL,
+    grades TEXT, -- JSON string to store grades for different exam types
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(user_id, subject)
