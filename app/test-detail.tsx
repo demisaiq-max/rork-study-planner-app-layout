@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  Platform,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Camera, Upload, CheckCircle } from 'lucide-react-native';
@@ -16,20 +15,18 @@ import { useUser } from '@/hooks/user-context';
 import { useLanguage } from '@/hooks/language-context';
 import { trpc } from '@/lib/trpc';
 import * as ImagePicker from 'expo-image-picker';
-import CircularProgress from '@/components/CircularProgress';
 
 export default function TestDetailScreen() {
   const { testId } = useLocalSearchParams<{ testId: string }>();
   const { user } = useUser();
   const { t } = useLanguage();
-  const [isLoading, setIsLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   // Fetch test details
-  const testQuery = trpc.tests.getSubjectTests.useQuery(
-    { userId: user?.id || '', subject: '' },
-    { enabled: !!user?.id }
+  const testQuery = trpc.tests.getTestById.useQuery(
+    { testId: testId || '' },
+    { enabled: !!testId }
   );
 
   const submitResultMutation = trpc.tests.submitTestResult.useMutation({
@@ -39,13 +36,7 @@ export default function TestDetailScreen() {
     },
   });
 
-  useEffect(() => {
-    if (testQuery.data !== undefined) {
-      setIsLoading(false);
-    }
-  }, [testQuery.data]);
-
-  const currentTest = testQuery.data?.find((test: any) => test.id === testId);
+  const currentTest = testQuery.data;
   const hasResult = currentTest?.test_results && currentTest.test_results.length > 0;
   const result = hasResult ? currentTest.test_results[0] : null;
 
@@ -144,7 +135,7 @@ export default function TestDetailScreen() {
     return date.toLocaleDateString();
   };
 
-  if (isLoading || !currentTest) {
+  if (testQuery.isLoading || !currentTest) {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
