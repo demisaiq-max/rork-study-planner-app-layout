@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -30,7 +30,7 @@ export default function AllSubjectsScreen() {
     }
   }, [subjectsQuery.data]);
 
-  const getSubjectName = (subjectName: string): string => {
+  const getSubjectName = useCallback((subjectName: string): string => {
     const koreanToKey: { [key: string]: string } = {
       '국어': 'korean',
       '영어': 'english', 
@@ -45,11 +45,11 @@ export default function AllSubjectsScreen() {
     }
     
     return subjectName;
-  };
+  }, [t]);
 
-  const handleSubjectPress = (subject: string) => {
+  const handleSubjectPress = useCallback((subject: string) => {
     router.push(`/subject-tests?subject=${encodeURIComponent(subject)}`);
-  };
+  }, []);
 
   if (isLoading) {
     return (
