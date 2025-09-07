@@ -1443,4 +1443,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 4,
   },
+  expectedGradeCard: {
+    backgroundColor: "#F8F9FA",
+    borderRadius: 8,
+    padding: 12,
+    minWidth: 60,
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#E5E5EA",
+    borderStyle: "dashed",
+  },
+  expectedGradeText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#8E8E93",
+    marginBottom: 2,
+    textAlign: "center",
+  },
+  expectedGradeValue: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#8E8E93",
+  },
 });
