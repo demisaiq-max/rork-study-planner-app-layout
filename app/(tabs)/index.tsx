@@ -69,6 +69,11 @@ export default function HomeScreen() {
   const [newBrainDumpText, setNewBrainDumpText] = useState("");
   const [showEditGradesModal, setShowEditGradesModal] = useState(false);
   const [editingGrades, setEditingGrades] = useState<Record<string, number>>({});
+  const [currentStats, setCurrentStats] = useState({
+    targetPercentile: 89,
+    averagePercentile: 50,
+    recentPercentile: 68,
+  });
   
   useEffect(() => {
     const timer = setInterval(() => {
@@ -241,12 +246,19 @@ export default function HomeScreen() {
         </View>
 
         {/* Subject Grades Section */}
-        <View style={styles.subjectsCard}>
+        <TouchableOpacity 
+          style={styles.subjectsCard}
+          onPress={() => router.push('/subject-grades')}
+          activeOpacity={0.7}
+        >
           <View style={styles.subjectsHeader}>
             <Text style={styles.subjectsTitle}>{t('subjectsTitle')}</Text>
-            <TouchableOpacity onPress={() => setShowEditGradesModal(true)}>
-              <Text style={styles.subjectsEditButton}>{t('editButton')}</Text>
-            </TouchableOpacity>
+            <View style={styles.subjectsHeaderRight}>
+              <TouchableOpacity onPress={() => setShowEditGradesModal(true)}>
+                <Text style={styles.subjectsEditButton}>{t('editButton')}</Text>
+              </TouchableOpacity>
+              <ArrowUpRight size={18} color="#8E8E93" style={{ marginLeft: 8 }} />
+            </View>
           </View>
           
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.subjectsScroll}>
@@ -299,7 +311,7 @@ export default function HomeScreen() {
               <Text style={styles.expectedGradeValue}>2{t('gradeUnit')}</Text>
             </TouchableOpacity>
           </ScrollView>
-        </View>
+        </TouchableOpacity>
 
         {/* D-Day Cards */}
         <View style={styles.dDaySection}>
@@ -1096,6 +1108,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#000000",
+  },
+  subjectsHeaderRight: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   subjectsEditButton: {
     fontSize: 14,
