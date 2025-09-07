@@ -77,7 +77,7 @@ export default function HomeScreen() {
   const [showEditGradesModal, setShowEditGradesModal] = useState(false);
   const [editingGrades, setEditingGrades] = useState<Record<string, number>>({});
   const [currentStats, setCurrentStats] = useState({
-    targetPercentile: 130,
+    targetPercentile: 140,
     averagePercentile: 0,
     recentPercentile: 0,
   });
@@ -99,37 +99,53 @@ export default function HomeScreen() {
   // Update stats when a graded exam is selected
   useEffect(() => {
     if (selectedGradedExam && gradedExams) {
-      // Use the percentile from the selected exam
-      const selectedPercentile = selectedGradedExam.percentile || 0;
+      // When a specific exam is selected, show stats for that subject only
+      const selectedSubject = selectedGradedExam.tests?.subject;
+      const subjectExams = gradedExams.filter((exam: any) => exam.tests?.subject === selectedSubject);
       
-      // Calculate average standard score from all graded exams
-      const allStandardScores = gradedExams.map((exam: any) => exam.standard_score || 0).filter(s => s > 0);
-      const averageStandardScore = allStandardScores.length > 0 
-        ? Math.round(allStandardScores.reduce((sum, score) => sum + score, 0) / allStandardScores.length)
+      // Calculate stats for the selected subject
+      const subjectStandardScores = subjectExams.map((exam: any) => exam.standard_score || 0).filter(s => s > 0);
+      const subjectPercentiles = subjectExams.map((exam: any) => exam.percentile || 0).filter(p => p > 0);
+      
+      const averageStandardScore = subjectStandardScores.length > 0 
+        ? Math.round(subjectStandardScores.reduce((sum, score) => sum + score, 0) / subjectStandardScores.length)
         : 0;
       
-      // Calculate target score (highest achieved standard score + 10, or max 150)
-      const maxStandardScore = allStandardScores.length > 0 ? Math.max(...allStandardScores) : 0;
-      const targetScore = maxStandardScore > 0 ? Math.min(maxStandardScore + 10, 150) : 130;
+      const averagePercentile = subjectPercentiles.length > 0 
+        ? Math.round(subjectPercentiles.reduce((sum, percentile) => sum + percentile, 0) / subjectPercentiles.length)
+        : 0;
+      
+      // Target score: highest achieved standard score in this subject + 5, or 140 if no data
+      const maxStandardScore = subjectStandardScores.length > 0 ? Math.max(...subjectStandardScores) : 0;
+      const targetScore = maxStandardScore > 0 ? Math.min(maxStandardScore + 5, 150) : 140;
+      
+      // Recent percentile from the selected exam
+      const recentPercentile = selectedGradedExam.percentile || 0;
       
       setCurrentStats({
         targetPercentile: targetScore,
         averagePercentile: averageStandardScore,
-        recentPercentile: selectedPercentile,
+        recentPercentile: recentPercentile,
       });
     } else if (gradedExams && gradedExams.length > 0) {
       // Show overall stats when no specific exam is selected
       const allStandardScores = gradedExams.map((exam: any) => exam.standard_score || 0).filter(s => s > 0);
+      const allPercentiles = gradedExams.map((exam: any) => exam.percentile || 0).filter(p => p > 0);
+      
       const averageStandardScore = allStandardScores.length > 0 
         ? Math.round(allStandardScores.reduce((sum, score) => sum + score, 0) / allStandardScores.length)
         : 0;
       
+      const averagePercentile = allPercentiles.length > 0 
+        ? Math.round(allPercentiles.reduce((sum, percentile) => sum + percentile, 0) / allPercentiles.length)
+        : 0;
+      
+      // Target score: highest achieved standard score across all subjects + 5, or 140 if no data
+      const maxStandardScore = allStandardScores.length > 0 ? Math.max(...allStandardScores) : 0;
+      const targetScore = maxStandardScore > 0 ? Math.min(maxStandardScore + 5, 150) : 140;
+      
       // Most recent exam percentile (first in the sorted array)
       const recentPercentile = gradedExams[0]?.percentile || 0;
-      
-      // Calculate target score (highest achieved standard score + 10, or max 150)
-      const maxStandardScore = allStandardScores.length > 0 ? Math.max(...allStandardScores) : 0;
-      const targetScore = maxStandardScore > 0 ? Math.min(maxStandardScore + 10, 150) : 130;
       
       setCurrentStats({
         targetPercentile: targetScore,
@@ -139,7 +155,7 @@ export default function HomeScreen() {
     } else {
       // Reset to default stats when no data
       setCurrentStats({
-        targetPercentile: 130,
+        targetPercentile: 140,
         averagePercentile: 0,
         recentPercentile: 0,
       });
@@ -1201,10 +1217,10 @@ const styles = StyleSheet.create({
     borderColor: "#E5E5EA",
   },
   subjectCardSelected: {
-    backgroundColor: "#E8F5E8",
-    borderColor: "#34C759",
+    backgroundColor: "#FFF3E0",
+    borderColor: "#FF9500",
     borderWidth: 3,
-    shadowColor: "#34C759",
+    shadowColor: "#FF9500",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -1220,7 +1236,7 @@ const styles = StyleSheet.create({
     color: "#8E8E93",
   },
   subjectNameSelected: {
-    color: "#34C759",
+    color: "#FF9500",
     fontWeight: "700",
   },
   subjectGrade: {
@@ -1231,7 +1247,7 @@ const styles = StyleSheet.create({
     color: "#8E8E93",
   },
   subjectGradeSelected: {
-    color: "#34C759",
+    color: "#FF9500",
     fontWeight: "600",
   },
   subjectTestName: {
@@ -1240,7 +1256,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   subjectTestNameSelected: {
-    color: "#34C759",
+    color: "#FF9500",
   },
   subjectIndicator: {
     width: 4,
@@ -1250,7 +1266,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   subjectIndicatorSelected: {
-    backgroundColor: "#34C759",
+    backgroundColor: "#FF9500",
     width: 6,
     height: 6,
     borderRadius: 3,
