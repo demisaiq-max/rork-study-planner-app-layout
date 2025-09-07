@@ -21,6 +21,7 @@ import TaskItem from "@/components/TaskItem";
 import { useStudyStore } from "@/hooks/study-store";
 import { useUser } from "@/hooks/user-context";
 import { useLanguage } from "@/hooks/language-context";
+import { trpc } from "@/lib/trpc";
 import FormattedDateInput from "@/components/FormattedDateInput";
 
 const { width } = Dimensions.get("window");
@@ -53,6 +54,12 @@ export default function HomeScreen() {
   const { user } = useUser();
   const { t } = useLanguage();
   
+  // Fetch graded exams
+  const { data: gradedExams, isLoading: isLoadingGradedExams } = trpc.tests.getLatestTestResults.useQuery(
+    { userId: user?.id || '' },
+    { enabled: !!user?.id }
+  );
+  
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showAddExamModal, setShowAddExamModal] = useState(false);
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
@@ -74,6 +81,7 @@ export default function HomeScreen() {
     averagePercentile: 50,
     recentPercentile: 68,
   });
+  const [selectedGradedExam, setSelectedGradedExam] = useState<any>(null);
   
   useEffect(() => {
     const timer = setInterval(() => {
@@ -87,6 +95,29 @@ export default function HomeScreen() {
       setEditingGrades({...subjectGrades});
     }
   }, [showEditGradesModal, subjectGrades]);
+
+  // Update stats when a graded exam is selected
+  useEffect(() => {
+    if (selectedGradedExam) {
+      // Calculate stats based on the selected exam
+      const score = selectedGradedExam.score || 0;
+      const totalQuestions = selectedGradedExam.total_questions || 100;
+      const percentage = Math.round((score / totalQuestions) * 100);
+      
+      setCurrentStats({
+        targetPercentile: 89, // Keep target the same
+        averagePercentile: Math.max(30, percentage - 10), // Simulate average
+        recentPercentile: percentage,
+      });
+    } else {
+      // Reset to default stats
+      setCurrentStats({
+        targetPercentile: 89,
+        averagePercentile: 50,
+        recentPercentile: 68,
+      });
+    }
+  }, [selectedGradedExam]);
 
   const progressPercentage = (todayStudyTime / targetStudyTime) * 100;
 
@@ -211,33 +242,33 @@ export default function HomeScreen() {
             <View style={styles.circlesContainer}>
               <View style={styles.circleItem}>
                 <CircularProgress 
-                  percentage={89}
+                  percentage={currentStats.targetPercentile}
                   size={70}
                   strokeWidth={6}
                   color="#333333"
-                  centerText="89"
+                  centerText={currentStats.targetPercentile.toString()}
                 />
                 <Text style={styles.circleLabel}>목표 백분위</Text>
               </View>
               
               <View style={styles.circleItem}>
                 <CircularProgress 
-                  percentage={50}
+                  percentage={currentStats.averagePercentile}
                   size={70}
                   strokeWidth={6}
                   color="#E5E5EA"
-                  centerText="50"
+                  centerText={currentStats.averagePercentile.toString()}
                 />
                 <Text style={styles.circleLabel}>평균 백분위</Text>
               </View>
               
               <View style={styles.circleItem}>
                 <CircularProgress 
-                  percentage={68}
+                  percentage={currentStats.recentPercentile}
                   size={70}
                   strokeWidth={6}
                   color="#8E8E93"
-                  centerText="68"
+                  centerText={currentStats.recentPercentile.toString()}
                 />
                 <Text style={styles.circleLabel}>최근 백분위</Text>
               </View>
@@ -245,73 +276,83 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Subject Grades Section */}
-        <TouchableOpacity 
-          style={styles.subjectsCard}
-          onPress={() => router.push('/subject-grades')}
-          activeOpacity={0.7}
-        >
+        {/* Graded Exams Section */}
+        <View style={styles.subjectsCard}>
           <View style={styles.subjectsHeader}>
-            <Text style={styles.subjectsTitle}>{t('subjectsTitle')}</Text>
+            <Text style={styles.subjectsTitle}>Graded Exams</Text>
             <View style={styles.subjectsHeaderRight}>
-              <TouchableOpacity onPress={() => router.push('/subject-grades')}>
-                <Text style={styles.subjectsEditButton}>{t('editButton')}</Text>
+              <TouchableOpacity onPress={() => router.push('/subject-tests')}>
+                <Text style={styles.subjectsEditButton}>View All</Text>
               </TouchableOpacity>
               <ArrowUpRight size={18} color="#8E8E93" style={{ marginLeft: 8 }} />
             </View>
           </View>
           
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.subjectsScroll}>
-            {subjects?.map((subject) => {
-              const currentVisibleSubjects = visibleSubjects || [];
-              const isVisible = currentVisibleSubjects.includes(subject);
-              const gradeValue = subjectGrades?.[subject];
-              const grade = gradeValue ? gradeValue.toString() : t('undetermined');
-              const isSelected = selectedSubject === subject;
-              
-              return (
-                <TouchableOpacity 
-                  key={subject}
-                  style={[
-                    styles.subjectCard, 
-                    !isVisible && styles.subjectCardHidden,
-                    isSelected && styles.subjectCardSelected
-                  ]}
-                  onPress={() => {
-                    if (currentVisibleSubjects.includes(subject)) {
-                      setSelectedSubject(isSelected ? null : subject);
-                    } else {
-                      toggleSubjectVisibility(subject);
-                    }
-                  }}
-                >
-                  <Text style={[
-                    styles.subjectName, 
-                    !isVisible && styles.subjectNameHidden,
-                    isSelected && styles.subjectNameSelected
-                  ]}>
-                    {t(subject.toLowerCase())}
-                  </Text>
-                  <Text style={[
-                    styles.subjectGrade, 
-                    !isVisible && styles.subjectGradeHidden,
-                    isSelected && styles.subjectGradeSelected
-                  ]}>
-                    {gradeValue ? `${grade}${t('gradeUnit')}` : grade}
-                  </Text>
-                  {isVisible && (
-                    <View style={[styles.subjectIndicator, isSelected && styles.subjectIndicatorSelected]} />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-            
-            <TouchableOpacity style={styles.expectedGradeCard}>
-              <Text style={styles.expectedGradeText}>{t('expectedGrade')}</Text>
-              <Text style={styles.expectedGradeValue}>2{t('gradeUnit')}</Text>
-            </TouchableOpacity>
+            {isLoadingGradedExams ? (
+              <View style={styles.loadingContainer}>
+                <Text style={styles.loadingText}>Loading...</Text>
+              </View>
+            ) : gradedExams && gradedExams.length > 0 ? (
+              gradedExams.map((exam: any) => {
+                const isSelected = selectedGradedExam?.id === exam.id;
+                const score = exam.score || 0;
+                const totalQuestions = exam.total_questions || 100;
+                const percentage = Math.round((score / totalQuestions) * 100);
+                const testType = exam.tests?.test_type || 'test';
+                const testName = exam.tests?.test_name || 'Unknown Test';
+                const subject = exam.tests?.subject || 'Unknown Subject';
+                
+                // Format test type for display
+                const formatTestType = (type: string) => {
+                  return type.split('_').map(word => 
+                    word.charAt(0).toUpperCase() + word.slice(1)
+                  ).join(' ');
+                };
+                
+                return (
+                  <TouchableOpacity 
+                    key={exam.id}
+                    style={[
+                      styles.subjectCard,
+                      isSelected && styles.subjectCardSelected
+                    ]}
+                    onPress={() => {
+                      setSelectedGradedExam(isSelected ? null : exam);
+                    }}
+                  >
+                    <Text style={[
+                      styles.subjectName,
+                      isSelected && styles.subjectNameSelected
+                    ]}>
+                      {subject}
+                    </Text>
+                    <Text style={[
+                      styles.subjectGrade,
+                      isSelected && styles.subjectGradeSelected
+                    ]}>
+                      {percentage}%
+                    </Text>
+                    <Text style={[
+                      styles.subjectTestName,
+                      isSelected && styles.subjectTestNameSelected
+                    ]}>
+                      {formatTestType(testType)}
+                    </Text>
+                    {isSelected && (
+                      <View style={styles.subjectIndicatorSelected} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })
+            ) : (
+              <View style={styles.noResultsCard}>
+                <Text style={styles.noResultsText}>No Graded Exams</Text>
+                <Text style={styles.noResultsSubtext}>Complete tests to see results</Text>
+              </View>
+            )}
           </ScrollView>
-        </TouchableOpacity>
+        </View>
 
         {/* D-Day Cards */}
         <View style={styles.dDaySection}>
