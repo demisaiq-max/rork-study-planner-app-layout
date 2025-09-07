@@ -98,26 +98,49 @@ export default function HomeScreen() {
 
   // Update stats when a graded exam is selected
   useEffect(() => {
-    if (selectedGradedExam) {
+    if (selectedGradedExam && gradedExams) {
       // Calculate stats based on the selected exam
       const score = selectedGradedExam.score || 0;
       const totalQuestions = selectedGradedExam.total_questions || 100;
       const percentage = Math.round((score / totalQuestions) * 100);
       
+      // Calculate average from all graded exams
+      const allScores = gradedExams.map((exam: any) => {
+        const examScore = exam.score || 0;
+        const examTotal = exam.total_questions || 100;
+        return Math.round((examScore / examTotal) * 100);
+      });
+      const averagePercentage = Math.round(allScores.reduce((sum, score) => sum + score, 0) / allScores.length);
+      
       setCurrentStats({
         targetPercentile: 89, // Keep target the same
-        averagePercentile: Math.max(30, percentage - 10), // Simulate average
+        averagePercentile: averagePercentage,
         recentPercentile: percentage,
       });
-    } else {
-      // Reset to default stats
+    } else if (gradedExams && gradedExams.length > 0) {
+      // Show overall stats when no specific exam is selected
+      const allScores = gradedExams.map((exam: any) => {
+        const examScore = exam.score || 0;
+        const examTotal = exam.total_questions || 100;
+        return Math.round((examScore / examTotal) * 100);
+      });
+      const averagePercentage = Math.round(allScores.reduce((sum, score) => sum + score, 0) / allScores.length);
+      const recentScore = allScores[0] || 0; // Most recent exam score
+      
       setCurrentStats({
         targetPercentile: 89,
-        averagePercentile: 50,
-        recentPercentile: 68,
+        averagePercentile: averagePercentage,
+        recentPercentile: recentScore,
+      });
+    } else {
+      // Reset to default stats when no data
+      setCurrentStats({
+        targetPercentile: 89,
+        averagePercentile: 30,
+        recentPercentile: 0,
       });
     }
-  }, [selectedGradedExam]);
+  }, [selectedGradedExam, gradedExams]);
 
   const progressPercentage = (todayStudyTime / targetStudyTime) * 100;
 
@@ -1176,9 +1199,14 @@ const styles = StyleSheet.create({
     borderColor: "#E5E5EA",
   },
   subjectCardSelected: {
-    backgroundColor: "#E8F3FF",
-    borderColor: "#007AFF",
+    backgroundColor: "#FFF2E8",
+    borderColor: "#FF6B35",
     borderWidth: 3,
+    shadowColor: "#FF6B35",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
   subjectName: {
     fontSize: 14,
@@ -1190,7 +1218,7 @@ const styles = StyleSheet.create({
     color: "#8E8E93",
   },
   subjectNameSelected: {
-    color: "#007AFF",
+    color: "#FF6B35",
     fontWeight: "700",
   },
   subjectGrade: {
@@ -1201,7 +1229,7 @@ const styles = StyleSheet.create({
     color: "#8E8E93",
   },
   subjectGradeSelected: {
-    color: "#007AFF",
+    color: "#FF6B35",
     fontWeight: "600",
   },
   subjectTestName: {
@@ -1210,7 +1238,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   subjectTestNameSelected: {
-    color: "#007AFF",
+    color: "#FF6B35",
   },
   subjectIndicator: {
     width: 4,
@@ -1220,7 +1248,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   subjectIndicatorSelected: {
-    backgroundColor: "#007AFF",
+    backgroundColor: "#FF6B35",
     width: 6,
     height: 6,
     borderRadius: 3,
