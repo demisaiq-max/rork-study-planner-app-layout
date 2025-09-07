@@ -322,28 +322,6 @@ export default function SubjectGradesScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Score Meters */}
-        <View style={styles.scoreMetersContainer}>
-          <View style={styles.scoreMeter}>
-            <View style={styles.scoreMeterCircle}>
-              <Text style={styles.scoreMeterValue}>{statistics.target}</Text>
-            </View>
-            <Text style={styles.scoreMeterLabel}>{t('targetPercentile')}</Text>
-          </View>
-          <View style={styles.scoreMeter}>
-            <View style={styles.scoreMeterCircle}>
-              <Text style={styles.scoreMeterValue}>{statistics.average}</Text>
-            </View>
-            <Text style={styles.scoreMeterLabel}>{t('averagePercentile')}</Text>
-          </View>
-          <View style={styles.scoreMeter}>
-            <View style={styles.scoreMeterCircle}>
-              <Text style={styles.scoreMeterValue}>{statistics.recent}</Text>
-            </View>
-            <Text style={styles.scoreMeterLabel}>{t('recentPercentile')}</Text>
-          </View>
-        </View>
-
         {selectedTest && (
           <View style={styles.selectedTestInfo}>
             <Text style={styles.selectedTestText}>
@@ -579,38 +557,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  scoreMetersContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 24,
-    paddingHorizontal: 20,
-    backgroundColor: '#FFFFFF',
-    marginBottom: 16,
-  },
-  scoreMeter: {
-    alignItems: 'center',
-  },
-  scoreMeterCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#F2F2F7',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#E5E5EA',
-  },
-  scoreMeterValue: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#000000',
-  },
-  scoreMeterLabel: {
-    marginTop: 8,
-    fontSize: 11,
-    color: '#8E8E93',
-    textAlign: 'center',
-  },
+
   selectedTestInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -619,6 +566,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: '#E8F4FF',
     marginHorizontal: 20,
+    marginTop: 16,
     marginBottom: 16,
     borderRadius: 8,
   },
