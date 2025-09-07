@@ -5,11 +5,13 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   ActivityIndicator,
+  Modal,
+  TextInput,
+  Alert,
 } from 'react-native';
 import { router } from 'expo-router';
-import { ArrowLeft, ChevronRight } from 'lucide-react-native';
+import { ArrowLeft, ChevronRight, Plus } from 'lucide-react-native';
 import { useUser } from '@/hooks/user-context';
 import { useLanguage } from '@/hooks/language-context';
 import { trpc } from '@/lib/trpc';
@@ -21,6 +23,8 @@ export default function SubjectGradesScreen() {
   const { user } = useUser();
   const { t } = useLanguage();
   const [isLoading, setIsLoading] = useState(true);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newSubjectName, setNewSubjectName] = useState('');
 
   // Fetch subjects from backend
   const subjectsQuery = trpc.tests.getUserSubjects.useQuery(
@@ -33,6 +37,17 @@ export default function SubjectGradesScreen() {
     { userId: user?.id || '' },
     { enabled: !!user?.id }
   );
+
+  const createSubjectMutation = trpc.tests.createSubject.useMutation({
+    onSuccess: () => {
+      subjectsQuery.refetch();
+      setShowAddModal(false);
+      setNewSubjectName('');
+    },
+    onError: (error) => {
+      Alert.alert(t('error'), error.message === 'Subject already exists' ? t('subjectAlreadyExists') : t('failedToAddSubject'));
+    },
+  });
 
   useEffect(() => {
     if (subjectsQuery.data !== undefined) {
@@ -51,6 +66,24 @@ export default function SubjectGradesScreen() {
       (result: any) => result.tests.subject === subject
     );
     return latestResult?.grade || null;
+  };
+
+  const handleAddSubject = async () => {
+    if (!newSubjectName.trim()) {
+      Alert.alert(t('error'), t('enterSubjectName'));
+      return;
+    }
+
+    if (!user?.id) return;
+
+    try {
+      await createSubjectMutation.mutateAsync({
+        userId: user.id,
+        subject: newSubjectName.trim(),
+      });
+    } catch {
+      // Error is handled in the mutation's onError callback
+    }
   };
 
   const getSubjectName = (subject: string): string => {
@@ -72,7 +105,7 @@ export default function SubjectGradesScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <ArrowLeft size={24} color="#000000" />
@@ -83,19 +116,21 @@ export default function SubjectGradesScreen() {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007AFF" />
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ArrowLeft size={24} color="#000000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('subjectGrades')}</Text>
-        <View style={styles.headerRight} />
+        <TouchableOpacity onPress={() => setShowAddModal(true)} style={styles.addButton}>
+          <Plus size={24} color="#007AFF" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -106,6 +141,13 @@ export default function SubjectGradesScreen() {
             <View style={styles.emptyState}>
               <Text style={styles.emptyText}>{t('noSubjectsFound')}</Text>
               <Text style={styles.emptySubtext}>{t('takeTestsToSeeSubjects')}</Text>
+              <TouchableOpacity 
+                style={styles.addFirstButton}
+                onPress={() => setShowAddModal(true)}
+              >
+                <Plus size={20} color="#FFFFFF" />
+                <Text style={styles.addFirstButtonText}>{t('addSubject')}</Text>
+              </TouchableOpacity>
             </View>
           ) : (
             subjectsQuery.data.map((subject: string) => {
@@ -136,8 +178,53 @@ export default function SubjectGradesScreen() {
         </View>
       </ScrollView>
 
+      {/* Add Subject Modal */}
+      <Modal
+        visible={showAddModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAddModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>{t('addSubject')}</Text>
+            
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>{t('subjectName')}</Text>
+              <TextInput
+                style={styles.textInput}
+                value={newSubjectName}
+                onChangeText={setNewSubjectName}
+                placeholder={t('enterSubjectName')}
+                placeholderTextColor="#8E8E93"
+              />
+            </View>
 
-    </SafeAreaView>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setShowAddModal(false);
+                  setNewSubjectName('');
+                }}
+              >
+                <Text style={styles.cancelButtonText}>{t('cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.saveButton]}
+                onPress={handleAddSubject}
+                disabled={createSubjectMutation.isPending}
+              >
+                <Text style={styles.saveButtonText}>
+                  {createSubjectMutation.isPending ? t('creating') : t('create')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+    </View>
   );
 }
 
@@ -169,6 +256,12 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     width: 40,
+  },
+  addButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   scrollView: {
@@ -245,6 +338,86 @@ const styles = StyleSheet.create({
   subjectGrade: {
     fontSize: 14,
     color: '#8E8E93',
+  },
+  addFirstButton: {
+    flexDirection: 'row',
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 16,
+  },
+  addFirstButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 24,
+    width: '90%',
+    maxWidth: 400,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 8,
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#000000',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#F2F2F7',
+  },
+  cancelButtonText: {
+    color: '#8E8E93',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  saveButton: {
+    backgroundColor: '#007AFF',
+  },
+  saveButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 
 });
