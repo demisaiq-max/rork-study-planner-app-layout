@@ -135,7 +135,8 @@ CREATE TABLE IF NOT EXISTS test_results (
     answer_sheet_image_url TEXT,
     analysis_data TEXT, -- JSON string for detailed analysis
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(test_id, user_id)
 );
 
 -- Create indexes for tests and test results
@@ -166,38 +167,72 @@ INSERT INTO tests (user_id, subject, test_type, test_name, test_date) VALUES
 ('550e8400-e29b-41d4-a716-446655440000', '수학', 'midterm', 'Midterm Exam', '2025-09-15'),
 ('550e8400-e29b-41d4-a716-446655440000', '탐구', 'final', 'Final Exam', '2025-10-20');
 
--- Sample test results
-INSERT INTO test_results (test_id, user_id, raw_score, standard_score, percentile, grade) 
+-- Subjects table for managing user subjects
+CREATE TABLE IF NOT EXISTS subjects (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, name)
+);
+
+-- Create indexes for subjects
+CREATE INDEX IF NOT EXISTS idx_subjects_user_id ON subjects(user_id);
+
+-- Create trigger for subjects updated_at
+DROP TRIGGER IF EXISTS update_subjects_updated_at ON subjects;
+CREATE TRIGGER update_subjects_updated_at BEFORE UPDATE ON subjects FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Sample subjects
+INSERT INTO subjects (user_id, name) VALUES 
+('550e8400-e29b-41d4-a716-446655440000', '국어'),
+('550e8400-e29b-41d4-a716-446655440000', '영어'),
+('550e8400-e29b-41d4-a716-446655440000', '수학'),
+('550e8400-e29b-41d4-a716-446655440000', '탐구'),
+('550e8400-e29b-41d4-a716-446655440000', '한국사')
+ON CONFLICT (user_id, name) DO NOTHING;
+
+-- Sample test results with detailed analysis data
+INSERT INTO test_results (test_id, user_id, raw_score, standard_score, percentile, grade, analysis_data) 
 SELECT 
     t.id,
     t.user_id,
     CASE 
-        WHEN t.test_name = 'Mock Test 1' AND t.subject = '국어' THEN 80
-        WHEN t.test_name = 'Mock Test 2' AND t.subject = '국어' THEN 86
-        WHEN t.test_name = 'Mock Test 1' AND t.subject = '영어' THEN 75
-        WHEN t.test_name = 'Midterm Exam' AND t.subject = '수학' THEN 92
-        ELSE 85
+        WHEN t.test_name = 'Mock Test 1' AND t.subject = '국어' THEN 85
+        WHEN t.test_name = 'Mock Test 2' AND t.subject = '국어' THEN 92
+        WHEN t.test_name = 'Mock Test 1' AND t.subject = '영어' THEN 78
+        WHEN t.test_name = 'Midterm Exam' AND t.subject = '수학' THEN 88
+        ELSE 82
     END as raw_score,
     CASE 
         WHEN t.test_name = 'Mock Test 1' AND t.subject = '국어' THEN 131
         WHEN t.test_name = 'Mock Test 2' AND t.subject = '국어' THEN 137
         WHEN t.test_name = 'Mock Test 1' AND t.subject = '영어' THEN 125
-        WHEN t.test_name = 'Midterm Exam' AND t.subject = '수학' THEN 145
-        ELSE 135
+        WHEN t.test_name = 'Midterm Exam' AND t.subject = '수학' THEN 134
+        ELSE 128
     END as standard_score,
     CASE 
         WHEN t.test_name = 'Mock Test 1' AND t.subject = '국어' THEN 93
         WHEN t.test_name = 'Mock Test 2' AND t.subject = '국어' THEN 95
-        WHEN t.test_name = 'Mock Test 1' AND t.subject = '영어' THEN 89
-        WHEN t.test_name = 'Midterm Exam' AND t.subject = '수학' THEN 96
-        ELSE 91
+        WHEN t.test_name = 'Mock Test 1' AND t.subject = '영어' THEN 87
+        WHEN t.test_name = 'Midterm Exam' AND t.subject = '수학' THEN 91
+        ELSE 89
     END as percentile,
     CASE 
         WHEN t.test_name = 'Mock Test 1' AND t.subject = '국어' THEN 2
         WHEN t.test_name = 'Mock Test 2' AND t.subject = '국어' THEN 2
         WHEN t.test_name = 'Mock Test 1' AND t.subject = '영어' THEN 3
-        WHEN t.test_name = 'Midterm Exam' AND t.subject = '수학' THEN 1
+        WHEN t.test_name = 'Midterm Exam' AND t.subject = '수학' THEN 2
         ELSE 2
-    END as grade
+    END as grade,
+    CASE 
+        WHEN t.test_name = 'Mock Test 1' AND t.subject = '국어' THEN '{"korean": {"rawScore": 85, "standardScore": 131, "percentile": 93, "grade": 2}, "math": {"rawScore": 78, "standardScore": 125, "percentile": 87, "grade": 3}, "english": {"rawScore": 72, "standardScore": 118, "percentile": 82, "grade": 3}}'
+        WHEN t.test_name = 'Mock Test 2' AND t.subject = '국어' THEN '{"korean": {"rawScore": 92, "standardScore": 137, "percentile": 95, "grade": 2}, "math": {"rawScore": 88, "standardScore": 135, "percentile": 94, "grade": 2}, "english": {"rawScore": 85, "standardScore": 128, "percentile": 91, "grade": 2}}'
+        WHEN t.test_name = 'Mock Test 1' AND t.subject = '영어' THEN '{"english": {"rawScore": 78, "standardScore": 125, "percentile": 87, "grade": 3}, "korean": {"rawScore": 82, "standardScore": 128, "percentile": 89, "grade": 2}}'
+        WHEN t.test_name = 'Midterm Exam' AND t.subject = '수학' THEN '{"math": {"rawScore": 88, "standardScore": 134, "percentile": 91, "grade": 2}, "korean": {"rawScore": 85, "standardScore": 131, "percentile": 93, "grade": 2}}'
+        ELSE '{"korean": {"rawScore": 82, "standardScore": 128, "percentile": 89, "grade": 2}}'
+    END as analysis_data
 FROM tests t
-WHERE t.user_id = '550e8400-e29b-41d4-a716-446655440000';
+WHERE t.user_id = '550e8400-e29b-41d4-a716-446655440000'
+ON CONFLICT DO NOTHING;

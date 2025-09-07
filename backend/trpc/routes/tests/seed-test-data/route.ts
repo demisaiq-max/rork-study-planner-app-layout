@@ -7,6 +7,8 @@ export const seedTestData = publicProcedure
     userId: z.string()
   }))
   .mutation(async ({ input }) => {
+    console.log('Seeding test data for user:', input.userId);
+    
     // First, create some test subjects if they don't exist
     const subjects = ['국어', '수학', '영어', '탐구', '한국사'];
     
@@ -19,12 +21,18 @@ export const seedTestData = publicProcedure
         .single();
       
       if (!existingSubject) {
-        await supabase
+        const { error } = await supabase
           .from('subjects')
           .insert({
             user_id: input.userId,
             name: subject
           });
+        
+        if (error) {
+          console.error('Error creating subject:', subject, error);
+        } else {
+          console.log('Created subject:', subject);
+        }
       }
     }
 
@@ -150,6 +158,60 @@ export const seedTestData = publicProcedure
     return { 
       message: 'Test data seeded successfully',
       testsCreated: createdTests.length
+    };
+  });
+
+// Debug procedure to check database state
+export const debugTestData = publicProcedure
+  .input(z.object({ 
+    userId: z.string()
+  }))
+  .query(async ({ input }) => {
+    console.log('Debugging test data for user:', input.userId);
+    
+    // Check tests
+    const { data: tests, error: testsError } = await supabase
+      .from('tests')
+      .select('*')
+      .eq('user_id', input.userId);
+    
+    if (testsError) {
+      console.error('Error fetching tests:', testsError);
+    } else {
+      console.log('Found tests:', tests?.length || 0);
+    }
+    
+    // Check test results
+    const { data: results, error: resultsError } = await supabase
+      .from('test_results')
+      .select('*')
+      .eq('user_id', input.userId);
+    
+    if (resultsError) {
+      console.error('Error fetching test results:', resultsError);
+    } else {
+      console.log('Found test results:', results?.length || 0);
+    }
+    
+    // Check subjects
+    const { data: subjects, error: subjectsError } = await supabase
+      .from('subjects')
+      .select('*')
+      .eq('user_id', input.userId);
+    
+    if (subjectsError) {
+      console.error('Error fetching subjects:', subjectsError);
+    } else {
+      console.log('Found subjects:', subjects?.length || 0);
+    }
+    
+    return {
+      tests: tests || [],
+      testResults: results || [],
+      subjects: subjects || [],
+      testsCount: tests?.length || 0,
+      resultsCount: results?.length || 0,
+      subjectsCount: subjects?.length || 0
     };
   });
 

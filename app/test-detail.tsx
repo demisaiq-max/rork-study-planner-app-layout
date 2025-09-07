@@ -35,10 +35,22 @@ export default function TestDetailScreen() {
       Alert.alert(t('success'), t('testResultSubmitted'));
     },
   });
+  
+  const seedDataMutation = trpc.tests.seedTestData.useMutation({
+    onSuccess: () => {
+      testQuery.refetch();
+      Alert.alert('Debug', 'Test data seeded successfully');
+    },
+  });
 
   const currentTest = testQuery.data;
   const hasResult = currentTest?.test_results && currentTest.test_results.length > 0;
   const result = hasResult ? currentTest.test_results[0] : null;
+  
+  // Debug logging
+  console.log('Test data:', currentTest);
+  console.log('Has result:', hasResult);
+  console.log('Result data:', result);
 
   const getSubjectName = (subjectName: string): string => {
     const koreanToKey: { [key: string]: string } = {
@@ -232,7 +244,16 @@ export default function TestDetailScreen() {
           <ArrowLeft size={24} color="#000000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{currentTest.test_name}</Text>
-        <View style={styles.headerRight} />
+        <TouchableOpacity 
+          onPress={() => {
+            if (user?.id) {
+              seedDataMutation.mutate({ userId: user.id });
+            }
+          }}
+          style={styles.debugButton}
+        >
+          <Text style={styles.debugButtonText}>Seed</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -782,6 +803,17 @@ const styles = StyleSheet.create({
   },
   analyzeButtonText: {
     fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  debugButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#FF9500',
+    borderRadius: 6,
+  },
+  debugButtonText: {
+    fontSize: 12,
     fontWeight: '600',
     color: '#FFFFFF',
   },
