@@ -49,18 +49,20 @@ export default function HomeScreen() {
   const { t, language } = useLanguage();
   
   // Fetch exams from database
-  const { data: exams, isLoading: isLoadingExams, refetch: refetchExams } = trpc.exams.getUserExams.useQuery(
+  const { data: exams, isLoading: isLoadingExams, refetch: refetchExams, error: examsError } = trpc.exams.getUserExams.useQuery(
     { userId: user?.id || '550e8400-e29b-41d4-a716-446655440000' },
     { 
-      enabled: !!user?.id
+      enabled: true,
+      retry: 1
     }
   );
   
   // Fetch graded exams
   const { data: gradedExams, isLoading: isLoadingGradedExams, error: gradedExamsError, refetch: refetchGradedExams } = trpc.tests.getLatestTestResults.useQuery(
-    { userId: user?.id || '' },
+    { userId: user?.id || '550e8400-e29b-41d4-a716-446655440000' },
     { 
-      enabled: !!user?.id
+      enabled: true,
+      retry: 1
     }
   );
   
@@ -68,16 +70,16 @@ export default function HomeScreen() {
   const { data: brainDumps, isLoading: isLoadingBrainDumps, error: brainDumpsError, refetch: refetchBrainDumps } = trpc.brainDumps.getBrainDumps.useQuery(
     { limit: 10 },
     { 
-      enabled: !!user?.id,
+      enabled: true,
       retry: 1
     }
   );
   
   // Fetch priority tasks from database
   const { data: dbPriorityTasks, isLoading: isLoadingPriorityTasks, refetch: refetchPriorityTasks } = trpc.priorityTasks.getPriorityTasks.useQuery(
-    { userId: user?.id || '' },
+    { userId: user?.id || '550e8400-e29b-41d4-a716-446655440000' },
     { 
-      enabled: !!user?.id,
+      enabled: true,
       retry: 1
     }
   );
