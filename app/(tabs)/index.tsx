@@ -565,7 +565,7 @@ export default function HomeScreen() {
           </View>
           
           <View style={styles.tasksList}>
-            {(dbPriorityTasks || priorityTasks)?.slice(0, 4).map((task, index) => {
+            {(dbPriorityTasks || priorityTasks)?.slice(0, 3).map((task, index) => {
               const taskData = dbPriorityTasks ? task : task;
               const getPriorityColor = (priority: string) => {
                 switch (priority) {
@@ -634,7 +634,7 @@ export default function HomeScreen() {
               );
             })}
             
-            {(dbPriorityTasks || priorityTasks)?.length > 4 && (
+            {(dbPriorityTasks || priorityTasks)?.length > 3 && (
               <TouchableOpacity 
                 style={styles.seeAllTasksButton}
                 onPress={() => router.push('/priority-management')}
