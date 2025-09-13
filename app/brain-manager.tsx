@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Stack, router } from "expo-router";
-import { Plus, Edit2, Trash2, Check, X, ChevronLeft, Search, Pin } from "lucide-react-native";
+import { Plus, Edit2, Trash2, Check, X, ChevronLeft, Search, Pin, Square, CheckSquare } from "lucide-react-native";
 import { trpc } from "@/lib/trpc";
 import { useUser } from "@/hooks/user-context";
 
@@ -21,6 +21,7 @@ interface BrainDump {
   content: string;
   category?: string;
   is_pinned: boolean;
+  is_completed: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -152,6 +153,7 @@ export default function BrainManagerScreen() {
         content: newItemContent.trim(),
         category: newItemCategory.trim() || undefined,
         is_pinned: false,
+        is_completed: false,
       });
     } else {
       Alert.alert("Error", "Please fill in title and content");
@@ -162,6 +164,13 @@ export default function BrainManagerScreen() {
     updateMutation.mutate({
       id: item.id,
       is_pinned: !item.is_pinned,
+    });
+  };
+
+  const toggleCompleted = (item: BrainDump) => {
+    updateMutation.mutate({
+      id: item.id,
+      is_completed: !item.is_completed,
     });
   };
 
@@ -329,12 +338,25 @@ export default function BrainManagerScreen() {
                 </View>
               ) : (
                 <View style={styles.itemContent}>
+                  <TouchableOpacity
+                    onPress={() => toggleCompleted(item)}
+                    style={styles.checkboxContainer}
+                  >
+                    {item.is_completed ? (
+                      <CheckSquare size={20} color="#34C759" />
+                    ) : (
+                      <Square size={20} color="#8E8E93" />
+                    )}
+                  </TouchableOpacity>
+                  
                   <View style={styles.itemTextContainer}>
                     <View style={styles.itemHeader}>
-                      <Text style={styles.itemText}>{item.title}</Text>
+                      <Text style={[styles.itemText, item.is_completed && styles.completedText]}>
+                        {item.title}
+                      </Text>
                       {item.is_pinned && <Pin size={16} color="#FF9500" />}
                     </View>
-                    <Text style={styles.itemContentText} numberOfLines={2}>
+                    <Text style={[styles.itemContentText, item.is_completed && styles.completedText]} numberOfLines={2}>
                       {item.content}
                     </Text>
                     {item.category && (
@@ -540,6 +562,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
   },
+  checkboxContainer: {
+    marginRight: 12,
+    marginTop: 2,
+  },
 
   itemTextContainer: {
     flex: 1,
@@ -549,6 +575,10 @@ const styles = StyleSheet.create({
     color: "#000000",
     marginBottom: 4,
     lineHeight: 22,
+  },
+  completedText: {
+    textDecorationLine: "line-through",
+    color: "#8E8E93",
   },
   itemHeader: {
     flexDirection: "row",

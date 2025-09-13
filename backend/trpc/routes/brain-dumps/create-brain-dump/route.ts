@@ -8,6 +8,7 @@ export const createBrainDumpProcedure = protectedProcedure
     content: z.string().min(1),
     category: z.string().optional(),
     is_pinned: z.boolean().optional().default(false),
+    is_completed: z.boolean().optional().default(false),
   }))
   .mutation(async ({ ctx, input }) => {
     const { data, error } = await supabase
@@ -18,6 +19,7 @@ export const createBrainDumpProcedure = protectedProcedure
         content: input.content,
         category: input.category,
         is_pinned: input.is_pinned,
+        is_completed: input.is_completed,
       })
       .select()
       .single();

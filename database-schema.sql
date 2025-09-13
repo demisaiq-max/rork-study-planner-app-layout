@@ -201,9 +201,13 @@ CREATE TABLE IF NOT EXISTS brain_dumps (
     content TEXT NOT NULL,
     category VARCHAR(100),
     is_pinned BOOLEAN DEFAULT FALSE,
+    is_completed BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Add is_completed column if it doesn't exist (for existing databases)
+ALTER TABLE brain_dumps ADD COLUMN IF NOT EXISTS is_completed BOOLEAN DEFAULT FALSE;
 
 -- Create indexes for brain dumps
 CREATE INDEX IF NOT EXISTS idx_brain_dumps_user_id ON brain_dumps(user_id);

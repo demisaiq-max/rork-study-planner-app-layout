@@ -9,6 +9,7 @@ export const updateBrainDumpProcedure = protectedProcedure
     content: z.string().min(1).optional(),
     category: z.string().optional(),
     is_pinned: z.boolean().optional(),
+    is_completed: z.boolean().optional(),
   }))
   .mutation(async ({ ctx, input }) => {
     const { id, ...updateData } = input;
