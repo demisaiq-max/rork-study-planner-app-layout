@@ -53,6 +53,33 @@ app.get("/", (c) => {
   return c.json({ status: "ok", message: "API is running" });
 });
 
+// Debug endpoint to check tRPC router
+app.get("/debug", (c) => {
+  try {
+    const routerDef = appRouter._def;
+    const procedures = routerDef.procedures || {};
+    const record = routerDef.record || {};
+    
+    return c.json({ 
+      status: "ok", 
+      message: "tRPC router loaded",
+      procedureKeys: Object.keys(procedures),
+      recordKeys: Object.keys(record),
+      routerType: typeof appRouter,
+      hasTests: 'tests' in record,
+      hasCommunity: 'community' in record,
+      testsKeys: record.tests ? Object.keys(record.tests._def.record || {}) : [],
+      communityKeys: record.community ? Object.keys(record.community._def.record || {}) : []
+    });
+  } catch (error) {
+    return c.json({ 
+      status: "error", 
+      message: "tRPC router error",
+      error: error instanceof Error ? error.message : String(error)
+    }, 500);
+  }
+});
+
 // Catch-all for unmatched routes
 app.all("*", (c) => {
   return c.json({ 
