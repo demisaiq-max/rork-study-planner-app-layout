@@ -453,101 +453,90 @@ export default function CommunityScreen() {
     const isLiked = post.likes?.some(like => like.user_id === userId) || false;
     
     return (
-      <TouchableOpacity 
-        key={post.id} 
-        style={styles.studyPostCard}
-        onPress={() => {
-          setSelectedPost(post);
-          setShowPostDetail(true);
-        }}
-      >
-        {/* Large Image First */}
-        {post.image_url && (
-          <View style={styles.studyImageContainer}>
-            <Image source={{ uri: post.image_url }} style={styles.studyImage} />
-            
-            {/* User Info Overlay */}
-            <View style={styles.imageOverlay}>
-              <View style={styles.overlayHeader}>
-                <View style={styles.userInfoOverlay}>
-                  <Image 
-                    source={{ uri: `https://i.pravatar.cc/150?u=${post.user_id}` }} 
-                    style={styles.overlayAvatar} 
-                  />
-                  <View>
-                    <Text style={styles.overlayUserName}>
-                      {post.user?.name || 'Anonymous'}
-                    </Text>
-                    {post.group && (
-                      <Text style={styles.overlayGroupName}>
-                        {post.group.name}
-                      </Text>
-                    )}
-                  </View>
-                </View>
-                <Text style={styles.overlayTime}>{formatTime(post.created_at)}</Text>
-              </View>
+      <View key={post.id} style={styles.koreanPostCard}>
+        {/* Header with user info */}
+        <View style={styles.koreanPostHeader}>
+          <View style={styles.koreanUserInfo}>
+            <Image 
+              source={{ uri: `https://i.pravatar.cc/150?u=${post.user_id}` }} 
+              style={styles.koreanAvatar} 
+            />
+            <View style={styles.koreanUserDetails}>
+              <Text style={styles.koreanUserName}>
+                {post.user?.name || '익명'}
+              </Text>
+              <Text style={styles.koreanUserMeta}>
+                {post.group ? `${post.group.name} | ` : ''}{post.study_hours || 5}등급
+              </Text>
             </View>
           </View>
+          <Text style={styles.koreanPostTime}>{formatTime(post.created_at)}</Text>
+        </View>
+        
+        {/* Large Image */}
+        <TouchableOpacity 
+          style={styles.koreanImageContainer}
+          onPress={() => {
+            setSelectedPost(post);
+            setShowPostDetail(true);
+          }}
+        >
+          <Image 
+            source={{ 
+              uri: post.image_url || 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400&h=400&fit=crop'
+            }} 
+            style={styles.koreanPostImage} 
+          />
+        </TouchableOpacity>
+        
+        {/* Content */}
+        {post.content && (
+          <TouchableOpacity 
+            style={styles.koreanContentSection}
+            onPress={() => {
+              setSelectedPost(post);
+              setShowPostDetail(true);
+            }}
+          >
+            <Text style={styles.koreanPostContent} numberOfLines={2}>
+              {post.content}
+            </Text>
+          </TouchableOpacity>
         )}
         
-        {/* Content Section */}
-        <View style={styles.postContentSection}>
-          {!post.image_url && (
-            <View style={styles.postHeader}>
-              <Image 
-                source={{ uri: `https://i.pravatar.cc/150?u=${post.user_id}` }} 
-                style={styles.avatar} 
-              />
-              <View style={styles.postInfo}>
-                <Text style={styles.authorName}>
-                  {post.user?.name || 'Anonymous'}
-                </Text>
-                {post.group && (
-                  <Text style={styles.groupLabel}>
-                    {post.group.name}
-                  </Text>
-                )}
-              </View>
-              <Text style={styles.postTime}>{formatTime(post.created_at)}</Text>
-            </View>
-          )}
+        {/* Actions Bar */}
+        <View style={styles.koreanActionsBar}>
+          <TouchableOpacity 
+            style={styles.koreanActionButton}
+            onPress={() => handleLikePost(post.id)}
+          >
+            <Heart 
+              size={18} 
+              color={isLiked ? "#FF3B30" : "#8E8E93"} 
+              fill={isLiked ? "#FF3B30" : "none"}
+            />
+            <Text style={[styles.koreanActionText, isLiked && styles.koreanActionTextActive]}>
+              {post.likes_count || 15}
+            </Text>
+          </TouchableOpacity>
           
-          {post.content && (
-            <Text style={styles.studyContent} numberOfLines={3}>{post.content}</Text>
-          )}
+          <TouchableOpacity 
+            style={styles.koreanActionButton}
+            onPress={() => {
+              setSelectedPost(post);
+              setShowPostDetail(true);
+            }}
+          >
+            <MessageCircle size={18} color="#8E8E93" />
+            <Text style={styles.koreanActionText}>{post.comments_count || 148}</Text>
+          </TouchableOpacity>
           
-          {/* Actions Bar */}
-          <View style={styles.studyActions}>
-            <TouchableOpacity 
-              style={styles.studyActionButton}
-              onPress={(e) => {
-                e.stopPropagation();
-                handleLikePost(post.id);
-              }}
-            >
-              <Heart 
-                size={20} 
-                color={isLiked ? "#FF3B30" : "#8E8E93"} 
-                fill={isLiked ? "#FF3B30" : "none"}
-              />
-              <Text style={[styles.studyActionText, isLiked && styles.actionTextActive]}>
-                {post.likes_count || 0}
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.studyActionButton}>
-              <MessageCircle size={20} color="#8E8E93" />
-              <Text style={styles.studyActionText}>{post.comments_count || 0}</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.studyActionButton}>
-              <Eye size={20} color="#8E8E93" />
-              <Text style={styles.studyActionText}>{post.views_count || 0}</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity style={styles.koreanActionButton}>
+            <Eye size={18} color="#8E8E93" />
+            <Text style={styles.koreanActionText}>{post.views_count || 18}</Text>
+          </TouchableOpacity>
         </View>
-      </TouchableOpacity>
+      </View>
     );
   };
 
@@ -1172,6 +1161,84 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  koreanPostCard: {
+    backgroundColor: "#FFFFFF",
+    marginBottom: 8,
+    borderBottomWidth: 8,
+    borderBottomColor: "#F2F2F7",
+  },
+  koreanPostHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  koreanUserInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  koreanAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  koreanUserDetails: {
+    flex: 1,
+  },
+  koreanUserName: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#000000",
+    marginBottom: 2,
+  },
+  koreanUserMeta: {
+    fontSize: 13,
+    color: "#8E8E93",
+  },
+  koreanPostTime: {
+    fontSize: 13,
+    color: "#8E8E93",
+  },
+  koreanImageContainer: {
+    width: '100%',
+    aspectRatio: 1,
+    backgroundColor: "#F0F0F0",
+  },
+  koreanPostImage: {
+    width: '100%',
+    height: '100%',
+  },
+  koreanContentSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  koreanPostContent: {
+    fontSize: 14,
+    color: "#000000",
+    lineHeight: 20,
+  },
+  koreanActionsBar: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    gap: 24,
+  },
+  koreanActionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  koreanActionText: {
+    fontSize: 14,
+    color: "#8E8E93",
+    fontWeight: "500",
+  },
+  koreanActionTextActive: {
+    color: "#FF3B30",
   },
   discussionPostCard: {
     backgroundColor: "#FFFFFF",
