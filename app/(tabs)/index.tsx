@@ -59,10 +59,11 @@ export default function HomeScreen() {
   );
   
   // Fetch brain dumps from database
-  const { data: brainDumps, isLoading: isLoadingBrainDumps, refetch: refetchBrainDumps } = trpc.brainDumps.getBrainDumps.useQuery(
+  const { data: brainDumps, isLoading: isLoadingBrainDumps, error: brainDumpsError, refetch: refetchBrainDumps } = trpc.brainDumps.getBrainDumps.useQuery(
     { limit: 10 },
     { 
-      enabled: !!user?.id
+      enabled: !!user?.id,
+      retry: 1
     }
   );
   
@@ -559,8 +560,8 @@ export default function HomeScreen() {
 
 
           {isLoadingBrainDumps ? (
-            <View style={styles.loadingContainer}>
-              <Text style={styles.loadingText}>Loading brain dumps...</Text>
+            <View style={styles.emptyBrainDump}>
+              <Text style={styles.emptyBrainDumpText}>Loading...</Text>
             </View>
           ) : brainDumps && brainDumps.length > 0 ? (
             brainDumps.slice(0, 4).map((item) => (
@@ -591,8 +592,8 @@ export default function HomeScreen() {
             ))
           ) : (
             <View style={styles.emptyBrainDump}>
-              <Text style={styles.emptyBrainDumpText}>No brain dumps yet</Text>
-              <Text style={styles.emptyBrainDumpSubtext}>Tap to create your first brain dump</Text>
+              <Text style={styles.emptyBrainDumpText}>{brainDumpsError ? 'No data available' : 'No brain dumps yet'}</Text>
+              <Text style={styles.emptyBrainDumpSubtext}>Tap to add your first thought</Text>
             </View>
           )}
           
