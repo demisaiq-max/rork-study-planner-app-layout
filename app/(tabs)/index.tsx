@@ -33,6 +33,7 @@ export default function HomeScreen() {
     todayStudyTime, 
     targetStudyTime,
     toggleTask,
+    togglePriorityTask,
     updateStudyTime,
     addDDay,
     addTask,
@@ -515,19 +516,28 @@ export default function HomeScreen() {
           
           <View style={styles.tasksList}>
             {priorityTasks?.slice(0, 3).map((task) => (
-              <View key={task.id} style={styles.priorityTaskItem}>
+              <TouchableOpacity 
+                key={task.id} 
+                style={styles.priorityTaskItem}
+                onPress={() => {
+                  if (togglePriorityTask) {
+                    togglePriorityTask(task.id);
+                  }
+                }}
+                activeOpacity={0.7}
+              >
                 <View style={styles.priorityTaskContent}>
-                  <View style={styles.priorityCheckbox}>
-                    <View style={styles.priorityDot} />
+                  <View style={[styles.checkbox, task.completed && styles.checkboxChecked]}>
+                    {task.completed && <Check size={14} color="#FFFFFF" />}
                   </View>
                   <View style={styles.priorityTaskText}>
-                    <Text style={styles.priorityTaskTitle}>{task.title}</Text>
+                    <Text style={[styles.priorityTaskTitle, task.completed && styles.priorityTaskTitleCompleted]}>{task.title}</Text>
                     {task.subject && (
-                      <Text style={styles.priorityTaskDescription}>{task.subject}</Text>
+                      <Text style={[styles.priorityTaskDescription, task.completed && styles.priorityTaskDescriptionCompleted]}>{task.subject}</Text>
                     )}
                   </View>
                 </View>
-              </View>
+              </TouchableOpacity>
             ))}
             
             {(!priorityTasks || priorityTasks.length === 0) && (
@@ -1246,24 +1256,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
   },
-  priorityCheckbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 2,
-    borderColor: "#E5E5EA",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-    marginTop: 2,
-  },
-  priorityDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#FF3B30",
-  },
+
   priorityTaskText: {
     flex: 1,
   },
@@ -1273,9 +1266,17 @@ const styles = StyleSheet.create({
     color: "#000000",
     marginBottom: 2,
   },
+  priorityTaskTitleCompleted: {
+    textDecorationLine: "line-through",
+    color: "#8E8E93",
+  },
   priorityTaskDescription: {
     fontSize: 12,
     color: "#8E8E93",
+  },
+  priorityTaskDescriptionCompleted: {
+    textDecorationLine: "line-through",
+    color: "#C7C7CC",
   },
   emptyPriorityTasks: {
     padding: 20,
