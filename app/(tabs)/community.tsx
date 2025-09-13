@@ -97,7 +97,8 @@ interface Group {
 
 export default function CommunityScreen() {
   const { language } = useLanguage();
-  const { userId } = useUser();
+  const { user } = useUser();
+  const userId = user?.id;
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState(0);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
@@ -131,7 +132,7 @@ export default function CommunityScreen() {
 
   // Fetch groups
   const groupsQuery = trpc.community.groups.getGroups.useQuery({
-    userId: userId || undefined,
+    userId: userId,
   });
 
   // Fetch questions
