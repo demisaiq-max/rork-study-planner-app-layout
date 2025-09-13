@@ -563,7 +563,7 @@ export default function HomeScreen() {
               <Text style={styles.loadingText}>Loading brain dumps...</Text>
             </View>
           ) : brainDumps && brainDumps.length > 0 ? (
-            brainDumps.slice(0, 3).map((item) => (
+            brainDumps.slice(0, 4).map((item) => (
               <TouchableOpacity 
                 key={item.id} 
                 style={styles.goalItem}
@@ -575,9 +575,6 @@ export default function HomeScreen() {
                 }}
                 activeOpacity={0.7}
               >
-                <View style={[styles.checkbox, item.is_completed && styles.checkboxChecked]}>
-                  {item.is_completed && <Check size={14} color="#FFFFFF" />}
-                </View>
                 <View style={styles.brainDumpPreview}>
                   <Text style={[styles.brainDumpPreviewTitle, item.is_completed && styles.brainDumpTextCompleted]}>{item.title}</Text>
                   <Text style={[styles.brainDumpPreviewContent, item.is_completed && styles.brainDumpTextCompleted]} numberOfLines={2}>
@@ -586,6 +583,9 @@ export default function HomeScreen() {
                   {item.category && (
                     <Text style={[styles.brainDumpCategory, item.is_completed && { color: '#C7C7CC' }]}>{item.category}</Text>
                   )}
+                </View>
+                <View style={[styles.checkbox, item.is_completed && styles.checkboxChecked]}>
+                  {item.is_completed && <Check size={14} color="#FFFFFF" />}
                 </View>
               </TouchableOpacity>
             ))
@@ -596,7 +596,7 @@ export default function HomeScreen() {
             </View>
           )}
           
-          {brainDumps && brainDumps.length > 3 && (
+          {brainDumps && brainDumps.length > 4 && (
             <TouchableOpacity 
               style={styles.seeAllButton}
               onPress={() => router.push('/brain-manager')}
@@ -1018,6 +1018,7 @@ const styles = StyleSheet.create({
   goalItem: {
     flexDirection: "row",
     alignItems: "flex-start",
+    justifyContent: "space-between",
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#F2F2F7",
@@ -1032,7 +1033,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     borderWidth: 2,
     borderColor: "#C7C7CC",
-    marginRight: 12,
+    marginLeft: 12,
     marginTop: 2,
     justifyContent: "center",
     alignItems: "center",
@@ -1408,7 +1409,6 @@ const styles = StyleSheet.create({
   },
   brainDumpPreview: {
     flex: 1,
-    paddingRight: 8,
   },
   brainDumpPreviewTitle: {
     fontSize: 14,
