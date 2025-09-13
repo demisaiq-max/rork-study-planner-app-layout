@@ -1003,12 +1003,12 @@ export default function CommunityScreen() {
                 ref={scrollViewRef}
                 style={styles.modalScrollContent}
                 keyboardShouldPersistTaps="handled"
-                contentContainerStyle={{ paddingBottom: 120 }}
+                contentContainerStyle={{ paddingBottom: 160 }}
                 onContentSizeChange={() => {
                   if (keyboardHeight > 0 && commentInputRef.current?.isFocused()) {
                     setTimeout(() => {
                       scrollViewRef.current?.scrollToEnd({ animated: true });
-                    }, 100);
+                    }, 300);
                   }
                 }}
               >
@@ -1077,7 +1077,7 @@ export default function CommunityScreen() {
               
               <View style={[
                 styles.commentInputContainer,
-                { marginBottom: keyboardHeight > 0 ? keyboardHeight - (Platform.OS === 'ios' ? 34 : 0) : 0 }
+                { bottom: keyboardHeight > 0 ? keyboardHeight : 60 }
               ]}>
                 <View style={styles.commentInputWrapper}>
                   <TextInput
@@ -1092,7 +1092,7 @@ export default function CommunityScreen() {
                     onFocus={() => {
                       setTimeout(() => {
                         scrollViewRef.current?.scrollToEnd({ animated: true });
-                      }, 100);
+                      }, 300);
                     }}
                   />
                   <TouchableOpacity 
@@ -1726,7 +1726,7 @@ const styles = StyleSheet.create({
   },
   commentInputContainer: {
     position: 'absolute',
-    bottom: 0,
+    bottom: 60,
     left: 0,
     right: 0,
     paddingHorizontal: 16,
