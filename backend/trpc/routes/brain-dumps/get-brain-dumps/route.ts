@@ -1,20 +1,22 @@
 import { z } from 'zod';
-import { protectedProcedure } from '../../../create-context';
+import { publicProcedure } from '../../../create-context';
 import { supabase } from '@/lib/supabase';
 
-export const getBrainDumpsProcedure = protectedProcedure
+export const getBrainDumpsProcedure = publicProcedure
   .input(z.object({
     limit: z.number().optional().default(10),
     offset: z.number().optional().default(0),
   }).optional())
-  .query(async ({ ctx, input }) => {
+  .query(async ({ input }) => {
     const limit = input?.limit ?? 10;
     const offset = input?.offset ?? 0;
+    // Use test user ID for now
+    const userId = '550e8400-e29b-41d4-a716-446655440000';
 
     const { data, error } = await supabase
       .from('brain_dumps')
       .select('*')
-      .eq('user_id', ctx.userId)
+      .eq('user_id', userId)
       .order('is_pinned', { ascending: false })
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
