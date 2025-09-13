@@ -2,7 +2,7 @@ import { createTRPCRouter } from "./create-context";
 import hiRoute from "./routes/example/hi/route";
 
 // Exam routes
-import getUserExams from "./routes/exams/get-user-exams/route";
+import { getUserExams } from "./routes/exams/get-user-exams/route";
 import createExam from "./routes/exams/create-exam/route";
 import getPriorityExams from "./routes/exams/get-priority-exams/route";
 import updateExam from "./routes/exams/update-exam/route";
@@ -28,7 +28,7 @@ import getSubjectTests from "./routes/tests/get-subject-tests/route";
 import createTest from "./routes/tests/create-test/route";
 import submitTestResult from "./routes/tests/submit-test-result/route";
 import getUserSubjects from "./routes/tests/get-user-subjects/route";
-import getLatestTestResults from "./routes/tests/get-latest-test-results/route";
+import { getLatestTestResults } from "./routes/tests/get-latest-test-results/route";
 import getTestById from "./routes/tests/get-test-by-id/route";
 import createSubject from "./routes/tests/create-subject/route";
 import deleteSubject from "./routes/tests/delete-subject/route";

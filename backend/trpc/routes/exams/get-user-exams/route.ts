@@ -22,5 +22,3 @@ export const getUserExams = publicProcedure
 
     return data || [];
   });
-
-export default getUserExams;

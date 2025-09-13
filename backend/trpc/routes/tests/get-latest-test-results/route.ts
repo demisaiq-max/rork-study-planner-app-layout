@@ -38,4 +38,3 @@ export const getLatestTestResults = publicProcedure
     return Object.values(latestBySubject);
   });
 
-export default getLatestTestResults;
