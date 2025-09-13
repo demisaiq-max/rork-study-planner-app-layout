@@ -12,7 +12,12 @@ export const updateExam = publicProcedure
     priority: z.boolean().optional(),
   }))
   .mutation(async ({ input }) => {
-    const { id, userId, ...updateData } = input;
+    const { id, userId: inputUserId, ...updateData } = input;
+    
+    // Use the test user UUID from the database if 'test-user' is passed
+    const userId = inputUserId === 'test-user' 
+      ? '550e8400-e29b-41d4-a716-446655440000' 
+      : inputUserId;
     
     const { data, error } = await supabase
       .from('exams')
