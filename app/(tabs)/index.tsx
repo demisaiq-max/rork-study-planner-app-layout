@@ -60,7 +60,9 @@ export default function HomeScreen() {
   const { data: gradedExams, isLoading: isLoadingGradedExams, error: gradedExamsError, refetch: refetchGradedExams } = trpc.tests.getLatestTestResults.useQuery(
     user?.id || 'default-user',
     { 
-      enabled: !!user?.id
+      enabled: !!user?.id,
+      retry: 2,
+      retryDelay: 1000
     }
   );
   
