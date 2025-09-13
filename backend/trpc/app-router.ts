@@ -52,6 +52,7 @@ import { getPostsProcedure } from "./routes/community/posts/get-posts/route";
 import { createPostProcedure } from "./routes/community/posts/create-post/route";
 import { likePostProcedure } from "./routes/community/posts/like-post/route";
 import { addCommentProcedure } from "./routes/community/posts/add-comment/route";
+import { incrementViewProcedure } from "./routes/community/posts/increment-view/route";
 
 // Community routes - Groups
 import { getGroupsProcedure } from "./routes/community/groups/get-groups/route";
@@ -63,6 +64,7 @@ import { getQuestionsProcedure } from "./routes/community/questions/get-question
 import { createQuestionProcedure } from "./routes/community/questions/create-question/route";
 import { addAnswerProcedure } from "./routes/community/questions/add-answer/route";
 import { likeQuestionProcedure } from "./routes/community/questions/like-question/route";
+import { incrementQuestionViewProcedure } from "./routes/community/questions/increment-view/route";
 
 export const appRouter = createTRPCRouter({
   example: createTRPCRouter({
@@ -121,6 +123,7 @@ export const appRouter = createTRPCRouter({
       createPost: createPostProcedure,
       likePost: likePostProcedure,
       addComment: addCommentProcedure,
+      incrementView: incrementViewProcedure,
     }),
     groups: createTRPCRouter({
       getGroups: getGroupsProcedure,
@@ -132,6 +135,7 @@ export const appRouter = createTRPCRouter({
       createQuestion: createQuestionProcedure,
       addAnswer: addAnswerProcedure,
       likeQuestion: likeQuestionProcedure,
+      incrementView: incrementQuestionViewProcedure,
     }),
   }),
 });

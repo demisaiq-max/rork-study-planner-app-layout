@@ -220,6 +220,9 @@ export default function CommunityScreen() {
     },
   });
 
+  const incrementPostViewMutation = trpc.community.posts.incrementView.useMutation();
+  const incrementQuestionViewMutation = trpc.community.questions.incrementView.useMutation();
+
   const joinGroupMutation = trpc.community.groups.joinGroup.useMutation({
     onSuccess: () => {
       groupsQuery.refetch();
@@ -479,6 +482,8 @@ export default function CommunityScreen() {
           onPress={() => {
             setSelectedPost(post);
             setShowPostDetail(true);
+            // Increment view count
+            incrementPostViewMutation.mutate({ postId: post.id });
           }}
         >
           <Image 
@@ -496,6 +501,8 @@ export default function CommunityScreen() {
             onPress={() => {
               setSelectedPost(post);
               setShowPostDetail(true);
+              // Increment view count
+              incrementPostViewMutation.mutate({ postId: post.id });
             }}
           >
             <Text style={styles.koreanPostContent} numberOfLines={2}>
@@ -516,7 +523,7 @@ export default function CommunityScreen() {
               fill={isLiked ? "#FF3B30" : "none"}
             />
             <Text style={[styles.koreanActionText, isLiked && styles.koreanActionTextActive]}>
-              {post.likes_count || 15}
+              {post.likes_count || 0}
             </Text>
           </TouchableOpacity>
           
@@ -525,16 +532,18 @@ export default function CommunityScreen() {
             onPress={() => {
               setSelectedPost(post);
               setShowPostDetail(true);
+              // Increment view count
+              incrementPostViewMutation.mutate({ postId: post.id });
             }}
           >
             <MessageCircle size={18} color="#8E8E93" />
-            <Text style={styles.koreanActionText}>{post.comments_count || 148}</Text>
+            <Text style={styles.koreanActionText}>{post.comments_count || 0}</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.koreanActionButton}>
+          <View style={styles.koreanActionButton}>
             <Eye size={18} color="#8E8E93" />
-            <Text style={styles.koreanActionText}>{post.views_count || 18}</Text>
-          </TouchableOpacity>
+            <Text style={styles.koreanActionText}>{post.views_count || 0}</Text>
+          </View>
         </View>
       </View>
     );
@@ -550,6 +559,8 @@ export default function CommunityScreen() {
         onPress={() => {
           setSelectedQuestion(question);
           setShowQuestionDetail(true);
+          // Increment view count
+          incrementQuestionViewMutation.mutate({ questionId: question.id });
         }}
       >
         <View style={styles.discussionHeader}>
