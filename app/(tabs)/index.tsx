@@ -44,11 +44,6 @@ export default function HomeScreen() {
     priorityTasks,
     addPriorityTask,
     removePriorityTask,
-    brainDumpItems,
-    addBrainDumpItem,
-    updateBrainDumpItem,
-    deleteBrainDumpItem,
-    toggleBrainDumpItem,
     isLoading
   } = useStudyStore();
   const { user } = useUser();
@@ -61,6 +56,35 @@ export default function HomeScreen() {
       enabled: !!user?.id
     }
   );
+  
+  // Fetch brain dumps from database
+  const { data: brainDumps, isLoading: isLoadingBrainDumps, refetch: refetchBrainDumps } = trpc.brainDumps.getBrainDumps.useQuery(
+    { limit: 10 },
+    { 
+      enabled: !!user?.id
+    }
+  );
+  
+  // Create brain dump mutation
+  const createBrainDumpMutation = trpc.brainDumps.createBrainDump.useMutation({
+    onSuccess: () => {
+      refetchBrainDumps();
+    },
+  });
+  
+  // Update brain dump mutation
+  const updateBrainDumpMutation = trpc.brainDumps.updateBrainDump.useMutation({
+    onSuccess: () => {
+      refetchBrainDumps();
+    },
+  });
+  
+  // Delete brain dump mutation
+  const deleteBrainDumpMutation = trpc.brainDumps.deleteBrainDump.useMutation({
+    onSuccess: () => {
+      refetchBrainDumps();
+    },
+  });
   
   // Seed test data mutation
   const seedTestDataMutation = trpc.tests.seedTestData.useMutation({
@@ -521,30 +545,49 @@ export default function HomeScreen() {
         >
           <Text style={styles.brainDumpTitle}>Brain Dump</Text>
           
-          <View style={styles.goalCard}>
-            <View style={styles.goalHeader}>
-              <Text style={styles.goalLabel}>{t('morningAdjustment')}</Text>
-              <Text style={styles.goalBadge}>V</Text>
+          {brainDumps && brainDumps.filter(item => item.is_pinned).length > 0 && (
+            <View style={styles.goalCard}>
+              <View style={styles.goalHeader}>
+                <Text style={styles.goalLabel}>Pinned Items</Text>
+                <Text style={styles.goalBadge}>📌</Text>
+              </View>
             </View>
-          </View>
+          )}
 
-          {brainDumpItems?.slice(0, 6).map((item) => (
-            <TouchableOpacity 
-              key={item.id}
-              style={styles.goalItem}
-              onPress={() => toggleBrainDumpItem(item.id)}
-            >
-              <Text style={styles.goalText}>{item.title}</Text>
-              <View style={[styles.checkbox, item.completed && styles.checkboxChecked]} />
-            </TouchableOpacity>
-          ))}
+          {isLoadingBrainDumps ? (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>Loading brain dumps...</Text>
+            </View>
+          ) : brainDumps && brainDumps.length > 0 ? (
+            brainDumps.slice(0, 3).map((item) => (
+              <View key={item.id} style={styles.goalItem}>
+                <View style={styles.brainDumpPreview}>
+                  <Text style={styles.brainDumpPreviewTitle}>{item.title}</Text>
+                  <Text style={styles.brainDumpPreviewContent} numberOfLines={2}>
+                    {item.content}
+                  </Text>
+                  {item.category && (
+                    <Text style={styles.brainDumpCategory}>{item.category}</Text>
+                  )}
+                </View>
+                {item.is_pinned && (
+                  <Text style={styles.pinnedIndicator}>📌</Text>
+                )}
+              </View>
+            ))
+          ) : (
+            <View style={styles.emptyBrainDump}>
+              <Text style={styles.emptyBrainDumpText}>No brain dumps yet</Text>
+              <Text style={styles.emptyBrainDumpSubtext}>Tap to create your first brain dump</Text>
+            </View>
+          )}
           
-          {brainDumpItems && brainDumpItems.length > 6 && (
+          {brainDumps && brainDumps.length > 3 && (
             <TouchableOpacity 
               style={styles.seeAllButton}
-              onPress={() => setShowBrainDumpModal(true)}
+              onPress={() => router.push('/brain-manager')}
             >
-              <Text style={styles.seeAllText}>See All ({brainDumpItems.length})</Text>
+              <Text style={styles.seeAllText}>See All ({brainDumps.length})</Text>
             </TouchableOpacity>
           )}
         </TouchableOpacity>
@@ -691,149 +734,7 @@ export default function HomeScreen() {
         </SafeAreaView>
       </Modal>
 
-      {/* Brain Dump Modal */}
-      <Modal
-        visible={showBrainDumpModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowBrainDumpModal(false)}
-      >
-        <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setShowBrainDumpModal(false)}>
-              <X size={24} color="#8E8E93" />
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Brain Dump</Text>
-            <TouchableOpacity 
-              onPress={() => {
-                if (newBrainDumpText.trim()) {
-                  addBrainDumpItem(newBrainDumpText.trim());
-                  setNewBrainDumpText("");
-                }
-              }}
-            >
-              <Plus size={24} color="#007AFF" />
-            </TouchableOpacity>
-          </View>
 
-          <ScrollView 
-            style={styles.modalScrollView}
-            contentContainerStyle={styles.modalScrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={styles.modalContent}>
-              <View style={styles.inputGroup}>
-                <TextInput
-                  style={styles.textInput}
-                  value={newBrainDumpText}
-                  onChangeText={setNewBrainDumpText}
-                  placeholder="Add new brain dump item..."
-                  placeholderTextColor="#8E8E93"
-                  onSubmitEditing={() => {
-                    if (newBrainDumpText.trim()) {
-                      addBrainDumpItem(newBrainDumpText.trim());
-                      setNewBrainDumpText("");
-                    }
-                  }}
-                />
-              </View>
-              
-              {brainDumpItems?.map((item) => (
-                <View key={item.id} style={styles.brainDumpItem}>
-                  {editingBrainDumpId === item.id ? (
-                    <View style={styles.editingContainer}>
-                      <TextInput
-                        style={styles.editingInput}
-                        value={editingBrainDumpText}
-                        onChangeText={setEditingBrainDumpText}
-                        onSubmitEditing={() => {
-                          updateBrainDumpItem(item.id, editingBrainDumpText);
-                          setEditingBrainDumpId(null);
-                          setEditingBrainDumpText("");
-                        }}
-                        autoFocus
-                      />
-                      <View style={styles.editingActions}>
-                        <TouchableOpacity 
-                          onPress={() => {
-                            updateBrainDumpItem(item.id, editingBrainDumpText);
-                            setEditingBrainDumpId(null);
-                            setEditingBrainDumpText("");
-                          }}
-                          style={styles.saveEditButton}
-                        >
-                          <Check size={16} color="#34C759" />
-                        </TouchableOpacity>
-                        <TouchableOpacity 
-                          onPress={() => {
-                            setEditingBrainDumpId(null);
-                            setEditingBrainDumpText("");
-                          }}
-                          style={styles.cancelEditButton}
-                        >
-                          <X size={16} color="#FF3B30" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  ) : (
-                    <View style={styles.brainDumpItemContent}>
-                      <TouchableOpacity 
-                        style={styles.brainDumpCheckbox}
-                        onPress={() => toggleBrainDumpItem(item.id)}
-                      >
-                        <View style={[styles.checkbox, item.completed && styles.checkboxChecked]}>
-                          {item.completed && <Check size={14} color="#FFFFFF" />}
-                        </View>
-                      </TouchableOpacity>
-                      
-                      <Text style={[styles.brainDumpText, item.completed && styles.brainDumpTextCompleted]}>
-                        {item.title}
-                      </Text>
-                      
-                      <View style={styles.brainDumpActions}>
-                        <TouchableOpacity 
-                          onPress={() => {
-                            setEditingBrainDumpId(item.id);
-                            setEditingBrainDumpText(item.title);
-                          }}
-                          style={styles.brainDumpEditButton}
-                        >
-                          <Edit2 size={16} color="#007AFF" />
-                        </TouchableOpacity>
-                        <TouchableOpacity 
-                          onPress={() => {
-                            Alert.alert(
-                              "Delete Item",
-                              "Are you sure you want to delete this brain dump item?",
-                              [
-                                { text: "Cancel", style: "cancel" },
-                                { 
-                                  text: "Delete", 
-                                  style: "destructive",
-                                  onPress: () => deleteBrainDumpItem(item.id)
-                                }
-                              ]
-                            );
-                          }}
-                          style={styles.deleteButton}
-                        >
-                          <Trash2 size={16} color="#FF3B30" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  )}
-                </View>
-              ))}
-              
-              {(!brainDumpItems || brainDumpItems.length === 0) && (
-                <View style={styles.emptyBrainDump}>
-                  <Text style={styles.emptyBrainDumpText}>No brain dump items yet</Text>
-                </View>
-              )}
-            </View>
-          </ScrollView>
-        </SafeAreaView>
-      </Modal>
 
       {/* Edit Grades Modal */}
       <Modal
@@ -1491,6 +1392,35 @@ const styles = StyleSheet.create({
   emptyBrainDumpText: {
     fontSize: 14,
     color: "#8E8E93",
+  },
+  emptyBrainDumpSubtext: {
+    fontSize: 12,
+    color: "#C7C7CC",
+    marginTop: 4,
+  },
+  brainDumpPreview: {
+    flex: 1,
+  },
+  brainDumpPreviewTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#000000",
+    marginBottom: 4,
+  },
+  brainDumpPreviewContent: {
+    fontSize: 12,
+    color: "#8E8E93",
+    lineHeight: 16,
+  },
+  brainDumpCategory: {
+    fontSize: 10,
+    color: "#007AFF",
+    marginTop: 4,
+    fontWeight: "500",
+  },
+  pinnedIndicator: {
+    fontSize: 16,
+    marginLeft: 8,
   },
   gradeEditItem: {
     marginBottom: 24,

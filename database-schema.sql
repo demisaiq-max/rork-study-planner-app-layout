@@ -193,6 +193,34 @@ INSERT INTO subjects (user_id, name) VALUES
 ('550e8400-e29b-41d4-a716-446655440000', '한국사')
 ON CONFLICT (user_id, name) DO NOTHING;
 
+-- Brain dumps table for storing user's brain dump content
+CREATE TABLE IF NOT EXISTS brain_dumps (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    category VARCHAR(100),
+    is_pinned BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create indexes for brain dumps
+CREATE INDEX IF NOT EXISTS idx_brain_dumps_user_id ON brain_dumps(user_id);
+CREATE INDEX IF NOT EXISTS idx_brain_dumps_created_at ON brain_dumps(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_brain_dumps_is_pinned ON brain_dumps(is_pinned);
+
+-- Create trigger for brain dumps updated_at
+DROP TRIGGER IF EXISTS update_brain_dumps_updated_at ON brain_dumps;
+CREATE TRIGGER update_brain_dumps_updated_at BEFORE UPDATE ON brain_dumps FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Sample brain dumps for test user only
+INSERT INTO brain_dumps (user_id, title, content, category, is_pinned) VALUES 
+('550e8400-e29b-41d4-a716-446655440000', '수능 D-30 계획', '매일 국어 기출 2회독\n영어 단어 100개\n수학 문제집 20문제', '학습계획', true),
+('550e8400-e29b-41d4-a716-446655440000', '영어 문법 정리', 'Present Perfect: have/has + p.p\n- 경험, 완료, 계속, 결과\n- since/for 구분하기', '영어', false),
+('550e8400-e29b-41d4-a716-446655440000', '수학 공식 모음', '이차방정식: ax² + bx + c = 0\n근의 공식: x = (-b ± √(b²-4ac))/2a', '수학', false)
+ON CONFLICT DO NOTHING;
+
 -- Sample test results with detailed analysis data
 INSERT INTO test_results (test_id, user_id, raw_score, standard_score, percentile, grade, analysis_data) 
 SELECT 

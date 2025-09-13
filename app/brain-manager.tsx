@@ -8,79 +8,187 @@ import {
   TextInput,
   Alert,
   Modal,
+  ActivityIndicator,
 } from "react-native";
 import { Stack, router } from "expo-router";
-import { Plus, Edit2, Trash2, Check, X, ChevronLeft, Search } from "lucide-react-native";
-import { useStudyStore } from "@/hooks/study-store";
+import { Plus, Edit2, Trash2, Check, X, ChevronLeft, Search, Pin } from "lucide-react-native";
+import { trpc } from "@/lib/trpc";
+import { useUser } from "@/hooks/user-context";
+
+interface BrainDump {
+  id: string;
+  title: string;
+  content: string;
+  category?: string;
+  is_pinned: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
 export default function BrainManagerScreen() {
-  const {
-    brainDumpItems,
-    addBrainDumpItem,
-    updateBrainDumpItem,
-    deleteBrainDumpItem,
-    toggleBrainDumpItem,
-  } = useStudyStore();
-
+  const { user } = useUser();
   const [searchQuery, setSearchQuery] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingText, setEditingText] = useState("");
+  const [editingTitle, setEditingTitle] = useState("");
+  const [editingContent, setEditingContent] = useState("");
+  const [editingCategory, setEditingCategory] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newItemText, setNewItemText] = useState("");
-  const [filterCompleted, setFilterCompleted] = useState<"all" | "active" | "completed">("all");
+  const [newItemTitle, setNewItemTitle] = useState("");
+  const [newItemContent, setNewItemContent] = useState("");
+  const [newItemCategory, setNewItemCategory] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  const filteredItems = brainDumpItems?.filter((item) => {
-    const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = 
-      filterCompleted === "all" ||
-      (filterCompleted === "active" && !item.completed) ||
-      (filterCompleted === "completed" && item.completed);
-    return matchesSearch && matchesFilter;
+  // Fetch brain dumps
+  const { data: brainDumps, isLoading, refetch } = trpc.brainDumps.getBrainDumps.useQuery(
+    { limit: 100 },
+    { enabled: !!user?.id }
+  );
+
+  // Mutations
+  const createMutation = trpc.brainDumps.createBrainDump.useMutation({
+    onSuccess: () => {
+      refetch();
+      setShowAddModal(false);
+      resetForm();
+    },
+    onError: (error) => {
+      Alert.alert("Error", "Failed to create brain dump");
+      console.error(error);
+    },
+  });
+
+  const updateMutation = trpc.brainDumps.updateBrainDump.useMutation({
+    onSuccess: () => {
+      refetch();
+      setEditingId(null);
+      resetForm();
+    },
+    onError: (error) => {
+      Alert.alert("Error", "Failed to update brain dump");
+      console.error(error);
+    },
+  });
+
+  const deleteMutation = trpc.brainDumps.deleteBrainDump.useMutation({
+    onSuccess: () => {
+      refetch();
+    },
+    onError: (error) => {
+      Alert.alert("Error", "Failed to delete brain dump");
+      console.error(error);
+    },
+  });
+
+  const resetForm = () => {
+    setNewItemTitle("");
+    setNewItemContent("");
+    setNewItemCategory("");
+    setEditingTitle("");
+    setEditingContent("");
+    setEditingCategory("");
+  };
+
+  // Filter brain dumps
+  const filteredItems = brainDumps?.filter((item) => {
+    const matchesSearch = 
+      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.content.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = !selectedCategory || item.category === selectedCategory;
+    return matchesSearch && matchesCategory;
   }) || [];
 
-  const handleEdit = (id: string, text: string) => {
-    setEditingId(id);
-    setEditingText(text);
+  // Sort brain dumps: pinned first, then by date
+  const sortedItems = [...filteredItems].sort((a, b) => {
+    if (a.is_pinned && !b.is_pinned) return -1;
+    if (!a.is_pinned && b.is_pinned) return 1;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+
+  // Get unique categories
+  const categories = Array.from(new Set(brainDumps?.map(item => item.category).filter(Boolean) || []));
+
+  const handleEdit = (item: BrainDump) => {
+    setEditingId(item.id);
+    setEditingTitle(item.title);
+    setEditingContent(item.content);
+    setEditingCategory(item.category || "");
   };
 
   const handleSaveEdit = () => {
-    if (editingId && editingText.trim()) {
-      updateBrainDumpItem(editingId, editingText.trim());
-      setEditingId(null);
-      setEditingText("");
+    if (editingId && editingTitle.trim() && editingContent.trim()) {
+      updateMutation.mutate({
+        id: editingId,
+        title: editingTitle.trim(),
+        content: editingContent.trim(),
+        category: editingCategory.trim() || undefined,
+      });
     }
   };
 
   const handleCancelEdit = () => {
     setEditingId(null);
-    setEditingText("");
+    resetForm();
   };
 
   const handleDelete = (id: string, title: string) => {
     Alert.alert(
-      "Delete Brain Dump Item",
+      "Delete Brain Dump",
       `Are you sure you want to delete "${title}"?`,
       [
         { text: "Cancel", style: "cancel" },
         {
           text: "Delete",
           style: "destructive",
-          onPress: () => deleteBrainDumpItem(id),
+          onPress: () => deleteMutation.mutate({ id }),
         },
       ]
     );
   };
 
   const handleAddItem = () => {
-    if (newItemText.trim()) {
-      addBrainDumpItem(newItemText.trim());
-      setNewItemText("");
-      setShowAddModal(false);
+    if (newItemTitle.trim() && newItemContent.trim()) {
+      createMutation.mutate({
+        title: newItemTitle.trim(),
+        content: newItemContent.trim(),
+        category: newItemCategory.trim() || undefined,
+        is_pinned: false,
+      });
+    } else {
+      Alert.alert("Error", "Please fill in title and content");
     }
   };
 
-  const completedCount = brainDumpItems?.filter(item => item.completed).length || 0;
-  const totalCount = brainDumpItems?.length || 0;
+  const togglePin = (item: BrainDump) => {
+    updateMutation.mutate({
+      id: item.id,
+      is_pinned: !item.is_pinned,
+    });
+  };
+
+  const pinnedCount = brainDumps?.filter(item => item.is_pinned).length || 0;
+  const totalCount = brainDumps?.length || 0;
+
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <Stack.Screen
+          options={{
+            headerShown: true,
+            title: "Brain Dump Manager",
+            headerLeft: () => (
+              <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                <ChevronLeft size={24} color="#007AFF" />
+              </TouchableOpacity>
+            ),
+          }}
+        />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+          <Text style={styles.loadingText}>Loading brain dumps...</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -108,12 +216,12 @@ export default function BrainManagerScreen() {
             <Text style={styles.statLabel}>Total Items</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{completedCount}</Text>
-            <Text style={styles.statLabel}>Completed</Text>
+            <Text style={styles.statNumber}>{pinnedCount}</Text>
+            <Text style={styles.statLabel}>Pinned</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{totalCount - completedCount}</Text>
-            <Text style={styles.statLabel}>Active</Text>
+            <Text style={styles.statNumber}>{categories.length}</Text>
+            <Text style={styles.statLabel}>Categories</Text>
           </View>
         </View>
 
@@ -133,32 +241,34 @@ export default function BrainManagerScreen() {
           )}
         </View>
 
-        <View style={styles.filterContainer}>
-          <TouchableOpacity
-            style={[styles.filterButton, filterCompleted === "all" && styles.filterButtonActive]}
-            onPress={() => setFilterCompleted("all")}
+        {categories.length > 0 && (
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            style={styles.categoryFilter}
+            contentContainerStyle={styles.categoryFilterContent}
           >
-            <Text style={[styles.filterText, filterCompleted === "all" && styles.filterTextActive]}>
-              All ({totalCount})
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.filterButton, filterCompleted === "active" && styles.filterButtonActive]}
-            onPress={() => setFilterCompleted("active")}
-          >
-            <Text style={[styles.filterText, filterCompleted === "active" && styles.filterTextActive]}>
-              Active ({totalCount - completedCount})
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.filterButton, filterCompleted === "completed" && styles.filterButtonActive]}
-            onPress={() => setFilterCompleted("completed")}
-          >
-            <Text style={[styles.filterText, filterCompleted === "completed" && styles.filterTextActive]}>
-              Completed ({completedCount})
-            </Text>
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity
+              style={[styles.filterButton, !selectedCategory && styles.filterButtonActive]}
+              onPress={() => setSelectedCategory(null)}
+            >
+              <Text style={[styles.filterText, !selectedCategory && styles.filterTextActive]}>
+                All
+              </Text>
+            </TouchableOpacity>
+            {categories.map((category) => (
+              <TouchableOpacity
+                key={category}
+                style={[styles.filterButton, selectedCategory === category && styles.filterButtonActive]}
+                onPress={() => setSelectedCategory(category)}
+              >
+                <Text style={[styles.filterText, selectedCategory === category && styles.filterTextActive]}>
+                  {category}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
       </View>
 
       <ScrollView
@@ -178,17 +288,36 @@ export default function BrainManagerScreen() {
             </Text>
           </View>
         ) : (
-          filteredItems.map((item) => (
+          sortedItems.map((item) => (
             <View key={item.id} style={styles.itemCard}>
               {editingId === item.id ? (
                 <View style={styles.editingContainer}>
-                  <TextInput
-                    style={styles.editingInput}
-                    value={editingText}
-                    onChangeText={setEditingText}
-                    multiline
-                    autoFocus
-                  />
+                  <View style={styles.editingInputs}>
+                    <TextInput
+                      style={styles.editingInput}
+                      value={editingTitle}
+                      onChangeText={setEditingTitle}
+                      placeholder="Title"
+                      placeholderTextColor="#8E8E93"
+                      autoFocus
+                    />
+                    <TextInput
+                      style={[styles.editingInput, styles.editingTextArea]}
+                      value={editingContent}
+                      onChangeText={setEditingContent}
+                      placeholder="Content"
+                      placeholderTextColor="#8E8E93"
+                      multiline
+                      numberOfLines={3}
+                    />
+                    <TextInput
+                      style={styles.editingInput}
+                      value={editingCategory}
+                      onChangeText={setEditingCategory}
+                      placeholder="Category (optional)"
+                      placeholderTextColor="#8E8E93"
+                    />
+                  </View>
                   <View style={styles.editingActions}>
                     <TouchableOpacity onPress={handleSaveEdit} style={styles.iconButton}>
                       <Check size={20} color="#34C759" />
@@ -200,30 +329,33 @@ export default function BrainManagerScreen() {
                 </View>
               ) : (
                 <View style={styles.itemContent}>
-                  <TouchableOpacity
-                    style={styles.checkboxContainer}
-                    onPress={() => toggleBrainDumpItem(item.id)}
-                  >
-                    <View style={[styles.checkbox, item.completed && styles.checkboxChecked]}>
-                      {item.completed && <Check size={14} color="#FFFFFF" />}
+                  <View style={styles.itemTextContainer}>
+                    <View style={styles.itemHeader}>
+                      <Text style={styles.itemText}>{item.title}</Text>
+                      {item.is_pinned && <Pin size={16} color="#FF9500" />}
                     </View>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity
-                    style={styles.itemTextContainer}
-                    onPress={() => toggleBrainDumpItem(item.id)}
-                  >
-                    <Text style={[styles.itemText, item.completed && styles.itemTextCompleted]}>
-                      {item.title}
+                    <Text style={styles.itemContentText} numberOfLines={2}>
+                      {item.content}
                     </Text>
+                    {item.category && (
+                      <View style={styles.categoryBadge}>
+                        <Text style={styles.categoryBadgeText}>{item.category}</Text>
+                      </View>
+                    )}
                     <Text style={styles.itemDate}>
-                      Added {new Date(item.createdAt).toLocaleDateString()}
+                      {new Date(item.created_at).toLocaleDateString()}
                     </Text>
-                  </TouchableOpacity>
+                  </View>
                   
                   <View style={styles.itemActions}>
                     <TouchableOpacity
-                      onPress={() => handleEdit(item.id, item.title)}
+                      onPress={() => togglePin(item)}
+                      style={styles.iconButton}
+                    >
+                      <Pin size={18} color={item.is_pinned ? "#FF9500" : "#8E8E93"} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => handleEdit(item)}
                       style={styles.iconButton}
                     >
                       <Edit2 size={18} color="#007AFF" />
@@ -254,26 +386,49 @@ export default function BrainManagerScreen() {
             <TouchableOpacity onPress={() => setShowAddModal(false)}>
               <X size={24} color="#8E8E93" />
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>Add Brain Dump Item</Text>
-            <TouchableOpacity onPress={handleAddItem}>
-              <Text style={styles.saveButton}>Save</Text>
+            <Text style={styles.modalTitle}>Add Brain Dump</Text>
+            <TouchableOpacity onPress={handleAddItem} disabled={createMutation.isPending}>
+              {createMutation.isPending ? (
+                <ActivityIndicator size="small" color="#007AFF" />
+              ) : (
+                <Text style={styles.saveButton}>Save</Text>
+              )}
             </TouchableOpacity>
           </View>
 
           <View style={styles.modalContent}>
-            <Text style={styles.inputLabel}>{"What's on your mind?"}</Text>
+            <Text style={styles.inputLabel}>Title</Text>
+            <TextInput
+              style={styles.textInput}
+              value={newItemTitle}
+              onChangeText={setNewItemTitle}
+              placeholder="Enter title..."
+              placeholderTextColor="#8E8E93"
+              autoFocus
+            />
+            
+            <Text style={styles.inputLabel}>Content</Text>
             <TextInput
               style={styles.textArea}
-              value={newItemText}
-              onChangeText={setNewItemText}
+              value={newItemContent}
+              onChangeText={setNewItemContent}
               placeholder="Enter your thoughts, ideas, or tasks..."
               placeholderTextColor="#8E8E93"
               multiline
               numberOfLines={6}
-              autoFocus
             />
+            
+            <Text style={styles.inputLabel}>Category (Optional)</Text>
+            <TextInput
+              style={styles.textInput}
+              value={newItemCategory}
+              onChangeText={setNewItemCategory}
+              placeholder="e.g., Study Plan, Ideas, Notes"
+              placeholderTextColor="#8E8E93"
+            />
+            
             <Text style={styles.helperText}>
-              Brain dump items help you capture thoughts quickly without overthinking.
+              Brain dumps help you capture and organize thoughts quickly.
             </Text>
           </View>
         </View>
@@ -338,18 +493,20 @@ const styles = StyleSheet.create({
     color: "#000000",
     marginLeft: 8,
   },
-  filterContainer: {
+  categoryFilter: {
+    maxHeight: 50,
+  },
+  categoryFilterContent: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    paddingVertical: 8,
+    gap: 8,
   },
   filterButton: {
-    flex: 1,
     paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    paddingHorizontal: 16,
+    borderRadius: 16,
     backgroundColor: "#F2F2F7",
-    marginHorizontal: 4,
-    alignItems: "center",
+    marginRight: 8,
   },
   filterButtonActive: {
     backgroundColor: "#007AFF",
@@ -383,23 +540,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
   },
-  checkboxContainer: {
-    marginRight: 12,
-    paddingTop: 2,
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: "#C7C7CC",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  checkboxChecked: {
-    backgroundColor: "#007AFF",
-    borderColor: "#007AFF",
-  },
+
   itemTextContainer: {
     flex: 1,
   },
@@ -409,9 +550,30 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     lineHeight: 22,
   },
-  itemTextCompleted: {
-    textDecorationLine: "line-through",
+  itemHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  itemContentText: {
+    fontSize: 14,
     color: "#8E8E93",
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  categoryBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: "#E8F3FF",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginBottom: 8,
+  },
+  categoryBadgeText: {
+    fontSize: 12,
+    color: "#007AFF",
+    fontWeight: "500",
   },
   itemDate: {
     fontSize: 12,
@@ -429,8 +591,11 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     gap: 8,
   },
-  editingInput: {
+  editingInputs: {
     flex: 1,
+    gap: 8,
+  },
+  editingInput: {
     backgroundColor: "#F8F9FA",
     borderRadius: 8,
     padding: 12,
@@ -438,7 +603,10 @@ const styles = StyleSheet.create({
     color: "#000000",
     borderWidth: 2,
     borderColor: "#007AFF",
-    minHeight: 60,
+  },
+  editingTextArea: {
+    minHeight: 80,
+    textAlignVertical: "top",
   },
   editingActions: {
     flexDirection: "column",
@@ -509,5 +677,25 @@ const styles = StyleSheet.create({
     color: "#8E8E93",
     marginTop: 12,
     lineHeight: 20,
+  },
+  textInput: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    color: "#000000",
+    borderWidth: 1,
+    borderColor: "#E5E5EA",
+    marginBottom: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: "#8E8E93",
   },
 });

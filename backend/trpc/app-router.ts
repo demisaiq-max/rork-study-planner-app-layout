@@ -32,6 +32,12 @@ import deleteSubject from "./routes/tests/delete-subject/route";
 import updateSubject from "./routes/tests/update-subject/route";
 import seedTestData, { debugTestData } from "./routes/tests/seed-test-data/route";
 
+// Brain dump routes
+import { getBrainDumpsProcedure } from "./routes/brain-dumps/get-brain-dumps/route";
+import { createBrainDumpProcedure } from "./routes/brain-dumps/create-brain-dump/route";
+import { updateBrainDumpProcedure } from "./routes/brain-dumps/update-brain-dump/route";
+import { deleteBrainDumpProcedure } from "./routes/brain-dumps/delete-brain-dump/route";
+
 export const appRouter = createTRPCRouter({
   example: createTRPCRouter({
     hi: hiRoute,
@@ -67,6 +73,12 @@ export const appRouter = createTRPCRouter({
     updateSubject,
     seedTestData,
     debugTestData,
+  }),
+  brainDumps: createTRPCRouter({
+    getBrainDumps: getBrainDumpsProcedure,
+    createBrainDump: createBrainDumpProcedure,
+    updateBrainDump: updateBrainDumpProcedure,
+    deleteBrainDump: deleteBrainDumpProcedure,
   }),
 });
 
