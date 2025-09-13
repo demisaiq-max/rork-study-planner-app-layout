@@ -296,3 +296,324 @@ SELECT
 FROM tests t
 WHERE t.user_id = '550e8400-e29b-41d4-a716-446655440000'
 ON CONFLICT DO NOTHING;
+
+-- ============================================
+-- COMMUNITY FEATURES DATABASE SCHEMA
+-- ============================================
+
+-- Study groups table
+CREATE TABLE IF NOT EXISTS study_groups (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    subject VARCHAR(100),
+    member_count INTEGER DEFAULT 0,
+    max_members INTEGER DEFAULT 50,
+    is_public BOOLEAN DEFAULT TRUE,
+    created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Group members table
+CREATE TABLE IF NOT EXISTS group_members (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    group_id UUID NOT NULL REFERENCES study_groups(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role VARCHAR(50) DEFAULT 'member' CHECK (role IN ('admin', 'moderator', 'member')),
+    joined_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(group_id, user_id)
+);
+
+-- Daily posts table
+CREATE TABLE IF NOT EXISTS daily_posts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    group_id UUID REFERENCES study_groups(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    study_hours INTEGER,
+    subjects_studied TEXT[],
+    mood VARCHAR(50),
+    image_url TEXT,
+    likes_count INTEGER DEFAULT 0,
+    comments_count INTEGER DEFAULT 0,
+    is_public BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Post likes table
+CREATE TABLE IF NOT EXISTS post_likes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    post_id UUID NOT NULL REFERENCES daily_posts(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(post_id, user_id)
+);
+
+-- Post comments table
+CREATE TABLE IF NOT EXISTS post_comments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    post_id UUID NOT NULL REFERENCES daily_posts(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    parent_comment_id UUID REFERENCES post_comments(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Questions table
+CREATE TABLE IF NOT EXISTS questions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(500) NOT NULL,
+    content TEXT NOT NULL,
+    subject VARCHAR(100),
+    tags TEXT[],
+    image_urls TEXT[],
+    views_count INTEGER DEFAULT 0,
+    answers_count INTEGER DEFAULT 0,
+    likes_count INTEGER DEFAULT 0,
+    is_solved BOOLEAN DEFAULT FALSE,
+    accepted_answer_id UUID,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Question likes table
+CREATE TABLE IF NOT EXISTS question_likes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    question_id UUID NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(question_id, user_id)
+);
+
+-- Answers table
+CREATE TABLE IF NOT EXISTS answers (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    question_id UUID NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    image_urls TEXT[],
+    likes_count INTEGER DEFAULT 0,
+    is_accepted BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Answer likes table
+CREATE TABLE IF NOT EXISTS answer_likes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    answer_id UUID NOT NULL REFERENCES answers(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(answer_id, user_id)
+);
+
+-- Notifications table for real-time updates
+CREATE TABLE IF NOT EXISTS notifications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    type VARCHAR(50) NOT NULL CHECK (type IN ('like', 'comment', 'answer', 'mention', 'group_invite', 'group_post')),
+    title VARCHAR(255) NOT NULL,
+    message TEXT,
+    related_id UUID,
+    related_type VARCHAR(50),
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create indexes for community tables
+CREATE INDEX IF NOT EXISTS idx_study_groups_created_by ON study_groups(created_by);
+CREATE INDEX IF NOT EXISTS idx_group_members_group_id ON group_members(group_id);
+CREATE INDEX IF NOT EXISTS idx_group_members_user_id ON group_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_daily_posts_user_id ON daily_posts(user_id);
+CREATE INDEX IF NOT EXISTS idx_daily_posts_group_id ON daily_posts(group_id);
+CREATE INDEX IF NOT EXISTS idx_daily_posts_created_at ON daily_posts(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_post_likes_post_id ON post_likes(post_id);
+CREATE INDEX IF NOT EXISTS idx_post_likes_user_id ON post_likes(user_id);
+CREATE INDEX IF NOT EXISTS idx_post_comments_post_id ON post_comments(post_id);
+CREATE INDEX IF NOT EXISTS idx_post_comments_user_id ON post_comments(user_id);
+CREATE INDEX IF NOT EXISTS idx_questions_user_id ON questions(user_id);
+CREATE INDEX IF NOT EXISTS idx_questions_subject ON questions(subject);
+CREATE INDEX IF NOT EXISTS idx_questions_created_at ON questions(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_question_likes_question_id ON question_likes(question_id);
+CREATE INDEX IF NOT EXISTS idx_answers_question_id ON answers(question_id);
+CREATE INDEX IF NOT EXISTS idx_answers_user_id ON answers(user_id);
+CREATE INDEX IF NOT EXISTS idx_answer_likes_answer_id ON answer_likes(answer_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);
+
+-- Create triggers for updated_at
+DROP TRIGGER IF EXISTS update_study_groups_updated_at ON study_groups;
+DROP TRIGGER IF EXISTS update_daily_posts_updated_at ON daily_posts;
+DROP TRIGGER IF EXISTS update_post_comments_updated_at ON post_comments;
+DROP TRIGGER IF EXISTS update_questions_updated_at ON questions;
+DROP TRIGGER IF EXISTS update_answers_updated_at ON answers;
+
+CREATE TRIGGER update_study_groups_updated_at BEFORE UPDATE ON study_groups FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_daily_posts_updated_at BEFORE UPDATE ON daily_posts FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_post_comments_updated_at BEFORE UPDATE ON post_comments FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_questions_updated_at BEFORE UPDATE ON questions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_answers_updated_at BEFORE UPDATE ON answers FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Function to update member count in study groups
+CREATE OR REPLACE FUNCTION update_group_member_count()
+RETURNS TRIGGER AS $
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        UPDATE study_groups SET member_count = member_count + 1 WHERE id = NEW.group_id;
+    ELSIF TG_OP = 'DELETE' THEN
+        UPDATE study_groups SET member_count = member_count - 1 WHERE id = OLD.group_id;
+    END IF;
+    RETURN NULL;
+END;
+$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS update_group_member_count_trigger ON group_members;
+CREATE TRIGGER update_group_member_count_trigger
+AFTER INSERT OR DELETE ON group_members
+FOR EACH ROW EXECUTE FUNCTION update_group_member_count();
+
+-- Function to update counts in posts
+CREATE OR REPLACE FUNCTION update_post_likes_count()
+RETURNS TRIGGER AS $
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        UPDATE daily_posts SET likes_count = likes_count + 1 WHERE id = NEW.post_id;
+    ELSIF TG_OP = 'DELETE' THEN
+        UPDATE daily_posts SET likes_count = likes_count - 1 WHERE id = OLD.post_id;
+    END IF;
+    RETURN NULL;
+END;
+$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS update_post_likes_count_trigger ON post_likes;
+CREATE TRIGGER update_post_likes_count_trigger
+AFTER INSERT OR DELETE ON post_likes
+FOR EACH ROW EXECUTE FUNCTION update_post_likes_count();
+
+-- Function to update comments count in posts
+CREATE OR REPLACE FUNCTION update_post_comments_count()
+RETURNS TRIGGER AS $
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        UPDATE daily_posts SET comments_count = comments_count + 1 WHERE id = NEW.post_id;
+    ELSIF TG_OP = 'DELETE' THEN
+        UPDATE daily_posts SET comments_count = comments_count - 1 WHERE id = OLD.post_id;
+    END IF;
+    RETURN NULL;
+END;
+$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS update_post_comments_count_trigger ON post_comments;
+CREATE TRIGGER update_post_comments_count_trigger
+AFTER INSERT OR DELETE ON post_comments
+FOR EACH ROW EXECUTE FUNCTION update_post_comments_count();
+
+-- Function to update likes count in questions
+CREATE OR REPLACE FUNCTION update_question_likes_count()
+RETURNS TRIGGER AS $
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        UPDATE questions SET likes_count = likes_count + 1 WHERE id = NEW.question_id;
+    ELSIF TG_OP = 'DELETE' THEN
+        UPDATE questions SET likes_count = likes_count - 1 WHERE id = OLD.question_id;
+    END IF;
+    RETURN NULL;
+END;
+$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS update_question_likes_count_trigger ON question_likes;
+CREATE TRIGGER update_question_likes_count_trigger
+AFTER INSERT OR DELETE ON question_likes
+FOR EACH ROW EXECUTE FUNCTION update_question_likes_count();
+
+-- Function to update answers count in questions
+CREATE OR REPLACE FUNCTION update_question_answers_count()
+RETURNS TRIGGER AS $
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        UPDATE questions SET answers_count = answers_count + 1 WHERE id = NEW.question_id;
+    ELSIF TG_OP = 'DELETE' THEN
+        UPDATE questions SET answers_count = answers_count - 1 WHERE id = OLD.question_id;
+    END IF;
+    RETURN NULL;
+END;
+$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS update_question_answers_count_trigger ON answers;
+CREATE TRIGGER update_question_answers_count_trigger
+AFTER INSERT OR DELETE ON answers
+FOR EACH ROW EXECUTE FUNCTION update_question_answers_count();
+
+-- Function to update likes count in answers
+CREATE OR REPLACE FUNCTION update_answer_likes_count()
+RETURNS TRIGGER AS $
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        UPDATE answers SET likes_count = likes_count + 1 WHERE id = NEW.answer_id;
+    ELSIF TG_OP = 'DELETE' THEN
+        UPDATE answers SET likes_count = likes_count - 1 WHERE id = OLD.answer_id;
+    END IF;
+    RETURN NULL;
+END;
+$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS update_answer_likes_count_trigger ON answer_likes;
+CREATE TRIGGER update_answer_likes_count_trigger
+AFTER INSERT OR DELETE ON answer_likes
+FOR EACH ROW EXECUTE FUNCTION update_answer_likes_count();
+
+-- Enable Row Level Security (RLS) for all community tables
+ALTER TABLE study_groups ENABLE ROW LEVEL SECURITY;
+ALTER TABLE group_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE daily_posts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE post_likes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE post_comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE questions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE question_likes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE answers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE answer_likes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+
+-- Create RLS policies (basic public read, authenticated write)
+CREATE POLICY "Public read access" ON study_groups FOR SELECT USING (true);
+CREATE POLICY "Public read access" ON group_members FOR SELECT USING (true);
+CREATE POLICY "Public read access" ON daily_posts FOR SELECT USING (true);
+CREATE POLICY "Public read access" ON post_likes FOR SELECT USING (true);
+CREATE POLICY "Public read access" ON post_comments FOR SELECT USING (true);
+CREATE POLICY "Public read access" ON questions FOR SELECT USING (true);
+CREATE POLICY "Public read access" ON question_likes FOR SELECT USING (true);
+CREATE POLICY "Public read access" ON answers FOR SELECT USING (true);
+CREATE POLICY "Public read access" ON answer_likes FOR SELECT USING (true);
+CREATE POLICY "Users read own notifications" ON notifications FOR SELECT USING (true);
+
+-- Sample data for test user community features
+-- Create sample study groups
+INSERT INTO study_groups (id, name, description, subject, created_by) VALUES 
+('650e8400-e29b-41d4-a716-446655440001', '수능 스터디 그룹', '2025 수능 대비 함께 공부해요!', '종합', '550e8400-e29b-41d4-a716-446655440000'),
+('650e8400-e29b-41d4-a716-446655440002', '영어 회화 모임', '매일 영어 회화 연습', '영어', '550e8400-e29b-41d4-a716-446655440000'),
+('650e8400-e29b-41d4-a716-446655440003', '수학 문제 풀이', '수학 문제 함께 풀어요', '수학', '550e8400-e29b-41d4-a716-446655440000')
+ON CONFLICT DO NOTHING;
+
+-- Add test user to groups
+INSERT INTO group_members (group_id, user_id, role) VALUES 
+('650e8400-e29b-41d4-a716-446655440001', '550e8400-e29b-41d4-a716-446655440000', 'admin'),
+('650e8400-e29b-41d4-a716-446655440002', '550e8400-e29b-41d4-a716-446655440000', 'member')
+ON CONFLICT DO NOTHING;
+
+-- Sample daily posts
+INSERT INTO daily_posts (user_id, group_id, content, study_hours, subjects_studied, mood) VALUES 
+('550e8400-e29b-41d4-a716-446655440000', '650e8400-e29b-41d4-a716-446655440001', '오늘 국어 모의고사 풀었어요! 생각보다 잘 나와서 기분 좋네요 😊', 3, ARRAY['국어'], 'happy'),
+('550e8400-e29b-41d4-a716-446655440000', '650e8400-e29b-41d4-a716-446655440001', '수학 미적분 파트 완료! 내일은 확률과 통계 시작합니다', 4, ARRAY['수학'], 'focused'),
+('550e8400-e29b-41d4-a716-446655440000', NULL, '영어 단어 200개 외웠어요. 힘들지만 보람있네요', 2, ARRAY['영어'], 'tired')
+ON CONFLICT DO NOTHING;
+
+-- Sample questions
+INSERT INTO questions (user_id, title, content, subject, tags) VALUES 
+('550e8400-e29b-41d4-a716-446655440000', '이차방정식 문제 질문입니다', '이 문제 어떻게 푸는지 알려주세요. x² + 5x + 6 = 0', '수학', ARRAY['이차방정식', '인수분해']),
+('550e8400-e29b-41d4-a716-446655440000', '영어 문법 to부정사 vs 동명사', 'stop to do와 stop doing의 차이가 뭔가요?', '영어', ARRAY['문법', 'to부정사', '동명사']),
+('550e8400-e29b-41d4-a716-446655440000', '국어 비문학 독해 팁', '비문학 지문 빨리 읽는 방법 있나요?', '국어', ARRAY['비문학', '독해', '수능'])
+ON CONFLICT DO NOTHING;

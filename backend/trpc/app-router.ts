@@ -47,6 +47,23 @@ import { createPriorityTaskProcedure } from "./routes/priority-tasks/create-prio
 import { updatePriorityTaskProcedure } from "./routes/priority-tasks/update-priority-task/route";
 import { deletePriorityTaskProcedure } from "./routes/priority-tasks/delete-priority-task/route";
 
+// Community routes - Posts
+import { getPostsProcedure } from "./routes/community/posts/get-posts/route";
+import { createPostProcedure } from "./routes/community/posts/create-post/route";
+import { likePostProcedure } from "./routes/community/posts/like-post/route";
+import { addCommentProcedure } from "./routes/community/posts/add-comment/route";
+
+// Community routes - Groups
+import { getGroupsProcedure } from "./routes/community/groups/get-groups/route";
+import { joinGroupProcedure } from "./routes/community/groups/join-group/route";
+import { leaveGroupProcedure } from "./routes/community/groups/leave-group/route";
+
+// Community routes - Questions
+import { getQuestionsProcedure } from "./routes/community/questions/get-questions/route";
+import { createQuestionProcedure } from "./routes/community/questions/create-question/route";
+import { addAnswerProcedure } from "./routes/community/questions/add-answer/route";
+import { likeQuestionProcedure } from "./routes/community/questions/like-question/route";
+
 export const appRouter = createTRPCRouter({
   example: createTRPCRouter({
     hi: hiRoute,
@@ -97,6 +114,25 @@ export const appRouter = createTRPCRouter({
     createPriorityTask: createPriorityTaskProcedure,
     updatePriorityTask: updatePriorityTaskProcedure,
     deletePriorityTask: deletePriorityTaskProcedure,
+  }),
+  community: createTRPCRouter({
+    posts: createTRPCRouter({
+      getPosts: getPostsProcedure,
+      createPost: createPostProcedure,
+      likePost: likePostProcedure,
+      addComment: addCommentProcedure,
+    }),
+    groups: createTRPCRouter({
+      getGroups: getGroupsProcedure,
+      joinGroup: joinGroupProcedure,
+      leaveGroup: leaveGroupProcedure,
+    }),
+    questions: createTRPCRouter({
+      getQuestions: getQuestionsProcedure,
+      createQuestion: createQuestionProcedure,
+      addAnswer: addAnswerProcedure,
+      likeQuestion: likeQuestionProcedure,
+    }),
   }),
 });
 
