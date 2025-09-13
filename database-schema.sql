@@ -690,3 +690,61 @@ INSERT INTO questions (user_id, title, content, subject, tags) VALUES
 ('550e8400-e29b-41d4-a716-446655440000', '영어 문법 to부정사 vs 동명사', 'stop to do와 stop doing의 차이가 뭔가요?', '영어', ARRAY['문법', 'to부정사', '동명사']),
 ('550e8400-e29b-41d4-a716-446655440000', '국어 비문학 독해 팁', '비문학 지문 빨리 읽는 방법 있나요?', '국어', ARRAY['비문학', '독해', '수능'])
 ON CONFLICT DO NOTHING;
+
+-- ============================================
+-- TIMER SESSIONS DATABASE SCHEMA
+-- ============================================
+
+-- Timer sessions table for storing study timer data
+CREATE TABLE IF NOT EXISTS timer_sessions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    subject VARCHAR(100),
+    duration INTEGER NOT NULL, -- in seconds
+    start_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    end_time TIMESTAMP WITH TIME ZONE,
+    is_completed BOOLEAN DEFAULT FALSE,
+    is_paused BOOLEAN DEFAULT FALSE,
+    pause_duration INTEGER DEFAULT 0, -- total pause time in seconds
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Timer pause logs for tracking pause/resume events
+CREATE TABLE IF NOT EXISTS timer_pause_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    session_id UUID NOT NULL REFERENCES timer_sessions(id) ON DELETE CASCADE,
+    pause_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    resume_time TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create indexes for timer tables
+CREATE INDEX IF NOT EXISTS idx_timer_sessions_user_id ON timer_sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_timer_sessions_start_time ON timer_sessions(start_time DESC);
+CREATE INDEX IF NOT EXISTS idx_timer_sessions_subject ON timer_sessions(subject);
+CREATE INDEX IF NOT EXISTS idx_timer_pause_logs_session_id ON timer_pause_logs(session_id);
+
+-- Create triggers for timer updated_at
+DROP TRIGGER IF EXISTS update_timer_sessions_updated_at ON timer_sessions;
+CREATE TRIGGER update_timer_sessions_updated_at BEFORE UPDATE ON timer_sessions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Enable Row Level Security for timer tables
+ALTER TABLE timer_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE timer_pause_logs ENABLE ROW LEVEL SECURITY;
+
+-- Create RLS policies for timer tables
+DROP POLICY IF EXISTS "Public read access" ON timer_sessions;
+DROP POLICY IF EXISTS "Public write access" ON timer_sessions;
+CREATE POLICY "Public read access" ON timer_sessions FOR SELECT USING (true);
+CREATE POLICY "Public write access" ON timer_sessions FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public update access" ON timer_sessions FOR UPDATE USING (true);
+CREATE POLICY "Public delete access" ON timer_sessions FOR DELETE USING (true);
+
+DROP POLICY IF EXISTS "Public read access" ON timer_pause_logs;
+DROP POLICY IF EXISTS "Public write access" ON timer_pause_logs;
+CREATE POLICY "Public read access" ON timer_pause_logs FOR SELECT USING (true);
+CREATE POLICY "Public write access" ON timer_pause_logs FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public update access" ON timer_pause_logs FOR UPDATE USING (true);
+CREATE POLICY "Public delete access" ON timer_pause_logs FOR DELETE USING (true);

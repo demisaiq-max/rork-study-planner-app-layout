@@ -6,12 +6,15 @@ import {
   TouchableOpacity,
   Dimensions,
   Animated,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Play, Pause, RotateCcw, Coffee } from "lucide-react-native";
 import CircularProgress from "@/components/CircularProgress";
 import { useStudyStore } from "@/hooks/study-store";
 import { useLanguage } from "@/hooks/language-context";
+import { useUser } from "@/hooks/user-context";
+import { trpc } from "@/lib/trpc";
 
 const { width } = Dimensions.get("window");
 
@@ -24,9 +27,81 @@ export default function TimerScreen() {
   const [isRunning, setIsRunning] = useState(false);
   const [timerMode, setTimerMode] = useState<"pomodoro" | "shortBreak" | "longBreak">("pomodoro");
   const [pomodoroCount, setPomodoroCount] = useState(0);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const { updateStudyTime } = useStudyStore();
   const { t } = useLanguage();
+  const { user } = useUser();
+  
+  // tRPC mutations for timer operations
+  const createTimerSession = trpc.timers.createTimerSession.useMutation();
+  const updateTimerSession = trpc.timers.updateTimerSession.useMutation();
+  const createPauseLog = trpc.timers.createPauseLog.useMutation();
+  
+  // Query for active timer
+  const { data: activeTimer } = trpc.timers.getActiveTimer.useQuery(
+    { userId: user?.id || '550e8400-e29b-41d4-a716-446655440000' },
+    { 
+      enabled: !!user?.id,
+      refetchInterval: false,
+    }
+  );
+  
+  // Query for timer sessions history
+  const { data: timerSessions, refetch: refetchSessions } = trpc.timers.getTimerSessions.useQuery(
+    { 
+      userId: user?.id || '550e8400-e29b-41d4-a716-446655440000',
+      limit: 10
+    },
+    { enabled: !!user?.id }
+  );
+  
+  // Load active timer on mount
+  useEffect(() => {
+    if (activeTimer && !currentSessionId) {
+      // Resume active timer
+      const startTime = new Date(activeTimer.start_time);
+      const now = new Date();
+      const elapsedSeconds = Math.floor((now.getTime() - startTime.getTime()) / 1000);
+      const remainingTime = activeTimer.duration - elapsedSeconds;
+      
+      if (remainingTime > 0 && !activeTimer.is_completed) {
+        setCurrentSessionId(activeTimer.id);
+        setSessionStartTime(startTime);
+        setTimeLeft(remainingTime);
+        
+        // Determine timer mode based on subject
+        if (activeTimer.subject === 'break-short') {
+          setTimerMode('shortBreak');
+        } else if (activeTimer.subject === 'break-long') {
+          setTimerMode('longBreak');
+        } else {
+          setTimerMode('pomodoro');
+        }
+      }
+    }
+  }, [activeTimer, currentSessionId]);
+  
+  // Calculate today's total focus time from sessions
+  useEffect(() => {
+    if (timerSessions) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const todaysSessions = timerSessions.filter(session => {
+        const sessionDate = new Date(session.start_time);
+        sessionDate.setHours(0, 0, 0, 0);
+        return sessionDate.getTime() === today.getTime() && 
+               session.is_completed && 
+               session.subject !== 'break-short' && 
+               session.subject !== 'break-long';
+      });
+      
+      const totalPomodoros = todaysSessions.filter(s => s.duration === POMODORO_TIME).length;
+      setPomodoroCount(totalPomodoros);
+    }
+  }, [timerSessions]);
 
   const switchMode = useCallback((mode: "pomodoro" | "shortBreak" | "longBreak") => {
     setTimerMode(mode);
@@ -58,7 +133,26 @@ export default function TimerScreen() {
     ]).start();
   }, [fadeAnim]);
 
-  const handleTimerComplete = useCallback(() => {
+  const handleTimerComplete = useCallback(async () => {
+    // Mark current session as completed
+    if (currentSessionId) {
+      try {
+        await updateTimerSession.mutateAsync({
+          id: currentSessionId,
+          endTime: new Date().toISOString(),
+          isCompleted: true,
+        });
+        
+        // Refetch sessions to update stats
+        refetchSessions();
+      } catch (error) {
+        console.error('Failed to complete timer session:', error);
+      }
+    }
+    
+    setCurrentSessionId(null);
+    setSessionStartTime(null);
+    
     if (timerMode === "pomodoro") {
       setPomodoroCount((prev) => {
         const newCount = prev + 1;
@@ -74,7 +168,7 @@ export default function TimerScreen() {
     } else {
       switchMode("pomodoro");
     }
-  }, [timerMode, switchMode, updateStudyTime]);
+  }, [timerMode, switchMode, updateStudyTime, currentSessionId, updateTimerSession, refetchSessions]);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
@@ -95,14 +189,83 @@ export default function TimerScreen() {
     return () => clearInterval(interval);
   }, [isRunning, timeLeft, handleTimerComplete]);
 
-  const toggleTimer = useCallback(() => {
+  const toggleTimer = useCallback(async () => {
+    if (!isRunning) {
+      // Start timer
+      if (!currentSessionId) {
+        // Create new session
+        try {
+          const subject = timerMode === 'pomodoro' ? 'focus' : 
+                         timerMode === 'shortBreak' ? 'break-short' : 'break-long';
+          const duration = timerMode === 'pomodoro' ? POMODORO_TIME :
+                          timerMode === 'shortBreak' ? SHORT_BREAK : LONG_BREAK;
+          
+          const result = await createTimerSession.mutateAsync({
+            userId: user?.id || '550e8400-e29b-41d4-a716-446655440000',
+            subject,
+            duration,
+            startTime: new Date().toISOString(),
+          });
+          
+          setCurrentSessionId(result.id);
+          setSessionStartTime(new Date());
+        } catch (error) {
+          console.error('Failed to create timer session:', error);
+          Alert.alert('Error', 'Failed to start timer session');
+          return;
+        }
+      } else if (activeTimer?.is_paused) {
+        // Resume from pause
+        try {
+          await updateTimerSession.mutateAsync({
+            id: currentSessionId,
+            isPaused: false,
+          });
+        } catch (error) {
+          console.error('Failed to resume timer:', error);
+        }
+      }
+    } else {
+      // Pause timer
+      if (currentSessionId) {
+        try {
+          await createPauseLog.mutateAsync({
+            sessionId: currentSessionId,
+            pauseTime: new Date().toISOString(),
+          });
+          
+          await updateTimerSession.mutateAsync({
+            id: currentSessionId,
+            isPaused: true,
+          });
+        } catch (error) {
+          console.error('Failed to pause timer:', error);
+        }
+      }
+    }
+    
     setIsRunning(!isRunning);
-  }, [isRunning]);
+  }, [isRunning, currentSessionId, timerMode, user?.id, createTimerSession, updateTimerSession, createPauseLog, activeTimer]);
 
-  const resetTimer = useCallback(() => {
+  const resetTimer = useCallback(async () => {
+    // Cancel current session if running
+    if (currentSessionId && isRunning) {
+      try {
+        await updateTimerSession.mutateAsync({
+          id: currentSessionId,
+          endTime: new Date().toISOString(),
+          isCompleted: false,
+        });
+      } catch (error) {
+        console.error('Failed to cancel timer session:', error);
+      }
+    }
+    
+    setCurrentSessionId(null);
+    setSessionStartTime(null);
     setIsRunning(false);
     switchMode(timerMode);
-  }, [timerMode, switchMode]);
+  }, [timerMode, switchMode, currentSessionId, isRunning, updateTimerSession]);
 
   const formatTime = useCallback((seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -220,6 +383,35 @@ export default function TimerScreen() {
           <Text style={styles.statLabel}>{t('totalFocus') || "Total Focus"}</Text>
         </View>
       </View>
+      
+      {/* Recent Sessions */}
+      {timerSessions && timerSessions.length > 0 && (
+        <View style={styles.recentSessions}>
+          <Text style={styles.recentTitle}>Recent Sessions</Text>
+          {timerSessions.slice(0, 3).map((session) => {
+            const duration = Math.floor(session.duration / 60);
+            const sessionDate = new Date(session.start_time);
+            const isBreak = session.subject?.includes('break');
+            
+            return (
+              <View key={session.id} style={styles.sessionItem}>
+                <View style={styles.sessionInfo}>
+                  <Text style={styles.sessionType}>
+                    {isBreak ? '☕' : '🎯'} {isBreak ? 'Break' : 'Focus'}
+                  </Text>
+                  <Text style={styles.sessionDuration}>{duration} min</Text>
+                </View>
+                <Text style={styles.sessionTime}>
+                  {sessionDate.toLocaleTimeString('en-US', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                  })}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -342,5 +534,42 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#8E8E93",
     marginTop: 4,
+  },
+  recentSessions: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  recentTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#000000",
+    marginBottom: 12,
+  },
+  sessionItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  sessionInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  sessionType: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#000000",
+  },
+  sessionDuration: {
+    fontSize: 14,
+    color: "#8E8E93",
+  },
+  sessionTime: {
+    fontSize: 12,
+    color: "#8E8E93",
   },
 });

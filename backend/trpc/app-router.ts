@@ -66,6 +66,13 @@ import { addAnswerProcedure } from "./routes/community/questions/add-answer/rout
 import { likeQuestionProcedure } from "./routes/community/questions/like-question/route";
 import { incrementQuestionViewProcedure } from "./routes/community/questions/increment-view/route";
 
+// Timer routes
+import { createTimerSessionProcedure } from "./routes/timers/create-timer-session/route";
+import { updateTimerSessionProcedure } from "./routes/timers/update-timer-session/route";
+import { getTimerSessionsProcedure } from "./routes/timers/get-timer-sessions/route";
+import { getActiveTimerProcedure } from "./routes/timers/get-active-timer/route";
+import { createPauseLogProcedure } from "./routes/timers/create-pause-log/route";
+
 export const appRouter = createTRPCRouter({
   example: createTRPCRouter({
     hi: hiRoute,
@@ -137,6 +144,13 @@ export const appRouter = createTRPCRouter({
       likeQuestion: likeQuestionProcedure,
       incrementView: incrementQuestionViewProcedure,
     }),
+  }),
+  timers: createTRPCRouter({
+    createTimerSession: createTimerSessionProcedure,
+    updateTimerSession: updateTimerSessionProcedure,
+    getTimerSessions: getTimerSessionsProcedure,
+    getActiveTimer: getActiveTimerProcedure,
+    createPauseLog: createPauseLogProcedure,
   }),
 });
 
