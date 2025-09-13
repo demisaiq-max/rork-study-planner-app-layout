@@ -26,21 +26,12 @@ app.use(
   trpcServer({
     router: appRouter,
     createContext,
+    endpoint: "/api/trpc",
     onError: ({ error, path }) => {
       console.error('tRPC error:', { path, error: error.message });
     },
   })
 );
-
-// Debug endpoint to check available procedures
-app.get("/debug/procedures", (c) => {
-  const procedures = Object.keys(appRouter._def.procedures);
-  return c.json({ 
-    status: "ok", 
-    procedures,
-    count: procedures.length 
-  });
-});
 
 // Simple health check endpoint
 app.get("/", (c) => {
