@@ -1,8 +1,8 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, Dimensions } from "react-native";
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Calendar, Clock, MapPin, X, ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { Calendar, Clock, MapPin, X } from 'lucide-react-native';
 
 interface Event {
   id: string;
@@ -23,21 +23,12 @@ export default function CalendarWidget({ currentDate }: CalendarWidgetProps) {
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const [weekOffset, setWeekOffset] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
+  const [currentMonth, setCurrentMonth] = useState<string>('');
   
-  // Calculate the displayed week based on offset
-  const getDisplayedDate = () => {
-    const displayDate = new Date(currentDate);
-    displayDate.setDate(currentDate.getDate() + (weekOffset * 7));
-    return displayDate;
-  };
-  
-  const displayedDate = getDisplayedDate();
-  const year = displayedDate.getFullYear();
-  const month = displayedDate.getMonth();
-  const date = displayedDate.getDate();
-  const day = displayedDate.getDay();
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  const date = currentDate.getDate();
   
   const monthNames = ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"];
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -75,33 +66,34 @@ export default function CalendarWidget({ currentDate }: CalendarWidgetProps) {
     return events.filter(event => event.date === dateStr);
   };
   
-  const getWeekDates = () => {
-    const weekDates = [];
+  const getAllDates = () => {
+    const allDates = [];
     const today = new Date();
     const todayDate = today.getDate();
     const todayMonth = today.getMonth();
     const todayYear = today.getFullYear();
     
-    // Create a new date object to avoid mutating the original
-    const startOfWeek = new Date(year, month, date);
-    // Calculate the start of the week (Sunday)
-    startOfWeek.setDate(date - day);
-    
-    for (let i = 0; i < 7; i++) {
-      // Create a fresh date for each day of the week
-      const weekDate = new Date(year, month, date - day + i);
-      const dayEvents = getEventsForDate(weekDate);
-      weekDates.push({
-        date: weekDate.getDate(),
-        month: weekDate.getMonth(),
-        fullDate: new Date(weekDate),
-        day: dayNames[weekDate.getDay()],
-        isToday: weekDate.getDate() === todayDate && weekDate.getMonth() === todayMonth && weekDate.getFullYear() === todayYear,
-        hasEvents: dayEvents.length > 0,
-        eventColors: dayEvents.slice(0, 3).map(e => e.color),
-      });
+    // Generate dates for 3 months (previous, current, next)
+    for (let monthOffset = -1; monthOffset <= 1; monthOffset++) {
+      const targetMonth = new Date(year, month + monthOffset, 1);
+      const daysInMonth = new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0).getDate();
+      
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateObj = new Date(targetMonth.getFullYear(), targetMonth.getMonth(), day);
+        const dayEvents = getEventsForDate(dateObj);
+        allDates.push({
+          date: day,
+          month: dateObj.getMonth(),
+          year: dateObj.getFullYear(),
+          fullDate: new Date(dateObj),
+          day: dayNames[dateObj.getDay()],
+          isToday: day === todayDate && dateObj.getMonth() === todayMonth && dateObj.getFullYear() === todayYear,
+          hasEvents: dayEvents.length > 0,
+          eventColors: dayEvents.slice(0, 3).map(e => e.color),
+        });
+      }
     }
-    return weekDates;
+    return allDates;
   };
   
   const handleDatePress = (dateItem: any) => {
@@ -111,37 +103,38 @@ export default function CalendarWidget({ currentDate }: CalendarWidgetProps) {
   
   const selectedDateEvents = selectedDate ? getEventsForDate(selectedDate) : [];
   
-  const weekDates = getWeekDates();
+  const allDates = getAllDates();
   
-  const handlePreviousWeek = () => {
-    setWeekOffset(weekOffset - 1);
-  };
+  // Find today's index and scroll to it on mount
+  useEffect(() => {
+    const todayIndex = allDates.findIndex(item => item.isToday);
+    if (todayIndex !== -1 && scrollViewRef.current) {
+      // Delay to ensure layout is complete
+      setTimeout(() => {
+        scrollViewRef.current?.scrollTo({ 
+          x: Math.max(0, todayIndex * 56 - 100), // 56 is approx width of each date item
+          animated: false 
+        });
+      }, 100);
+    }
+  }, []);
   
-  const handleNextWeek = () => {
-    setWeekOffset(weekOffset + 1);
-  };
-  
-  const handleToday = () => {
-    setWeekOffset(0);
-  };
-  
-  // Get the month/year text for the header
-  const getHeaderText = () => {
-    const firstDay = weekDates[0];
-    const lastDay = weekDates[6];
-    
-    if (firstDay && lastDay) {
-      if (firstDay.month === lastDay.month) {
-        return `${year}년 ${monthNames[firstDay.month]}`;
-      } else {
-        // Week spans two months
-        const firstMonth = monthNames[firstDay.month];
-        const lastMonth = monthNames[lastDay.month];
-        return `${year}년 ${firstMonth} - ${lastMonth}`;
+  // Update current month based on scroll position
+  const handleScroll = (event: any) => {
+    const scrollX = event.nativeEvent.contentOffset.x;
+    const index = Math.floor((scrollX + 100) / 56); // 56 is approx width of each date item
+    if (allDates[index]) {
+      const monthYear = `${allDates[index].year}년 ${monthNames[allDates[index].month]}`;
+      if (monthYear !== currentMonth) {
+        setCurrentMonth(monthYear);
       }
     }
-    return `${year}년 ${monthNames[month]}`;
   };
+  
+  // Initialize current month on mount
+  useEffect(() => {
+    setCurrentMonth(`${year}년 ${monthNames[month]}`);
+  }, []);
   
   return (
     <View style={styles.container}>
@@ -151,31 +144,7 @@ export default function CalendarWidget({ currentDate }: CalendarWidgetProps) {
         activeOpacity={0.8}
       >
         <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.monthYear}>{getHeaderText()}</Text>
-            {weekOffset !== 0 && (
-              <TouchableOpacity 
-                style={styles.todayButton}
-                onPress={handleToday}
-              >
-                <Text style={styles.todayButtonText}>오늘</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-          <View style={styles.navigationButtons}>
-            <TouchableOpacity 
-              style={styles.navButton}
-              onPress={handlePreviousWeek}
-            >
-              <ChevronLeft size={20} color="#007AFF" />
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.navButton}
-              onPress={handleNextWeek}
-            >
-              <ChevronRight size={20} color="#007AFF" />
-            </TouchableOpacity>
-          </View>
+          <Text style={styles.monthYear}>{currentMonth || `${year}년 ${monthNames[month]}`}</Text>
         </View>
       </TouchableOpacity>
       
@@ -183,11 +152,12 @@ export default function CalendarWidget({ currentDate }: CalendarWidgetProps) {
         ref={scrollViewRef}
         horizontal
         showsHorizontalScrollIndicator={false}
-        pagingEnabled
         style={styles.weekScrollView}
         contentContainerStyle={styles.weekContainer}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
       >
-        {weekDates.map((item, index) => (
+        {allDates.map((item, index) => (
           <TouchableOpacity 
             key={index} 
             style={[styles.dayItem, item.isToday && styles.todayItem]}
@@ -322,50 +292,26 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
+
   monthYear: {
     fontSize: 16,
     fontWeight: "600",
     color: "#000000",
   },
-  todayButton: {
-    backgroundColor: "#007AFF",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  todayButtonText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  navigationButtons: {
-    flexDirection: "row",
-    gap: 4,
-  },
-  navButton: {
-    padding: 4,
-    borderRadius: 8,
-    backgroundColor: "#F2F2F7",
-  },
+
   weekScrollView: {
     marginHorizontal: -8,
   },
   weekContainer: {
     flexDirection: "row",
-    paddingHorizontal: 8,
-    gap: 8,
+    paddingHorizontal: 20,
   },
   dayItem: {
     alignItems: "center",
     paddingVertical: 8,
     paddingHorizontal: 8,
     borderRadius: 8,
-    minWidth: 48,
+    width: 52,
     marginHorizontal: 2,
   },
   todayItem: {
