@@ -198,18 +198,23 @@ export default function CommunityScreen() {
     onSuccess: (data) => {
       console.log('Like post success:', data);
       postsQuery.refetch();
-      Alert.alert(
-        language === 'ko' ? '성공' : 'Success',
-        data.liked 
-          ? (language === 'ko' ? '좋아요를 눌렀습니다' : 'Post liked')
-          : (language === 'ko' ? '좋아요를 취소했습니다' : 'Post unliked')
-      );
+      // Don't show alert for successful likes to reduce noise
     },
     onError: (error) => {
-      console.error('Like post error:', error);
+      console.error('ERROR Like post error:', error);
+      let errorMessage = 'Failed to like post';
+      
+      if (error.message.includes('JSON Parse error')) {
+        errorMessage = 'Server connection error. Please try again.';
+      } else if (error.message.includes('Failed to fetch')) {
+        errorMessage = 'Network error. Please check your connection.';
+      } else {
+        errorMessage = error.message || 'Failed to like post';
+      }
+      
       Alert.alert(
         language === 'ko' ? '오류' : 'Error',
-        error.message || (language === 'ko' ? '좋아요 처리 중 오류가 발생했습니다' : 'Failed to like post')
+        language === 'ko' ? '서버 연결 오류입니다. 다시 시도해주세요.' : errorMessage
       );
     },
   });
@@ -225,16 +230,23 @@ export default function CommunityScreen() {
       console.log('Comment added successfully:', data);
       postsQuery.refetch();
       setNewComment("");
-      Alert.alert(
-        language === 'ko' ? '성공' : 'Success',
-        language === 'ko' ? '댓글이 등록되었습니다' : 'Comment posted successfully'
-      );
+      // Don't show alert for successful comments to reduce noise
     },
     onError: (error) => {
-      console.error('Add comment error:', error);
+      console.error('ERROR Add comment error:', error);
+      let errorMessage = 'Failed to post comment';
+      
+      if (error.message.includes('JSON Parse error')) {
+        errorMessage = 'Server connection error. Please try again.';
+      } else if (error.message.includes('Failed to fetch')) {
+        errorMessage = 'Network error. Please check your connection.';
+      } else {
+        errorMessage = error.message || 'Failed to post comment';
+      }
+      
       Alert.alert(
         language === 'ko' ? '오류' : 'Error',
-        error.message || (language === 'ko' ? '댓글 등록 중 오류가 발생했습니다' : 'Failed to post comment')
+        language === 'ko' ? '서버 연결 오류입니다. 다시 시도해주세요.' : errorMessage
       );
     },
   });
