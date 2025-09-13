@@ -58,7 +58,7 @@ export default function HomeScreen() {
   
   // Fetch graded exams
   const { data: gradedExams, isLoading: isLoadingGradedExams, error: gradedExamsError, refetch: refetchGradedExams } = trpc.tests.getLatestTestResults.useQuery(
-    { userId: user?.id || '' },
+    user?.id || 'default-user',
     { 
       enabled: !!user?.id
     }

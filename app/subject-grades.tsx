@@ -39,7 +39,7 @@ export default function SubjectGradesScreen() {
 
   // Fetch latest test results for statistics display
   const latestResultsQuery = trpc.tests.getLatestTestResults.useQuery(
-    { userId: user?.id || '' },
+    user?.id || 'default-user',
     { enabled: !!user?.id }
   );
 

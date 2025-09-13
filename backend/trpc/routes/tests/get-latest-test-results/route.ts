@@ -3,8 +3,10 @@ import { supabase } from '@/lib/supabase';
 import { z } from 'zod';
 
 export const getLatestTestResults = publicProcedure
-  .input(z.object({ userId: z.string() }))
+  .input(z.string().optional())
   .query(async ({ input }) => {
+    const userId = input || 'default-user';
+    
     // Get the latest test result for each subject
     const { data, error } = await supabase
       .from('test_results')
@@ -17,7 +19,7 @@ export const getLatestTestResults = publicProcedure
           test_date
         )
       `)
-      .eq('user_id', input.userId)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
     if (error) {
