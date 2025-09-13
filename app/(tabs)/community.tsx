@@ -195,8 +195,22 @@ export default function CommunityScreen() {
   });
 
   const likePostMutation = trpc.community.posts.likePost.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('Like post success:', data);
       postsQuery.refetch();
+      Alert.alert(
+        language === 'ko' ? '성공' : 'Success',
+        data.liked 
+          ? (language === 'ko' ? '좋아요를 눌렀습니다' : 'Post liked')
+          : (language === 'ko' ? '좋아요를 취소했습니다' : 'Post unliked')
+      );
+    },
+    onError: (error) => {
+      console.error('Like post error:', error);
+      Alert.alert(
+        language === 'ko' ? '오류' : 'Error',
+        error.message || (language === 'ko' ? '좋아요 처리 중 오류가 발생했습니다' : 'Failed to like post')
+      );
     },
   });
 
@@ -207,9 +221,21 @@ export default function CommunityScreen() {
   });
 
   const addCommentMutation = trpc.community.posts.addComment.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('Comment added successfully:', data);
       postsQuery.refetch();
       setNewComment("");
+      Alert.alert(
+        language === 'ko' ? '성공' : 'Success',
+        language === 'ko' ? '댓글이 등록되었습니다' : 'Comment posted successfully'
+      );
+    },
+    onError: (error) => {
+      console.error('Add comment error:', error);
+      Alert.alert(
+        language === 'ko' ? '오류' : 'Error',
+        error.message || (language === 'ko' ? '댓글 등록 중 오류가 발생했습니다' : 'Failed to post comment')
+      );
     },
   });
 
@@ -328,6 +354,7 @@ export default function CommunityScreen() {
       );
       return;
     }
+    console.log('Liking post:', postId, 'by user:', userId);
     likePostMutation.mutate({ postId });
   };
 
@@ -343,7 +370,13 @@ export default function CommunityScreen() {
   };
 
   const handleAddComment = () => {
-    if (!newComment.trim() || !selectedPost) return;
+    if (!newComment.trim() || !selectedPost) {
+      Alert.alert(
+        language === 'ko' ? '알림' : 'Notice',
+        language === 'ko' ? '댓글을 입력해주세요' : 'Please enter a comment'
+      );
+      return;
+    }
     if (!userId) {
       Alert.alert(
         language === 'ko' ? '로그인 필요' : 'Login Required',
@@ -352,6 +385,7 @@ export default function CommunityScreen() {
       return;
     }
     
+    console.log('Adding comment to post:', selectedPost.id, 'by user:', userId);
     addCommentMutation.mutate({
       postId: selectedPost.id,
       content: newComment,
@@ -516,6 +550,7 @@ export default function CommunityScreen() {
           <TouchableOpacity 
             style={styles.koreanActionButton}
             onPress={() => handleLikePost(post.id)}
+            disabled={likePostMutation.isPending}
           >
             <Heart 
               size={18} 
@@ -929,9 +964,16 @@ export default function CommunityScreen() {
                   <TouchableOpacity 
                     style={styles.likeButton}
                     onPress={() => handleLikePost(selectedPost.id)}
+                    disabled={likePostMutation.isPending}
                   >
-                    <Heart size={16} color="#8E8E93" />
-                    <Text style={styles.likeButtonText}>{selectedPost.likes_count}</Text>
+                    <Heart 
+                      size={16} 
+                      color={selectedPost.likes?.some(like => like.user_id === userId) ? "#FF3B30" : "#8E8E93"}
+                      fill={selectedPost.likes?.some(like => like.user_id === userId) ? "#FF3B30" : "none"}
+                    />
+                    <Text style={[styles.likeButtonText, selectedPost.likes?.some(like => like.user_id === userId) && { color: "#FF3B30" }]}>
+                      {selectedPost.likes_count || 0}
+                    </Text>
                   </TouchableOpacity>
                 </View>
                 
@@ -972,10 +1014,15 @@ export default function CommunityScreen() {
                   multiline
                 />
                 <TouchableOpacity 
-                  style={styles.sendButton}
+                  style={[styles.sendButton, (!newComment.trim() || addCommentMutation.isPending) && styles.sendButtonDisabled]}
                   onPress={handleAddComment}
+                  disabled={!newComment.trim() || addCommentMutation.isPending}
                 >
-                  <Send size={20} color="#007AFF" />
+                  {addCommentMutation.isPending ? (
+                    <ActivityIndicator size="small" color="#007AFF" />
+                  ) : (
+                    <Send size={20} color={newComment.trim() ? "#007AFF" : "#C7C7CC"} />
+                  )}
                 </TouchableOpacity>
               </View>
             </KeyboardAvoidingView>
@@ -1617,6 +1664,9 @@ const styles = StyleSheet.create({
   },
   sendButton: {
     padding: 8,
+  },
+  sendButtonDisabled: {
+    opacity: 0.5,
   },
   createPostHeader: {
     flexDirection: 'row',
