@@ -88,12 +88,12 @@ CREATE TRIGGER update_user_settings_updated_at BEFORE UPDATE ON user_settings FO
 -- You can remove this section if you don't want sample data
 
 -- Sample user
-INSERT INTO users (id, email, name) VALUES 
+INSERT INTO users (id, email, name) VALUES
 ('550e8400-e29b-41d4-a716-446655440000', 'test@example.com', 'Test User')
 ON CONFLICT (email) DO NOTHING;
 
 -- Sample subject grades
-INSERT INTO subject_grades (user_id, subject, grade) VALUES 
+INSERT INTO subject_grades (user_id, subject, grade) VALUES
 ('550e8400-e29b-41d4-a716-446655440000', '국어', '2등급'),
 ('550e8400-e29b-41d4-a716-446655440000', '영어', '1등급'),
 ('550e8400-e29b-41d4-a716-446655440000', '수학', '3등급'),
@@ -101,12 +101,12 @@ INSERT INTO subject_grades (user_id, subject, grade) VALUES
 ON CONFLICT (user_id, subject) DO NOTHING;
 
 -- Sample user settings
-INSERT INTO user_settings (user_id, visible_subjects) VALUES 
+INSERT INTO user_settings (user_id, visible_subjects) VALUES
 ('550e8400-e29b-41d4-a716-446655440000', ARRAY['국어', '영어', '수학', '탐구'])
 ON CONFLICT (user_id) DO NOTHING;
 
 -- Sample exams
-INSERT INTO exams (user_id, title, date, subject, priority) VALUES 
+INSERT INTO exams (user_id, title, date, subject, priority) VALUES
 ('550e8400-e29b-41d4-a716-446655440000', '수능 모의고사', '2025-09-15', '국어', true),
 ('550e8400-e29b-41d4-a716-446655440000', '영어 중간고사', '2025-09-20', '영어', false),
 ('550e8400-e29b-41d4-a716-446655440000', '수학 기말고사', '2025-10-05', '수학', true);
@@ -154,13 +154,13 @@ CREATE TRIGGER update_tests_updated_at BEFORE UPDATE ON tests FOR EACH ROW EXECU
 CREATE TRIGGER update_test_results_updated_at BEFORE UPDATE ON test_results FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Sample study sessions
-INSERT INTO study_sessions (user_id, subject, duration, date) VALUES 
+INSERT INTO study_sessions (user_id, subject, duration, date) VALUES
 ('550e8400-e29b-41d4-a716-446655440000', '국어', 120, '2025-08-30'),
 ('550e8400-e29b-41d4-a716-446655440000', '영어', 90, '2025-08-30'),
 ('550e8400-e29b-41d4-a716-446655440000', '수학', 150, '2025-08-29');
 
 -- Sample tests
-INSERT INTO tests (user_id, subject, test_type, test_name, test_date) VALUES 
+INSERT INTO tests (user_id, subject, test_type, test_name, test_date) VALUES
 ('550e8400-e29b-41d4-a716-446655440000', '국어', 'mock', 'Mock Test 1', '2025-08-25'),
 ('550e8400-e29b-41d4-a716-446655440000', '국어', 'mock', 'Mock Test 2', '2025-09-01'),
 ('550e8400-e29b-41d4-a716-446655440000', '영어', 'mock', 'Mock Test 1', '2025-08-26'),
@@ -185,7 +185,7 @@ DROP TRIGGER IF EXISTS update_subjects_updated_at ON subjects;
 CREATE TRIGGER update_subjects_updated_at BEFORE UPDATE ON subjects FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Sample subjects
-INSERT INTO subjects (user_id, name) VALUES 
+INSERT INTO subjects (user_id, name) VALUES
 ('550e8400-e29b-41d4-a716-446655440000', '국어'),
 ('550e8400-e29b-41d4-a716-446655440000', '영어'),
 ('550e8400-e29b-41d4-a716-446655440000', '수학'),
@@ -219,7 +219,7 @@ DROP TRIGGER IF EXISTS update_brain_dumps_updated_at ON brain_dumps;
 CREATE TRIGGER update_brain_dumps_updated_at BEFORE UPDATE ON brain_dumps FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Sample brain dumps for test user only
-INSERT INTO brain_dumps (user_id, title, content, category, is_pinned) VALUES 
+INSERT INTO brain_dumps (user_id, title, content, category, is_pinned) VALUES
 ('550e8400-e29b-41d4-a716-446655440000', '수능 D-30 계획', '매일 국어 기출 2회독\n영어 단어 100개\n수학 문제집 20문제', '학습계획', true),
 ('550e8400-e29b-41d4-a716-446655440000', '영어 문법 정리', 'Present Perfect: have/has + p.p\n- 경험, 완료, 계속, 결과\n- since/for 구분하기', '영어', false),
 ('550e8400-e29b-41d4-a716-446655440000', '수학 공식 모음', '이차방정식: ax² + bx + c = 0\n근의 공식: x = (-b ± √(b²-4ac))/2a', '수학', false)
@@ -247,46 +247,46 @@ DROP TRIGGER IF EXISTS update_priority_tasks_updated_at ON priority_tasks;
 CREATE TRIGGER update_priority_tasks_updated_at BEFORE UPDATE ON priority_tasks FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Sample priority tasks for test user
-INSERT INTO priority_tasks (user_id, title, subject, priority, order_index, completed) VALUES 
+INSERT INTO priority_tasks (user_id, title, subject, priority, order_index, completed) VALUES
 ('550e8400-e29b-41d4-a716-446655440000', '아침 조정하기', '일반', 'high', 1, false),
 ('550e8400-e29b-41d4-a716-446655440000', '2025년 6월 모의고사 풀기', '수학', 'high', 2, false),
 ('550e8400-e29b-41d4-a716-446655440000', '학원가기', '일반', 'medium', 3, false)
 ON CONFLICT DO NOTHING;
 
 -- Sample test results with detailed analysis data
-INSERT INTO test_results (test_id, user_id, raw_score, standard_score, percentile, grade, analysis_data) 
-SELECT 
+INSERT INTO test_results (test_id, user_id, raw_score, standard_score, percentile, grade, analysis_data)
+SELECT
     t.id,
     t.user_id,
-    CASE 
+    CASE
         WHEN t.test_name = 'Mock Test 1' AND t.subject = '국어' THEN 85
         WHEN t.test_name = 'Mock Test 2' AND t.subject = '국어' THEN 92
         WHEN t.test_name = 'Mock Test 1' AND t.subject = '영어' THEN 78
         WHEN t.test_name = 'Midterm Exam' AND t.subject = '수학' THEN 88
         ELSE 82
     END as raw_score,
-    CASE 
+    CASE
         WHEN t.test_name = 'Mock Test 1' AND t.subject = '국어' THEN 131
         WHEN t.test_name = 'Mock Test 2' AND t.subject = '국어' THEN 137
         WHEN t.test_name = 'Mock Test 1' AND t.subject = '영어' THEN 125
         WHEN t.test_name = 'Midterm Exam' AND t.subject = '수학' THEN 134
         ELSE 128
     END as standard_score,
-    CASE 
+    CASE
         WHEN t.test_name = 'Mock Test 1' AND t.subject = '국어' THEN 93
         WHEN t.test_name = 'Mock Test 2' AND t.subject = '국어' THEN 95
         WHEN t.test_name = 'Mock Test 1' AND t.subject = '영어' THEN 87
         WHEN t.test_name = 'Midterm Exam' AND t.subject = '수학' THEN 91
         ELSE 89
     END as percentile,
-    CASE 
+    CASE
         WHEN t.test_name = 'Mock Test 1' AND t.subject = '국어' THEN 2
         WHEN t.test_name = 'Mock Test 2' AND t.subject = '국어' THEN 2
         WHEN t.test_name = 'Mock Test 1' AND t.subject = '영어' THEN 3
         WHEN t.test_name = 'Midterm Exam' AND t.subject = '수학' THEN 2
         ELSE 2
     END as grade,
-    CASE 
+    CASE
         WHEN t.test_name = 'Mock Test 1' AND t.subject = '국어' THEN '{"korean": {"rawScore": 85, "standardScore": 131, "percentile": 93, "grade": 2}, "math": {"rawScore": 78, "standardScore": 125, "percentile": 87, "grade": 3}, "english": {"rawScore": 72, "standardScore": 118, "percentile": 82, "grade": 3}}'
         WHEN t.test_name = 'Mock Test 2' AND t.subject = '국어' THEN '{"korean": {"rawScore": 92, "standardScore": 137, "percentile": 95, "grade": 2}, "math": {"rawScore": 88, "standardScore": 135, "percentile": 94, "grade": 2}, "english": {"rawScore": 85, "standardScore": 128, "percentile": 91, "grade": 2}}'
         WHEN t.test_name = 'Mock Test 1' AND t.subject = '영어' THEN '{"english": {"rawScore": 78, "standardScore": 125, "percentile": 87, "grade": 3}, "korean": {"rawScore": 82, "standardScore": 128, "percentile": 89, "grade": 2}}'
@@ -460,7 +460,7 @@ CREATE TRIGGER update_answers_updated_at BEFORE UPDATE ON answers FOR EACH ROW E
 
 -- Function to update member count in study groups
 CREATE OR REPLACE FUNCTION update_group_member_count()
-RETURNS TRIGGER AS $
+RETURNS TRIGGER AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
         UPDATE study_groups SET member_count = member_count + 1 WHERE id = NEW.group_id;
@@ -469,7 +469,7 @@ BEGIN
     END IF;
     RETURN NULL;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 DROP TRIGGER IF EXISTS update_group_member_count_trigger ON group_members;
 CREATE TRIGGER update_group_member_count_trigger
@@ -478,7 +478,7 @@ FOR EACH ROW EXECUTE FUNCTION update_group_member_count();
 
 -- Function to update counts in posts
 CREATE OR REPLACE FUNCTION update_post_likes_count()
-RETURNS TRIGGER AS $
+RETURNS TRIGGER AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
         UPDATE daily_posts SET likes_count = likes_count + 1 WHERE id = NEW.post_id;
@@ -487,7 +487,7 @@ BEGIN
     END IF;
     RETURN NULL;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 DROP TRIGGER IF EXISTS update_post_likes_count_trigger ON post_likes;
 CREATE TRIGGER update_post_likes_count_trigger
@@ -496,7 +496,7 @@ FOR EACH ROW EXECUTE FUNCTION update_post_likes_count();
 
 -- Function to update comments count in posts
 CREATE OR REPLACE FUNCTION update_post_comments_count()
-RETURNS TRIGGER AS $
+RETURNS TRIGGER AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
         UPDATE daily_posts SET comments_count = comments_count + 1 WHERE id = NEW.post_id;
@@ -505,7 +505,7 @@ BEGIN
     END IF;
     RETURN NULL;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 DROP TRIGGER IF EXISTS update_post_comments_count_trigger ON post_comments;
 CREATE TRIGGER update_post_comments_count_trigger
@@ -514,7 +514,7 @@ FOR EACH ROW EXECUTE FUNCTION update_post_comments_count();
 
 -- Function to update likes count in questions
 CREATE OR REPLACE FUNCTION update_question_likes_count()
-RETURNS TRIGGER AS $
+RETURNS TRIGGER AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
         UPDATE questions SET likes_count = likes_count + 1 WHERE id = NEW.question_id;
@@ -523,7 +523,7 @@ BEGIN
     END IF;
     RETURN NULL;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 DROP TRIGGER IF EXISTS update_question_likes_count_trigger ON question_likes;
 CREATE TRIGGER update_question_likes_count_trigger
@@ -532,7 +532,7 @@ FOR EACH ROW EXECUTE FUNCTION update_question_likes_count();
 
 -- Function to update answers count in questions
 CREATE OR REPLACE FUNCTION update_question_answers_count()
-RETURNS TRIGGER AS $
+RETURNS TRIGGER AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
         UPDATE questions SET answers_count = answers_count + 1 WHERE id = NEW.question_id;
@@ -541,7 +541,7 @@ BEGIN
     END IF;
     RETURN NULL;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 DROP TRIGGER IF EXISTS update_question_answers_count_trigger ON answers;
 CREATE TRIGGER update_question_answers_count_trigger
@@ -550,7 +550,7 @@ FOR EACH ROW EXECUTE FUNCTION update_question_answers_count();
 
 -- Function to update likes count in answers
 CREATE OR REPLACE FUNCTION update_answer_likes_count()
-RETURNS TRIGGER AS $
+RETURNS TRIGGER AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
         UPDATE answers SET likes_count = likes_count + 1 WHERE id = NEW.answer_id;
@@ -559,7 +559,7 @@ BEGIN
     END IF;
     RETURN NULL;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 DROP TRIGGER IF EXISTS update_answer_likes_count_trigger ON answer_likes;
 CREATE TRIGGER update_answer_likes_count_trigger
@@ -592,27 +592,27 @@ CREATE POLICY "Users read own notifications" ON notifications FOR SELECT USING (
 
 -- Sample data for test user community features
 -- Create sample study groups
-INSERT INTO study_groups (id, name, description, subject, created_by) VALUES 
+INSERT INTO study_groups (id, name, description, subject, created_by) VALUES
 ('650e8400-e29b-41d4-a716-446655440001', '수능 스터디 그룹', '2025 수능 대비 함께 공부해요!', '종합', '550e8400-e29b-41d4-a716-446655440000'),
 ('650e8400-e29b-41d4-a716-446655440002', '영어 회화 모임', '매일 영어 회화 연습', '영어', '550e8400-e29b-41d4-a716-446655440000'),
 ('650e8400-e29b-41d4-a716-446655440003', '수학 문제 풀이', '수학 문제 함께 풀어요', '수학', '550e8400-e29b-41d4-a716-446655440000')
 ON CONFLICT DO NOTHING;
 
 -- Add test user to groups
-INSERT INTO group_members (group_id, user_id, role) VALUES 
+INSERT INTO group_members (group_id, user_id, role) VALUES
 ('650e8400-e29b-41d4-a716-446655440001', '550e8400-e29b-41d4-a716-446655440000', 'admin'),
 ('650e8400-e29b-41d4-a716-446655440002', '550e8400-e29b-41d4-a716-446655440000', 'member')
 ON CONFLICT DO NOTHING;
 
 -- Sample daily posts
-INSERT INTO daily_posts (user_id, group_id, content, study_hours, subjects_studied, mood) VALUES 
+INSERT INTO daily_posts (user_id, group_id, content, study_hours, subjects_studied, mood) VALUES
 ('550e8400-e29b-41d4-a716-446655440000', '650e8400-e29b-41d4-a716-446655440001', '오늘 국어 모의고사 풀었어요! 생각보다 잘 나와서 기분 좋네요 😊', 3, ARRAY['국어'], 'happy'),
 ('550e8400-e29b-41d4-a716-446655440000', '650e8400-e29b-41d4-a716-446655440001', '수학 미적분 파트 완료! 내일은 확률과 통계 시작합니다', 4, ARRAY['수학'], 'focused'),
 ('550e8400-e29b-41d4-a716-446655440000', NULL, '영어 단어 200개 외웠어요. 힘들지만 보람있네요', 2, ARRAY['영어'], 'tired')
 ON CONFLICT DO NOTHING;
 
 -- Sample questions
-INSERT INTO questions (user_id, title, content, subject, tags) VALUES 
+INSERT INTO questions (user_id, title, content, subject, tags) VALUES
 ('550e8400-e29b-41d4-a716-446655440000', '이차방정식 문제 질문입니다', '이 문제 어떻게 푸는지 알려주세요. x² + 5x + 6 = 0', '수학', ARRAY['이차방정식', '인수분해']),
 ('550e8400-e29b-41d4-a716-446655440000', '영어 문법 to부정사 vs 동명사', 'stop to do와 stop doing의 차이가 뭔가요?', '영어', ARRAY['문법', 'to부정사', '동명사']),
 ('550e8400-e29b-41d4-a716-446655440000', '국어 비문학 독해 팁', '비문학 지문 빨리 읽는 방법 있나요?', '국어', ARRAY['비문학', '독해', '수능'])
