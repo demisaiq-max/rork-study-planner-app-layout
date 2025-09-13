@@ -950,7 +950,7 @@ export default function CommunityScreen() {
             <KeyboardAvoidingView 
               style={styles.modalContent}
               behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-              keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+              keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
             >
               <ScrollView style={styles.modalScrollContent}>
                 <View style={styles.postDetailHeader}>
@@ -1573,6 +1573,7 @@ const styles = StyleSheet.create({
   modalScrollContent: {
     flex: 1,
     paddingHorizontal: 20,
+    paddingBottom: 80,
   },
   postDetailHeader: {
     flexDirection: "row",
@@ -1658,9 +1659,14 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     paddingHorizontal: 20,
     paddingVertical: 12,
+    paddingBottom: 20,
     borderTopWidth: 1,
     borderTopColor: '#E5E5EA',
     backgroundColor: '#FFFFFF',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
   commentInput: {
     flex: 1,
