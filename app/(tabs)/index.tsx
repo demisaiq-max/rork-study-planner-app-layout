@@ -29,13 +29,11 @@ const { width } = Dimensions.get("window");
 export default function HomeScreen() {
   const { 
     tasks, 
-    dDays, 
     todayStudyTime, 
     targetStudyTime,
     toggleTask,
     togglePriorityTask,
     updateStudyTime,
-    addDDay,
     addTask,
     subjects,
     subjectGrades,
@@ -49,6 +47,14 @@ export default function HomeScreen() {
   } = useStudyStore();
   const { user } = useUser();
   const { t, language } = useLanguage();
+  
+  // Fetch exams from database
+  const { data: exams, isLoading: isLoadingExams, refetch: refetchExams } = trpc.exams.getUserExams.useQuery(
+    { userId: user?.id || 'test-user' },
+    { 
+      enabled: true
+    }
+  );
   
   // Fetch graded exams
   const { data: gradedExams, isLoading: isLoadingGradedExams, error: gradedExamsError, refetch: refetchGradedExams } = trpc.tests.getLatestTestResults.useQuery(
@@ -114,6 +120,34 @@ export default function HomeScreen() {
       console.error('Error seeding test data:', error);
     }
   });
+  
+  // Seed exam data mutation
+  const seedExamDataMutation = trpc.exams.seedExamData.useMutation({
+    onSuccess: () => {
+      refetchExams();
+    }
+  });
+  
+  // Create exam mutation
+  const createExamMutation = trpc.exams.createExam.useMutation({
+    onSuccess: () => {
+      refetchExams();
+      setShowAddExamModal(false);
+      setNewExamTitle("");
+      setNewExamDate("");
+    },
+    onError: (error) => {
+      Alert.alert(t('error'), error.message);
+    }
+  });
+  
+  // Seed exam data for test user on mount
+  useEffect(() => {
+    const userId = user?.id || 'test-user';
+    if (userId === 'test-user' && exams && exams.length === 0 && !isLoadingExams) {
+      seedExamDataMutation.mutate({ userId });
+    }
+  }, [exams, isLoadingExams]);
   
   // Debug logging
   useEffect(() => {
@@ -267,15 +301,13 @@ export default function HomeScreen() {
       return;
     }
 
-    addDDay({
+    createExamMutation.mutate({
+      userId: user?.id || 'test-user',
       title: newExamTitle,
       date: newExamDate,
-      daysLeft: daysLeft
+      subject: 'General',
+      priority: false
     });
-
-    setNewExamTitle("");
-    setNewExamDate("");
-    setShowAddExamModal(false);
   };
 
   const handleAddTask = () => {
@@ -486,24 +518,25 @@ export default function HomeScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.dDayScroll}
           >
-            {dDays?.map((dDay) => {
-              const examDate = new Date(dDay.date);
+            {exams?.map((exam) => {
+              const examDate = new Date(exam.date);
               const today = new Date();
               today.setHours(0, 0, 0, 0);
               examDate.setHours(0, 0, 0, 0);
               const timeDiff = examDate.getTime() - today.getTime();
-              const calculatedDaysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24));
-              const validDaysLeft = !isNaN(calculatedDaysLeft) && isFinite(calculatedDaysLeft) ? calculatedDaysLeft : dDay.daysLeft || 0;
+              const daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24));
+              const validDaysLeft = !isNaN(daysLeft) && isFinite(daysLeft) ? daysLeft : 0;
               
               return (
                 <TouchableOpacity
-                  key={dDay.id}
+                  key={exam.id}
                   onPress={() => router.push('/exam-management')}
                 >
                   <DayCard 
-                    {...dDay} 
+                    title={exam.title}
+                    date={exam.date}
                     daysLeft={validDaysLeft}
-                    priority={dDay.priority}
+                    priority={exam.priority ? "high" : "medium"}
                   />
                 </TouchableOpacity>
               );

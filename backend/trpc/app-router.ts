@@ -5,6 +5,9 @@ import hiRoute from "./routes/example/hi/route";
 import getUserExams from "./routes/exams/get-user-exams/route";
 import createExam from "./routes/exams/create-exam/route";
 import getPriorityExams from "./routes/exams/get-priority-exams/route";
+import updateExam from "./routes/exams/update-exam/route";
+import deleteExam from "./routes/exams/delete-exam/route";
+import seedExamData from "./routes/exams/seed-exam-data/route";
 
 // Grade routes
 import getSubjectGrades from "./routes/grades/get-subject-grades/route";
@@ -51,7 +54,10 @@ export const appRouter = createTRPCRouter({
   exams: createTRPCRouter({
     getUserExams,
     createExam,
+    updateExam,
+    deleteExam,
     getPriorityExams,
+    seedExamData,
   }),
   grades: createTRPCRouter({
     getSubjectGrades,

@@ -9,30 +9,111 @@ import {
   Modal,
   TextInput,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack } from "expo-router";
 import { Edit2, Trash2, Plus, X, Calendar } from "lucide-react-native";
-import { useStudyStore } from "@/hooks/study-store";
 import { useLanguage } from "@/hooks/language-context";
+import { useUser } from "@/hooks/user-context";
 import FormattedDateInput from "@/components/FormattedDateInput";
+import { trpc } from "@/lib/trpc";
+
+interface Exam {
+  id: string;
+  user_id: string;
+  title: string;
+  date: string;
+  subject: string;
+  priority: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
 
 export default function ExamManagementScreen() {
-  const { dDays, addDDay, updateDDay, removeDDay } = useStudyStore();
   const { t } = useLanguage();
+  const { user } = useUser();
   
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [editingExam, setEditingExam] = useState<any>(null);
+  const [editingExam, setEditingExam] = useState<Exam | null>(null);
   
   const [newExamTitle, setNewExamTitle] = useState("");
   const [newExamDate, setNewExamDate] = useState("");
-  const [newExamDescription, setNewExamDescription] = useState("");
+  const [newExamSubject, setNewExamSubject] = useState("");
   const [newExamPriority, setNewExamPriority] = useState<"high" | "medium" | "low">("medium");
   const [editExamTitle, setEditExamTitle] = useState("");
   const [editExamDate, setEditExamDate] = useState("");
-  const [editExamDescription, setEditExamDescription] = useState("");
+  const [editExamSubject, setEditExamSubject] = useState("");
   const [editExamPriority, setEditExamPriority] = useState<"high" | "medium" | "low">("medium");
+  
+  // Fetch exams from database
+  const examsQuery = trpc.exams.getUserExams.useQuery(
+    { userId: user?.id || 'test-user' },
+    { enabled: !!user?.id || true }
+  );
+  
+  // Mutations
+  const createExamMutation = trpc.exams.createExam.useMutation({
+    onSuccess: () => {
+      examsQuery.refetch();
+      setShowAddModal(false);
+      resetAddForm();
+    },
+    onError: (error) => {
+      Alert.alert(t('error'), error.message);
+    }
+  });
+  
+  const updateExamMutation = trpc.exams.updateExam.useMutation({
+    onSuccess: () => {
+      examsQuery.refetch();
+      setShowEditModal(false);
+      resetEditForm();
+    },
+    onError: (error) => {
+      Alert.alert(t('error'), error.message);
+    }
+  });
+  
+  const deleteExamMutation = trpc.exams.deleteExam.useMutation({
+    onSuccess: () => {
+      examsQuery.refetch();
+    },
+    onError: (error) => {
+      Alert.alert(t('error'), error.message);
+    }
+  });
+  
+  // Seed data for test user
+  const seedDataMutation = trpc.exams.seedExamData.useMutation({
+    onSuccess: () => {
+      examsQuery.refetch();
+    }
+  });
+  
+  // Seed data on mount if test user and no exams
+  useEffect(() => {
+    const userId = user?.id || 'test-user';
+    if (userId === 'test-user' && examsQuery.data && examsQuery.data.length === 0) {
+      seedDataMutation.mutate({ userId });
+    }
+  }, [examsQuery.data]);
+  
+  const resetAddForm = () => {
+    setNewExamTitle("");
+    setNewExamDate("");
+    setNewExamSubject("");
+    setNewExamPriority("medium");
+  };
+  
+  const resetEditForm = () => {
+    setEditingExam(null);
+    setEditExamTitle("");
+    setEditExamDate("");
+    setEditExamSubject("");
+    setEditExamPriority("medium");
+  };
   
   // Calculate days left for display
   const calculateDaysLeft = (dateString: string) => {
@@ -46,7 +127,7 @@ export default function ExamManagementScreen() {
   };
 
   const handleAddExam = () => {
-    if (!newExamTitle.trim() || !newExamDate.trim()) {
+    if (!newExamTitle.trim() || !newExamDate.trim() || !newExamSubject.trim()) {
       Alert.alert(t('error'), t('examFormError'));
       return;
     }
@@ -64,23 +145,17 @@ export default function ExamManagementScreen() {
       return;
     }
 
-    addDDay({
+    createExamMutation.mutate({
+      userId: user?.id || 'test-user',
       title: newExamTitle,
       date: newExamDate,
-      daysLeft: daysLeft,
-      description: newExamDescription,
-      priority: newExamPriority
+      subject: newExamSubject,
+      priority: newExamPriority === "high"
     });
-
-    setNewExamTitle("");
-    setNewExamDate("");
-    setNewExamDescription("");
-    setNewExamPriority("medium");
-    setShowAddModal(false);
   };
 
   const handleEditExam = () => {
-    if (!editExamTitle.trim() || !editExamDate.trim()) {
+    if (!editExamTitle.trim() || !editExamDate.trim() || !editExamSubject.trim() || !editingExam) {
       Alert.alert(t('error'), t('examFormError'));
       return;
     }
@@ -98,22 +173,14 @@ export default function ExamManagementScreen() {
       return;
     }
 
-    if (updateDDay) {
-      updateDDay(editingExam.id, {
-        title: editExamTitle,
-        date: editExamDate,
-        daysLeft: daysLeft,
-        description: editExamDescription,
-        priority: editExamPriority
-      });
-    }
-
-    setEditingExam(null);
-    setEditExamTitle("");
-    setEditExamDate("");
-    setEditExamDescription("");
-    setEditExamPriority("medium");
-    setShowEditModal(false);
+    updateExamMutation.mutate({
+      id: editingExam.id,
+      userId: user?.id || 'test-user',
+      title: editExamTitle,
+      date: editExamDate,
+      subject: editExamSubject,
+      priority: editExamPriority === "high"
+    });
   };
 
   const handleDeleteExam = (examId: string) => {
@@ -126,34 +193,38 @@ export default function ExamManagementScreen() {
           text: t('delete'), 
           style: "destructive",
           onPress: () => {
-            if (removeDDay) {
-              removeDDay(examId);
-            }
+            deleteExamMutation.mutate({
+              id: examId,
+              userId: user?.id || 'test-user'
+            });
           }
         }
       ]
     );
   };
 
-  const openEditModal = (exam: any) => {
+  const openEditModal = (exam: Exam) => {
     setEditingExam(exam);
     setEditExamTitle(exam.title);
     setEditExamDate(exam.date);
-    setEditExamDescription(exam.description || "");
-    setEditExamPriority(exam.priority || "medium");
+    setEditExamSubject(exam.subject || "");
+    setEditExamPriority(exam.priority ? "high" : "medium");
     setShowEditModal(true);
   };
 
-  const getPriorityColor = (priority?: string) => {
-    switch (priority) {
-      case "high":
-        return "#FF3B30";
-      case "low":
-        return "#34C759";
-      default:
-        return "#FF9500";
-    }
+  const getPriorityColor = (priority?: boolean) => {
+    return priority ? "#FF3B30" : "#FF9500";
   };
+  
+  if (examsQuery.isLoading) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color="#007AFF" />
+      </View>
+    );
+  }
+  
+  const exams = examsQuery.data || [];
 
   return (
     <>
@@ -183,15 +254,15 @@ export default function ExamManagementScreen() {
           </View>
 
           <View style={styles.examsList}>
-            {dDays?.map((exam) => (
+            {exams.map((exam) => (
               <View key={exam.id} style={styles.examCard}>
                 <View style={[styles.priorityIndicator, { backgroundColor: getPriorityColor(exam.priority) }]} />
                 <View style={styles.examContent}>
                   <View style={styles.examInfo}>
                     <View style={styles.examTextContainer}>
                       <Text style={styles.examTitle}>{exam.title}</Text>
-                      {exam.description && (
-                        <Text style={styles.examDescription} numberOfLines={2}>{exam.description}</Text>
+                      {exam.subject && (
+                        <Text style={styles.examDescription} numberOfLines={2}>{exam.subject}</Text>
                       )}
                       <Text style={styles.examDate}>{exam.date}</Text>
                     </View>
@@ -223,7 +294,7 @@ export default function ExamManagementScreen() {
               </View>
             ))}
             
-            {(!dDays || dDays.length === 0) && (
+            {exams.length === 0 && (
               <View style={styles.emptyState}>
                 <Calendar size={48} color="#C7C7CC" />
                 <Text style={styles.emptyTitle}>{t('noExams')}</Text>
@@ -288,15 +359,13 @@ export default function ExamManagementScreen() {
                 </View>
                 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>{t('examDescription')}</Text>
+                  <Text style={styles.inputLabel}>{t('subject')}</Text>
                   <TextInput
-                    style={[styles.textInput, styles.textArea]}
-                    value={newExamDescription}
-                    onChangeText={setNewExamDescription}
-                    placeholder={t('examDescPlaceholder')}
+                    style={styles.textInput}
+                    value={newExamSubject}
+                    onChangeText={setNewExamSubject}
+                    placeholder={t('subjectPlaceholder')}
                     placeholderTextColor="#8E8E93"
-                    multiline
-                    numberOfLines={3}
                   />
                 </View>
                 
@@ -386,15 +455,13 @@ export default function ExamManagementScreen() {
                 </View>
                 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>{t('examDescription')}</Text>
+                  <Text style={styles.inputLabel}>{t('subject')}</Text>
                   <TextInput
-                    style={[styles.textInput, styles.textArea]}
-                    value={editExamDescription}
-                    onChangeText={setEditExamDescription}
-                    placeholder={t('examDescPlaceholder')}
+                    style={styles.textInput}
+                    value={editExamSubject}
+                    onChangeText={setEditExamSubject}
+                    placeholder={t('subjectPlaceholder')}
                     placeholderTextColor="#8E8E93"
-                    multiline
-                    numberOfLines={3}
                   />
                 </View>
                 
@@ -657,5 +724,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#FFFFFF",
+  },
+  centerContent: {
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
