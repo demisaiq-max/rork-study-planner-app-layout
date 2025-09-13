@@ -55,10 +55,37 @@ export default function HomeScreen() {
   const { t } = useLanguage();
   
   // Fetch graded exams
-  const { data: gradedExams, isLoading: isLoadingGradedExams } = trpc.tests.getLatestTestResults.useQuery(
+  const { data: gradedExams, isLoading: isLoadingGradedExams, error: gradedExamsError, refetch: refetchGradedExams } = trpc.tests.getLatestTestResults.useQuery(
     { userId: user?.id || '' },
-    { enabled: !!user?.id }
+    { 
+      enabled: !!user?.id
+    }
   );
+  
+  // Seed test data mutation
+  const seedTestDataMutation = trpc.tests.seedTestData.useMutation({
+    onSuccess: () => {
+      console.log('Test data seeded successfully');
+      refetchGradedExams();
+    },
+    onError: (error) => {
+      console.error('Error seeding test data:', error);
+    }
+  });
+  
+  // Debug logging
+  useEffect(() => {
+    console.log('User ID:', user?.id);
+    console.log('Graded exams data:', gradedExams);
+    console.log('Is loading graded exams:', isLoadingGradedExams);
+    console.log('Graded exams error:', gradedExamsError);
+    if (gradedExams) {
+      console.log('Graded exams loaded:', gradedExams.length);
+    }
+    if (gradedExamsError) {
+      console.error('Error loading graded exams:', gradedExamsError);
+    }
+  }, [user?.id, gradedExams, isLoadingGradedExams, gradedExamsError]);
   
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showAddExamModal, setShowAddExamModal] = useState(false);
@@ -330,8 +357,13 @@ export default function HomeScreen() {
           
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.subjectsScroll}>
             {isLoadingGradedExams ? (
-              <View style={styles.loadingContainer}>
-                <Text style={styles.loadingText}>Loading...</Text>
+              <View style={styles.loadingExamsContainer}>
+                <Text style={styles.loadingText}>Loading exams...</Text>
+              </View>
+            ) : gradedExamsError ? (
+              <View style={styles.noResultsCard}>
+                <Text style={styles.noResultsText}>Error Loading</Text>
+                <Text style={styles.noResultsSubtext}>{(gradedExamsError as any)?.message || 'Failed to load exams'}</Text>
               </View>
             ) : gradedExams && gradedExams.length > 0 ? (
               gradedExams.map((exam: any) => {
@@ -384,10 +416,22 @@ export default function HomeScreen() {
                 );
               })
             ) : (
-              <View style={styles.noResultsCard}>
-                <Text style={styles.noResultsText}>No Graded Exams</Text>
-                <Text style={styles.noResultsSubtext}>Complete tests to see results</Text>
-              </View>
+              <TouchableOpacity 
+                style={styles.noResultsCard}
+                onPress={() => {
+                  if (user?.id && !seedTestDataMutation.isPending) {
+                    seedTestDataMutation.mutate({ userId: user.id });
+                  }
+                }}
+                disabled={seedTestDataMutation.isPending}
+              >
+                <Text style={styles.noResultsText}>
+                  {seedTestDataMutation.isPending ? 'Loading...' : 'No Graded Exams'}
+                </Text>
+                <Text style={styles.noResultsSubtext}>
+                  {seedTestDataMutation.isPending ? 'Creating sample data...' : 'Tap to create sample data'}
+                </Text>
+              </TouchableOpacity>
             )}
           </ScrollView>
         </View>
@@ -1344,6 +1388,12 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingExamsContainer: {
+    minWidth: 200,
+    height: 80,
     justifyContent: "center",
     alignItems: "center",
   },
