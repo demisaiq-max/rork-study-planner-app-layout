@@ -7,16 +7,12 @@ export const trpc = createTRPCReact<AppRouter>();
 
 const getBaseUrl = () => {
   if (process.env.EXPO_PUBLIC_RORK_API_BASE_URL) {
-    return process.env.EXPO_PUBLIC_RORK_API_BASE_URL.replace(/\/?$/, "");
+    return process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
   }
-  if (typeof window !== 'undefined' && window.location?.origin) {
-    return window.location.origin;
-  }
-  if (typeof location !== 'undefined' && (location as Location).origin) {
-    return (location as Location).origin;
-  }
-  console.warn("EXPO_PUBLIC_RORK_API_BASE_URL not set. Falling back to http://localhost:3000");
-  return "http://localhost:3000";
+
+  throw new Error(
+    "No base url found, please set EXPO_PUBLIC_RORK_API_BASE_URL"
+  );
 };
 
 export const trpcClient = trpc.createClient({
@@ -24,13 +20,33 @@ export const trpcClient = trpc.createClient({
     httpLink({
       url: `${getBaseUrl()}/api/trpc`,
       transformer: superjson,
-      fetch: async (input, init) => {
-        const res = await fetch(input, init);
-        if (!res.ok) {
-          const text = await res.text();
-          console.error("tRPC HTTP error", res.status, text);
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      fetch: async (url, options) => {
+        console.log('tRPC request:', { url, method: options?.method });
+        try {
+          const response = await fetch(url, {
+            ...options,
+            headers: {
+              'Content-Type': 'application/json',
+              ...options?.headers,
+            },
+          });
+          
+          console.log('tRPC response status:', response.status);
+          
+          if (!response.ok) {
+            const text = await response.text();
+            console.error('tRPC error response:', text);
+            throw new Error(`HTTP ${response.status}: ${text}`);
+          }
+          
+          return response;
+        } catch (error) {
+          console.error('tRPC fetch error:', error);
+          throw error;
         }
-        return res;
       },
     }),
   ],

@@ -997,18 +997,16 @@ export default function CommunityScreen() {
             <KeyboardAvoidingView 
               style={styles.modalContent}
               behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-              keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
+              keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
             >
               <ScrollView 
                 ref={scrollViewRef}
                 style={styles.modalScrollContent}
                 keyboardShouldPersistTaps="handled"
-                contentContainerStyle={{ paddingBottom: 160 }}
+                contentContainerStyle={{ paddingBottom: 80 }}
                 onContentSizeChange={() => {
-                  if (keyboardHeight > 0 && commentInputRef.current?.isFocused()) {
-                    setTimeout(() => {
-                      scrollViewRef.current?.scrollToEnd({ animated: true });
-                    }, 300);
+                  if (keyboardHeight > 0) {
+                    scrollViewRef.current?.scrollToEnd({ animated: true });
                   }
                 }}
               >
@@ -1077,7 +1075,7 @@ export default function CommunityScreen() {
               
               <View style={[
                 styles.commentInputContainer,
-                { bottom: keyboardHeight > 0 ? keyboardHeight : 60 }
+                { bottom: keyboardHeight > 0 ? 0 : 0 }
               ]}>
                 <View style={styles.commentInputWrapper}>
                   <TextInput
@@ -1725,21 +1723,17 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   commentInputContainer: {
-    position: 'absolute',
-    bottom: 60,
-    left: 0,
-    right: 0,
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: Platform.OS === 'ios' ? 20 : 12,
+    paddingBottom: Platform.OS === 'ios' ? 12 : 12,
     borderTopWidth: 1,
     borderTopColor: '#E5E5EA',
     backgroundColor: '#FFFFFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 3,
   },
   commentInputWrapper: {
     flexDirection: 'row',

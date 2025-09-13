@@ -1,39 +1,39 @@
 import { createTRPCRouter } from "./create-context";
-import hiProcedure from "./routes/example/hi/route";
+import hiRoute from "./routes/example/hi/route";
 
 // Exam routes
-import { getUserExams } from "./routes/exams/get-user-exams/route";
-import { createExam } from "./routes/exams/create-exam/route";
-import { getPriorityExams } from "./routes/exams/get-priority-exams/route";
-import { updateExam } from "./routes/exams/update-exam/route";
-import { deleteExam } from "./routes/exams/delete-exam/route";
-import { seedExamData } from "./routes/exams/seed-exam-data/route";
+import getUserExams from "./routes/exams/get-user-exams/route";
+import createExam from "./routes/exams/create-exam/route";
+import getPriorityExams from "./routes/exams/get-priority-exams/route";
+import updateExam from "./routes/exams/update-exam/route";
+import deleteExam from "./routes/exams/delete-exam/route";
+import seedExamData from "./routes/exams/seed-exam-data/route";
 
 // Grade routes
-import { getSubjectGrades } from "./routes/grades/get-subject-grades/route";
-import { updateSubjectGrade } from "./routes/grades/update-subject-grade/route";
-import { deleteSubjectGrade } from "./routes/grades/delete-subject-grade/route";
+import getSubjectGrades from "./routes/grades/get-subject-grades/route";
+import updateSubjectGrade from "./routes/grades/update-subject-grade/route";
+import deleteSubjectGrade from "./routes/grades/delete-subject-grade/route";
 import { seedDummyDataProcedure } from "./routes/grades/seed-dummy-data/route";
 
 // Settings routes
-import { getUserSettings } from "./routes/settings/get-user-settings/route";
-import { updateUserSettings } from "./routes/settings/update-user-settings/route";
+import getUserSettings from "./routes/settings/get-user-settings/route";
+import updateUserSettings from "./routes/settings/update-user-settings/route";
 
 // Study session routes
-import { createStudySession } from "./routes/study/create-study-session/route";
-import { getStudySessions } from "./routes/study/get-study-sessions/route";
+import createStudySession from "./routes/study/create-study-session/route";
+import getStudySessions from "./routes/study/get-study-sessions/route";
 
 // Test routes
-import { getSubjectTests } from "./routes/tests/get-subject-tests/route";
-import { createTest } from "./routes/tests/create-test/route";
-import { submitTestResult } from "./routes/tests/submit-test-result/route";
-import { getUserSubjects } from "./routes/tests/get-user-subjects/route";
-import { getLatestTestResults } from "./routes/tests/get-latest-test-results/route";
-import { getTestById } from "./routes/tests/get-test-by-id/route";
-import { createSubject } from "./routes/tests/create-subject/route";
-import { deleteSubject } from "./routes/tests/delete-subject/route";
-import { updateSubject } from "./routes/tests/update-subject/route";
-import { seedTestData, debugTestData } from "./routes/tests/seed-test-data/route";
+import getSubjectTests from "./routes/tests/get-subject-tests/route";
+import createTest from "./routes/tests/create-test/route";
+import submitTestResult from "./routes/tests/submit-test-result/route";
+import getUserSubjects from "./routes/tests/get-user-subjects/route";
+import getLatestTestResults from "./routes/tests/get-latest-test-results/route";
+import getTestById from "./routes/tests/get-test-by-id/route";
+import createSubject from "./routes/tests/create-subject/route";
+import deleteSubject from "./routes/tests/delete-subject/route";
+import updateSubject from "./routes/tests/update-subject/route";
+import seedTestData, { debugTestData } from "./routes/tests/seed-test-data/route";
 
 // Brain dump routes
 import { getBrainDumpsProcedure } from "./routes/brain-dumps/get-brain-dumps/route";
@@ -66,11 +66,9 @@ import { addAnswerProcedure } from "./routes/community/questions/add-answer/rout
 import { likeQuestionProcedure } from "./routes/community/questions/like-question/route";
 import { incrementQuestionViewProcedure } from "./routes/community/questions/increment-view/route";
 
-
-
 export const appRouter = createTRPCRouter({
   example: createTRPCRouter({
-    hi: hiProcedure,
+    hi: hiRoute,
   }),
   exams: createTRPCRouter({
     getUserExams,

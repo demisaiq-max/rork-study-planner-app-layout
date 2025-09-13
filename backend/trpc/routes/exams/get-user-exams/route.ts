@@ -5,9 +5,8 @@ import { z } from 'zod';
 export const getUserExams = publicProcedure
   .input(z.object({ userId: z.string() }))
   .query(async ({ input }) => {
-    // Use the test user UUID from the database if 'test-user' is passed or if the ID is not a valid UUID
-    const isValidUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.userId);
-    const userId = !isValidUuid || input.userId === 'test-user' 
+    // Use the test user UUID from the database if 'test-user' is passed
+    const userId = input.userId === 'test-user' 
       ? '550e8400-e29b-41d4-a716-446655440000' 
       : input.userId;
     
