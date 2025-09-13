@@ -15,6 +15,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Keyboard,
+  KeyboardEvent,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Search, Heart, MessageCircle, Eye, ChevronLeft, MoreHorizontal, Send, Camera, Image as ImageIcon, X, ChevronDown, Users } from "lucide-react-native";
@@ -119,6 +120,7 @@ export default function CommunityScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
+  const commentInputRef = useRef<TextInput>(null);
 
   const tabs = [
     language === 'ko' ? '공부 인증' : "Study Verification",
@@ -375,12 +377,8 @@ export default function CommunityScreen() {
   useEffect(() => {
     const keyboardWillShow = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      (e) => {
+      (e: KeyboardEvent) => {
         setKeyboardHeight(e.endCoordinates.height);
-        // Scroll to bottom when keyboard opens
-        setTimeout(() => {
-          scrollViewRef.current?.scrollToEnd({ animated: true });
-        }, 100);
       }
     );
     
@@ -999,13 +997,18 @@ export default function CommunityScreen() {
             <KeyboardAvoidingView 
               style={styles.modalContent}
               behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-              keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+              keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
             >
               <ScrollView 
                 ref={scrollViewRef}
                 style={styles.modalScrollContent}
                 keyboardShouldPersistTaps="handled"
-                contentContainerStyle={{ paddingBottom: 100 }}
+                contentContainerStyle={{ paddingBottom: 80 }}
+                onContentSizeChange={() => {
+                  if (keyboardHeight > 0) {
+                    scrollViewRef.current?.scrollToEnd({ animated: true });
+                  }
+                }}
               >
                 <View style={styles.postDetailHeader}>
                   <Image 
@@ -1070,26 +1073,38 @@ export default function CommunityScreen() {
                 </View>
               </ScrollView>
               
-              <View style={styles.commentInputContainer}>
-                <TextInput
-                  style={styles.commentInput}
-                  placeholder={language === 'ko' ? '댓글을 입력하세요...' : 'Write a comment...'}
-                  placeholderTextColor="#8E8E93"
-                  value={newComment}
-                  onChangeText={setNewComment}
-                  multiline
-                />
-                <TouchableOpacity 
-                  style={[styles.sendButton, (!newComment.trim() || addCommentMutation.isPending) && styles.sendButtonDisabled]}
-                  onPress={handleAddComment}
-                  disabled={!newComment.trim() || addCommentMutation.isPending}
-                >
-                  {addCommentMutation.isPending ? (
-                    <ActivityIndicator size="small" color="#007AFF" />
-                  ) : (
-                    <Send size={20} color={newComment.trim() ? "#007AFF" : "#C7C7CC"} />
-                  )}
-                </TouchableOpacity>
+              <View style={[
+                styles.commentInputContainer,
+                { bottom: keyboardHeight > 0 ? 0 : 0 }
+              ]}>
+                <View style={styles.commentInputWrapper}>
+                  <TextInput
+                    ref={commentInputRef}
+                    style={styles.commentInput}
+                    placeholder={language === 'ko' ? '댓글을 입력하세요...' : 'Write a comment...'}
+                    placeholderTextColor="#8E8E93"
+                    value={newComment}
+                    onChangeText={setNewComment}
+                    multiline
+                    maxLength={500}
+                    onFocus={() => {
+                      setTimeout(() => {
+                        scrollViewRef.current?.scrollToEnd({ animated: true });
+                      }, 300);
+                    }}
+                  />
+                  <TouchableOpacity 
+                    style={[styles.sendButton, (!newComment.trim() || addCommentMutation.isPending) && styles.sendButtonDisabled]}
+                    onPress={handleAddComment}
+                    disabled={!newComment.trim() || addCommentMutation.isPending}
+                  >
+                    {addCommentMutation.isPending ? (
+                      <ActivityIndicator size="small" color="#007AFF" />
+                    ) : (
+                      <Send size={20} color={newComment.trim() ? "#007AFF" : "#C7C7CC"} />
+                    )}
+                  </TouchableOpacity>
+                </View>
               </View>
             </KeyboardAvoidingView>
           )}
@@ -1708,41 +1723,50 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   commentInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: Platform.OS === 'ios' ? 12 : 12,
     borderTopWidth: 1,
     borderTopColor: '#E5E5EA',
     backgroundColor: '#FFFFFF',
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+  commentInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 8,
   },
   commentInput: {
     flex: 1,
-    minHeight: 40,
+    minHeight: 36,
     maxHeight: 100,
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 8,
+    paddingTop: 8,
     backgroundColor: '#F2F2F7',
-    borderRadius: 20,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
     fontSize: 14,
     color: '#000000',
-    marginRight: 8,
+    textAlignVertical: 'center',
   },
   sendButton: {
-    padding: 8,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#007AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 0,
   },
   sendButtonDisabled: {
-    opacity: 0.5,
+    backgroundColor: '#C7C7CC',
+    opacity: 0.6,
   },
   createPostHeader: {
     flexDirection: 'row',
