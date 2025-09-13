@@ -48,7 +48,7 @@ export default function HomeScreen() {
     isLoading
   } = useStudyStore();
   const { user } = useUser();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   
   // Fetch graded exams
   const { data: gradedExams, isLoading: isLoadingGradedExams, error: gradedExamsError, refetch: refetchGradedExams } = trpc.tests.getLatestTestResults.useQuery(
@@ -61,6 +61,15 @@ export default function HomeScreen() {
   // Fetch brain dumps from database
   const { data: brainDumps, isLoading: isLoadingBrainDumps, error: brainDumpsError, refetch: refetchBrainDumps } = trpc.brainDumps.getBrainDumps.useQuery(
     { limit: 10 },
+    { 
+      enabled: !!user?.id,
+      retry: 1
+    }
+  );
+  
+  // Fetch priority tasks from database
+  const { data: dbPriorityTasks, isLoading: isLoadingPriorityTasks, refetch: refetchPriorityTasks } = trpc.priorityTasks.getPriorityTasks.useQuery(
+    { userId: user?.id || '' },
     { 
       enabled: !!user?.id,
       retry: 1
@@ -85,6 +94,13 @@ export default function HomeScreen() {
   const deleteBrainDumpMutation = trpc.brainDumps.deleteBrainDump.useMutation({
     onSuccess: () => {
       refetchBrainDumps();
+    },
+  });
+  
+  // Update priority task mutation
+  const updatePriorityTaskMutation = trpc.priorityTasks.updatePriorityTask.useMutation({
+    onSuccess: () => {
+      refetchPriorityTasks();
     },
   });
   
@@ -516,34 +532,87 @@ export default function HomeScreen() {
           </View>
           
           <View style={styles.tasksList}>
-            {priorityTasks?.slice(0, 3).map((task) => (
-              <TouchableOpacity 
-                key={task.id} 
-                style={styles.priorityTaskItem}
-                onPress={() => {
-                  if (togglePriorityTask) {
-                    togglePriorityTask(task.id);
-                  }
-                }}
-                activeOpacity={0.7}
-              >
-                <View style={styles.priorityTaskContent}>
-                  <View style={[styles.checkbox, task.completed && styles.checkboxChecked]}>
-                    {task.completed && <Check size={14} color="#FFFFFF" />}
+            {(dbPriorityTasks || priorityTasks)?.slice(0, 4).map((task, index) => {
+              const taskData = dbPriorityTasks ? task : task;
+              const getPriorityColor = (priority: string) => {
+                switch (priority) {
+                  case 'high': return '#FF3B30';
+                  case 'medium': return '#FF9500';
+                  case 'low': return '#34C759';
+                  default: return '#8E8E93';
+                }
+              };
+              const getPriorityLabel = (priority: string) => {
+                const labels: Record<string, string> = {
+                  high: '높음',
+                  medium: '중간',
+                  low: '낮음'
+                };
+                return labels[priority] || priority;
+              };
+              
+              return (
+                <TouchableOpacity 
+                  key={taskData.id} 
+                  style={styles.priorityTaskItem}
+                  onPress={() => {
+                    if (dbPriorityTasks && user?.id) {
+                      updatePriorityTaskMutation.mutate({
+                        id: taskData.id,
+                        completed: !taskData.completed
+                      });
+                    } else if (togglePriorityTask) {
+                      togglePriorityTask(taskData.id);
+                    }
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.priorityTaskContent}>
+                    <View style={styles.priorityNumberContainer}>
+                      <Text style={[styles.priorityNumber, taskData.completed && styles.priorityNumberCompleted]}>
+                        {index + 1}
+                      </Text>
+                    </View>
+                    <View style={styles.priorityTaskText}>
+                      <Text style={[styles.priorityTaskTitle, taskData.completed && styles.priorityTaskTitleCompleted]}>
+                        {taskData.title}
+                      </Text>
+                      <View style={styles.priorityTaskMeta}>
+                        {taskData.subject && (
+                          <Text style={[styles.priorityTaskDescription, taskData.completed && styles.priorityTaskDescriptionCompleted]}>
+                            {taskData.subject}
+                          </Text>
+                        )}
+                        <View style={[
+                          styles.priorityLabel,
+                          { backgroundColor: getPriorityColor(taskData.priority) + '20' }
+                        ]}>
+                          <Text style={[
+                            styles.priorityLabelText,
+                            { color: getPriorityColor(taskData.priority) }
+                          ]}>
+                            {getPriorityLabel(taskData.priority)}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
                   </View>
-                  <View style={styles.priorityTaskText}>
-                    <Text style={[styles.priorityTaskTitle, task.completed && styles.priorityTaskTitleCompleted]}>{task.title}</Text>
-                    {task.subject && (
-                      <Text style={[styles.priorityTaskDescription, task.completed && styles.priorityTaskDescriptionCompleted]}>{task.subject}</Text>
-                    )}
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))}
+                </TouchableOpacity>
+              );
+            })}
             
-            {(!priorityTasks || priorityTasks.length === 0) && (
+            {(dbPriorityTasks || priorityTasks)?.length > 4 && (
+              <TouchableOpacity 
+                style={styles.seeAllTasksButton}
+                onPress={() => router.push('/priority-management')}
+              >
+                <Text style={styles.seeAllTasksText}>모두 보기</Text>
+              </TouchableOpacity>
+            )}
+            
+            {((!dbPriorityTasks && !priorityTasks) || (dbPriorityTasks?.length === 0 && priorityTasks?.length === 0)) && (
               <View style={styles.emptyPriorityTasks}>
-                <Text style={styles.emptyPriorityText}>{t('emptyPriorityText')}</Text>
+                <Text style={styles.emptyPriorityText}>{isLoadingPriorityTasks ? 'Loading...' : t('emptyPriorityText')}</Text>
               </View>
             )}
           </View>
@@ -555,7 +624,7 @@ export default function HomeScreen() {
           onPress={() => router.push('/brain-manager')}
           activeOpacity={0.8}
         >
-          <Text style={styles.brainDumpTitle}>{t('goalsTitle')}</Text>
+          <Text style={styles.brainDumpTitle}>{language === 'ko' ? '모든 생각 쏟아내기' : 'Brain Dump'}</Text>
           
 
 
@@ -1325,6 +1394,48 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#000000",
     marginBottom: 16,
+  },
+  priorityNumberContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#007AFF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  priorityNumber: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+  priorityNumberCompleted: {
+    textDecorationLine: "line-through",
+  },
+  priorityTaskMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 4,
+  },
+  priorityLabel: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  priorityLabelText: {
+    fontSize: 10,
+    fontWeight: "600",
+  },
+  seeAllTasksButton: {
+    paddingVertical: 8,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  seeAllTasksText: {
+    fontSize: 13,
+    color: "#007AFF",
+    fontWeight: "500",
   },
   seeAllButton: {
     paddingVertical: 12,

@@ -38,6 +38,12 @@ import { createBrainDumpProcedure } from "./routes/brain-dumps/create-brain-dump
 import { updateBrainDumpProcedure } from "./routes/brain-dumps/update-brain-dump/route";
 import { deleteBrainDumpProcedure } from "./routes/brain-dumps/delete-brain-dump/route";
 
+// Priority task routes
+import { getPriorityTasksProcedure } from "./routes/priority-tasks/get-priority-tasks/route";
+import { createPriorityTaskProcedure } from "./routes/priority-tasks/create-priority-task/route";
+import { updatePriorityTaskProcedure } from "./routes/priority-tasks/update-priority-task/route";
+import { deletePriorityTaskProcedure } from "./routes/priority-tasks/delete-priority-task/route";
+
 export const appRouter = createTRPCRouter({
   example: createTRPCRouter({
     hi: hiRoute,
@@ -79,6 +85,12 @@ export const appRouter = createTRPCRouter({
     createBrainDump: createBrainDumpProcedure,
     updateBrainDump: updateBrainDumpProcedure,
     deleteBrainDump: deleteBrainDumpProcedure,
+  }),
+  priorityTasks: createTRPCRouter({
+    getPriorityTasks: getPriorityTasksProcedure,
+    createPriorityTask: createPriorityTaskProcedure,
+    updatePriorityTask: updatePriorityTaskProcedure,
+    deletePriorityTask: deletePriorityTaskProcedure,
   }),
 });
 

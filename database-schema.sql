@@ -225,6 +225,34 @@ INSERT INTO brain_dumps (user_id, title, content, category, is_pinned) VALUES
 ('550e8400-e29b-41d4-a716-446655440000', '수학 공식 모음', '이차방정식: ax² + bx + c = 0\n근의 공식: x = (-b ± √(b²-4ac))/2a', '수학', false)
 ON CONFLICT DO NOTHING;
 
+-- Priority tasks table for managing priority tasks
+CREATE TABLE IF NOT EXISTS priority_tasks (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    subject VARCHAR(100) NOT NULL,
+    priority VARCHAR(20) NOT NULL CHECK (priority IN ('high', 'medium', 'low')),
+    order_index INTEGER NOT NULL DEFAULT 1,
+    completed BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create indexes for priority tasks
+CREATE INDEX IF NOT EXISTS idx_priority_tasks_user_id ON priority_tasks(user_id);
+CREATE INDEX IF NOT EXISTS idx_priority_tasks_order ON priority_tasks(order_index);
+
+-- Create trigger for priority tasks updated_at
+DROP TRIGGER IF EXISTS update_priority_tasks_updated_at ON priority_tasks;
+CREATE TRIGGER update_priority_tasks_updated_at BEFORE UPDATE ON priority_tasks FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Sample priority tasks for test user
+INSERT INTO priority_tasks (user_id, title, subject, priority, order_index, completed) VALUES 
+('550e8400-e29b-41d4-a716-446655440000', '아침 조정하기', '일반', 'high', 1, false),
+('550e8400-e29b-41d4-a716-446655440000', '2025년 6월 모의고사 풀기', '수학', 'high', 2, false),
+('550e8400-e29b-41d4-a716-446655440000', '학원가기', '일반', 'medium', 3, false)
+ON CONFLICT DO NOTHING;
+
 -- Sample test results with detailed analysis data
 INSERT INTO test_results (test_id, user_id, raw_score, standard_score, percentile, grade, analysis_data) 
 SELECT 
