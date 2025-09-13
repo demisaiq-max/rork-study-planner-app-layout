@@ -554,7 +554,7 @@ export default function HomeScreen() {
           onPress={() => router.push('/brain-manager')}
           activeOpacity={0.8}
         >
-          <Text style={styles.brainDumpTitle}>Brain Dump</Text>
+          <Text style={styles.brainDumpTitle}>{t('goalsTitle')}</Text>
           
 
 
