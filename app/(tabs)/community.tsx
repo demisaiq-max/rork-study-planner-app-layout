@@ -35,6 +35,7 @@ interface Post {
   image_url?: string;
   likes_count: number;
   comments_count: number;
+  views_count: number;
   created_at: string;
   updated_at: string;
   user?: {
@@ -117,9 +118,9 @@ export default function CommunityScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const tabs = [
-    language === 'ko' ? '오늘의 공부 인증' : "Today's Study Verification",
-    language === 'ko' ? '내 등급 모임' : 'My Grade Group',
-    language === 'ko' ? '문제질문하기' : 'Ask Questions'
+    language === 'ko' ? '공부 인증' : "Study Verification",
+    language === 'ko' ? '그룹' : 'Groups',
+    language === 'ko' ? '질문' : 'Questions'
   ];
 
   // Fetch posts with real-time updates
@@ -460,59 +461,91 @@ export default function CommunityScreen() {
           setShowPostDetail(true);
         }}
       >
-        <View style={styles.postHeader}>
-          <Image 
-            source={{ uri: `https://i.pravatar.cc/150?u=${post.user_id}` }} 
-            style={styles.avatar} 
-          />
-          <View style={styles.postInfo}>
-            <Text style={styles.authorName}>
-              {post.user?.name || 'Anonymous'}
-              {post.group && ` • ${post.group.name}`}
-            </Text>
-            <Text style={styles.postTime}>{formatTime(post.created_at)}</Text>
-          </View>
-        </View>
-        
+        {/* Large Image First */}
         {post.image_url && (
           <View style={styles.studyImageContainer}>
             <Image source={{ uri: post.image_url }} style={styles.studyImage} />
+            
+            {/* User Info Overlay */}
+            <View style={styles.imageOverlay}>
+              <View style={styles.overlayHeader}>
+                <View style={styles.userInfoOverlay}>
+                  <Image 
+                    source={{ uri: `https://i.pravatar.cc/150?u=${post.user_id}` }} 
+                    style={styles.overlayAvatar} 
+                  />
+                  <View>
+                    <Text style={styles.overlayUserName}>
+                      {post.user?.name || 'Anonymous'}
+                    </Text>
+                    {post.group && (
+                      <Text style={styles.overlayGroupName}>
+                        {post.group.name}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+                <Text style={styles.overlayTime}>{formatTime(post.created_at)}</Text>
+              </View>
+            </View>
           </View>
         )}
         
-        {post.content && (
-          <Text style={styles.studyContent}>{post.content}</Text>
-        )}
-        
-        <View style={styles.studyActions}>
-          <TouchableOpacity 
-            style={styles.studyActionButton}
-            onPress={(e) => {
-              e.stopPropagation();
-              handleLikePost(post.id);
-            }}
-          >
-            <Heart 
-              size={16} 
-              color={isLiked ? "#FF3B30" : "#8E8E93"} 
-              fill={isLiked ? "#FF3B30" : "none"}
-            />
-            <Text style={[styles.studyActionText, isLiked && styles.actionTextActive]}>
-              {post.likes_count}
-            </Text>
-          </TouchableOpacity>
+        {/* Content Section */}
+        <View style={styles.postContentSection}>
+          {!post.image_url && (
+            <View style={styles.postHeader}>
+              <Image 
+                source={{ uri: `https://i.pravatar.cc/150?u=${post.user_id}` }} 
+                style={styles.avatar} 
+              />
+              <View style={styles.postInfo}>
+                <Text style={styles.authorName}>
+                  {post.user?.name || 'Anonymous'}
+                </Text>
+                {post.group && (
+                  <Text style={styles.groupLabel}>
+                    {post.group.name}
+                  </Text>
+                )}
+              </View>
+              <Text style={styles.postTime}>{formatTime(post.created_at)}</Text>
+            </View>
+          )}
           
-          <TouchableOpacity style={styles.studyActionButton}>
-            <MessageCircle size={16} color="#8E8E93" />
-            <Text style={styles.studyActionText}>{post.comments_count}</Text>
-          </TouchableOpacity>
+          {post.content && (
+            <Text style={styles.studyContent} numberOfLines={3}>{post.content}</Text>
+          )}
           
-          <TouchableOpacity style={styles.studyActionButton}>
-            <Eye size={16} color="#8E8E93" />
-            <Text style={styles.studyActionText}>
-              {language === 'ko' ? '보기' : 'View'}
-            </Text>
-          </TouchableOpacity>
+          {/* Actions Bar */}
+          <View style={styles.studyActions}>
+            <TouchableOpacity 
+              style={styles.studyActionButton}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleLikePost(post.id);
+              }}
+            >
+              <Heart 
+                size={20} 
+                color={isLiked ? "#FF3B30" : "#8E8E93"} 
+                fill={isLiked ? "#FF3B30" : "none"}
+              />
+              <Text style={[styles.studyActionText, isLiked && styles.actionTextActive]}>
+                {post.likes_count || 0}
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.studyActionButton}>
+              <MessageCircle size={20} color="#8E8E93" />
+              <Text style={styles.studyActionText}>{post.comments_count || 0}</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.studyActionButton}>
+              <Eye size={20} color="#8E8E93" />
+              <Text style={styles.studyActionText}>{post.views_count || 0}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -731,39 +764,80 @@ export default function CommunityScreen() {
         ) : (
           <>
             {activeTab === 0 && (
-              postsQuery.data && postsQuery.data.length > 0 
-                ? postsQuery.data.map(renderPost)
-                : (
-                  <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyText}>
-                      {language === 'ko' ? '아직 게시물이 없습니다' : 'No posts yet'}
-                    </Text>
-                    <Text style={styles.emptySubText}>
-                      {language === 'ko' ? '첫 번째 게시물을 작성해보세요!' : 'Be the first to post!'}
-                    </Text>
-                  </View>
-                )
+              <>
+                {/* Group Pills for Study Verification Tab */}
+                {activeTab === 0 && groupsQuery.data && groupsQuery.data.length > 0 && (
+                  <ScrollView 
+                    horizontal 
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.groupPillsContainer}
+                    contentContainerStyle={styles.groupPillsContent}
+                  >
+                    <TouchableOpacity
+                      style={[
+                        styles.groupPill,
+                        !selectedGroup && styles.groupPillActive
+                      ]}
+                      onPress={() => setSelectedGroup(null)}
+                    >
+                      <Text style={[
+                        styles.groupPillText,
+                        !selectedGroup && styles.groupPillTextActive
+                      ]}>
+                        {language === 'ko' ? '전체' : 'All'}
+                      </Text>
+                    </TouchableOpacity>
+                    {groupsQuery.data.filter(g => g.isMember).map(group => (
+                      <TouchableOpacity
+                        key={group.id}
+                        style={[
+                          styles.groupPill,
+                          selectedGroup === group.id && styles.groupPillActive
+                        ]}
+                        onPress={() => setSelectedGroup(group.id)}
+                      >
+                        <Text style={[
+                          styles.groupPillText,
+                          selectedGroup === group.id && styles.groupPillTextActive
+                        ]}>
+                          {group.name}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                )}
+                
+                {postsQuery.data && postsQuery.data.length > 0 
+                  ? (
+                    selectedGroup 
+                      ? postsQuery.data.filter(p => p.group_id === selectedGroup).map(renderPost)
+                      : postsQuery.data.map(renderPost)
+                  )
+                  : (
+                    <View style={styles.emptyContainer}>
+                      <Text style={styles.emptyText}>
+                        {language === 'ko' ? '아직 게시물이 없습니다' : 'No posts yet'}
+                      </Text>
+                      <Text style={styles.emptySubText}>
+                        {language === 'ko' ? '첫 번째 게시물을 작성해보세요!' : 'Be the first to post!'}
+                      </Text>
+                    </View>
+                  )
+                }
+              </>
             )}
             {activeTab === 1 && (
-              selectedGroup 
-                ? (
-                  postsQuery.data && postsQuery.data.filter(p => p.group_id === selectedGroup).length > 0
-                    ? postsQuery.data?.filter(p => p.group_id === selectedGroup).map(renderPost)
-                    : (
-                      <View style={styles.emptyContainer}>
-                        <Text style={styles.emptyText}>
-                          {language === 'ko' ? '이 그룹에 게시물이 없습니다' : 'No posts in this group'}
-                        </Text>
-                      </View>
-                    )
-                )
-                : (
+              <View style={styles.groupsContainer}>
+                {groupsQuery.data && groupsQuery.data.length > 0 ? (
+                  groupsQuery.data.map(renderGroup)
+                ) : (
                   <View style={styles.emptyContainer}>
                     <Text style={styles.emptyText}>
-                      {language === 'ko' ? '그룹을 선택해주세요' : 'Please select a group'}
+                      {language === 'ko' ? '그룹이 없습니다' : 'No groups available'}
                     </Text>
                   </View>
-                )
+                )}
+              </View>
             )}
             {activeTab === 2 && (
               questionsQuery.data && questionsQuery.data.length > 0
@@ -1089,15 +1163,15 @@ const styles = StyleSheet.create({
   },
   studyPostCard: {
     backgroundColor: "#FFFFFF",
-    marginBottom: 8,
+    marginBottom: 12,
     marginHorizontal: 16,
     borderRadius: 12,
-    padding: 16,
+    overflow: 'hidden',
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   discussionPostCard: {
     backgroundColor: "#FFFFFF",
@@ -1132,38 +1206,40 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   studyContent: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#000000",
-    lineHeight: 22,
-    marginBottom: 12,
-    fontWeight: "500",
+    lineHeight: 20,
+    marginTop: 8,
   },
   studyImageContainer: {
-    marginVertical: 12,
-    borderRadius: 12,
-    overflow: 'hidden',
+    position: 'relative',
+    width: '100%',
+    aspectRatio: 1,
   },
   studyImage: {
-    width: width - 64,
-    height: width - 64,
+    width: '100%',
+    height: '100%',
     backgroundColor: "#F0F0F0",
   },
   studyActions: {
     flexDirection: "row",
     justifyContent: "space-around",
-    paddingTop: 12,
+    paddingTop: 8,
+    marginTop: 8,
     borderTopWidth: 1,
     borderTopColor: "#F0F0F0",
   },
   studyActionButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 6,
     paddingVertical: 4,
+    paddingHorizontal: 8,
   },
   studyActionText: {
-    fontSize: 12,
+    fontSize: 14,
     color: "#8E8E93",
+    fontWeight: '500',
   },
   actionTextActive: {
     color: "#FF3B30",
@@ -1537,5 +1613,83 @@ const styles = StyleSheet.create({
   },
   spacer: {
     width: 24,
+  },
+  imageOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    padding: 12,
+  },
+  overlayHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  userInfoOverlay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  overlayAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  overlayUserName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  overlayGroupName: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  overlayTime: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  postContentSection: {
+    padding: 12,
+  },
+  groupLabel: {
+    fontSize: 12,
+    color: '#007AFF',
+    marginTop: 2,
+  },
+  groupPillsContainer: {
+    height: 44,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  groupPillsContent: {
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    gap: 8,
+  },
+  groupPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#F2F2F7',
+    borderRadius: 16,
+    height: 32,
+  },
+  groupPillActive: {
+    backgroundColor: '#007AFF',
+  },
+  groupPillText: {
+    fontSize: 14,
+    color: '#8E8E93',
+    fontWeight: '500',
+  },
+  groupPillTextActive: {
+    color: '#FFFFFF',
+  },
+  groupsContainer: {
+    paddingTop: 8,
   },
 });
