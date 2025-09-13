@@ -20,9 +20,9 @@ app.onError((err, c) => {
   return c.json({ error: err.message }, 500);
 });
 
-// Mount tRPC router
+// Mount tRPC router at /trpc
 app.use(
-  "/*",
+  "/trpc/*",
   trpcServer({
     router: appRouter,
     createContext,
