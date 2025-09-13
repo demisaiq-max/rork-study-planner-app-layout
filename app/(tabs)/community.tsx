@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -14,6 +14,7 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
+  Keyboard,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Search, Heart, MessageCircle, Eye, ChevronLeft, MoreHorizontal, Send, Camera, Image as ImageIcon, X, ChevronDown, Users } from "lucide-react-native";
@@ -48,7 +49,7 @@ interface Post {
     name: string;
   };
   likes?: Array<{ user_id: string }>;
-  comments?: Array<{
+  comments?: {
     id: string;
     content: string;
     created_at: string;
@@ -56,7 +57,7 @@ interface Post {
       id: string;
       name: string;
     };
-  }>;
+  }[];
 }
 
 interface Question {
@@ -116,6 +117,8 @@ export default function CommunityScreen() {
   const [newAnswer, setNewAnswer] = useState("");
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   const tabs = [
     language === 'ko' ? '공부 인증' : "Study Verification",
@@ -129,7 +132,7 @@ export default function CommunityScreen() {
     limit: 50,
   }, {
     enabled: !userLoading && !!user, // Only fetch when user is loaded
-    refetchInterval: 30000, // Refresh every 30 seconds for real-time updates
+    refetchInterval: 10000, // Refresh every 10 seconds for real-time updates
     retry: 1,
     retryDelay: 1000,
     staleTime: 5000,
@@ -228,7 +231,15 @@ export default function CommunityScreen() {
   const addCommentMutation = trpc.community.posts.addComment.useMutation({
     onSuccess: (data) => {
       console.log('Comment added successfully:', data);
-      postsQuery.refetch();
+      postsQuery.refetch().then(() => {
+        // Update selected post with new data
+        if (selectedPost) {
+          const updatedPost = postsQuery.data?.find(p => p.id === selectedPost.id);
+          if (updatedPost) {
+            setSelectedPost(updatedPost);
+          }
+        }
+      });
       setNewComment("");
       // Don't show alert for successful comments to reduce noise
     },
@@ -298,6 +309,7 @@ export default function CommunityScreen() {
         schema: 'public', 
         table: 'daily_posts' 
       }, () => {
+        console.log('Post change detected');
         postsQuery.refetch();
       })
       .on('postgres_changes', { 
@@ -305,6 +317,7 @@ export default function CommunityScreen() {
         schema: 'public', 
         table: 'post_likes' 
       }, () => {
+        console.log('Like change detected');
         postsQuery.refetch();
       })
       .on('postgres_changes', { 
@@ -312,14 +325,24 @@ export default function CommunityScreen() {
         schema: 'public', 
         table: 'post_comments' 
       }, () => {
+        console.log('Comment change detected');
         postsQuery.refetch();
+        // Update selected post if it's open
+        if (selectedPost) {
+          setTimeout(() => {
+            const updatedPost = postsQuery.data?.find(p => p.id === selectedPost.id);
+            if (updatedPost) {
+              setSelectedPost(updatedPost);
+            }
+          }, 500);
+        }
       })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, postsQuery]);
+  }, [user, postsQuery, selectedPost]);
 
   // Set up real-time subscription for questions
   useEffect(() => {
@@ -347,6 +370,32 @@ export default function CommunityScreen() {
       supabase.removeChannel(channel);
     };
   }, [user, questionsQuery]);
+
+  // Handle keyboard events
+  useEffect(() => {
+    const keyboardWillShow = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => {
+        setKeyboardHeight(e.endCoordinates.height);
+        // Scroll to bottom when keyboard opens
+        setTimeout(() => {
+          scrollViewRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      }
+    );
+    
+    const keyboardWillHide = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        setKeyboardHeight(0);
+      }
+    );
+
+    return () => {
+      keyboardWillShow.remove();
+      keyboardWillHide.remove();
+    };
+  }, []);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -950,9 +999,14 @@ export default function CommunityScreen() {
             <KeyboardAvoidingView 
               style={styles.modalContent}
               behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-              keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
+              keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
             >
-              <ScrollView style={styles.modalScrollContent}>
+              <ScrollView 
+                ref={scrollViewRef}
+                style={styles.modalScrollContent}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={{ paddingBottom: 100 }}
+              >
                 <View style={styles.postDetailHeader}>
                   <Image 
                     source={{ uri: `https://i.pravatar.cc/150?u=${selectedPost.user_id}` }} 
@@ -994,7 +1048,7 @@ export default function CommunityScreen() {
                     {language === 'ko' ? '댓글' : 'Comments'} {selectedPost.comments_count}
                   </Text>
                   
-                  {selectedPost.comments?.map((comment) => (
+                  {(postsQuery.data?.find(p => p.id === selectedPost.id)?.comments || selectedPost.comments)?.map((comment: { id: string; content: string; created_at: string; user?: { id: string; name: string } }) => (
                     <View key={comment.id} style={styles.commentItem}>
                       <Image 
                         source={{ uri: `https://i.pravatar.cc/150?u=${comment.user?.id}` }} 
@@ -1573,7 +1627,6 @@ const styles = StyleSheet.create({
   modalScrollContent: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingBottom: 80,
   },
   postDetailHeader: {
     flexDirection: "row",
@@ -1659,7 +1712,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     paddingHorizontal: 20,
     paddingVertical: 12,
-    paddingBottom: 20,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
     borderTopWidth: 1,
     borderTopColor: '#E5E5EA',
     backgroundColor: '#FFFFFF',
@@ -1667,6 +1720,11 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
   },
   commentInput: {
     flex: 1,
