@@ -97,7 +97,7 @@ interface Group {
 
 export default function CommunityScreen() {
   const { language } = useLanguage();
-  const { user } = useUser();
+  const { user, isLoading: userLoading } = useUser();
   const userId = user?.id;
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState(0);
@@ -127,18 +127,22 @@ export default function CommunityScreen() {
     groupId: activeTab === 1 && selectedGroup ? selectedGroup : undefined,
     limit: 50,
   }, {
+    enabled: !userLoading, // Only fetch when user is loaded
     refetchInterval: 5000, // Refresh every 5 seconds for real-time updates
   });
 
   // Fetch groups
   const groupsQuery = trpc.community.groups.getGroups.useQuery({
     userId: userId,
+  }, {
+    enabled: !userLoading && !!userId, // Only fetch when user is loaded
   });
 
   // Fetch questions
   const questionsQuery = trpc.community.questions.getQuestions.useQuery({
     limit: 50,
   }, {
+    enabled: !userLoading, // Only fetch when user is loaded
     refetchInterval: 5000,
   });
 
@@ -610,7 +614,8 @@ export default function CommunityScreen() {
     );
   };
 
-  const isLoading = postsQuery.isLoading || groupsQuery.isLoading || questionsQuery.isLoading;
+  const isLoading = userLoading || postsQuery.isLoading || groupsQuery.isLoading || questionsQuery.isLoading;
+  const hasError = postsQuery.isError || groupsQuery.isError || questionsQuery.isError;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -670,12 +675,49 @@ export default function CommunityScreen() {
               {language === 'ko' ? '로딩 중...' : 'Loading...'}
             </Text>
           </View>
+        ) : hasError ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>
+              {language === 'ko' ? '데이터를 불러오는 중 오류가 발생했습니다' : 'Error loading data'}
+            </Text>
+            <TouchableOpacity 
+              style={styles.retryButton}
+              onPress={handleRefresh}
+            >
+              <Text style={styles.retryButtonText}>
+                {language === 'ko' ? '다시 시도' : 'Retry'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         ) : (
           <>
-            {activeTab === 0 && postsQuery.data?.map(renderPost)}
+            {activeTab === 0 && (
+              postsQuery.data && postsQuery.data.length > 0 
+                ? postsQuery.data.map(renderPost)
+                : (
+                  <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>
+                      {language === 'ko' ? '아직 게시물이 없습니다' : 'No posts yet'}
+                    </Text>
+                    <Text style={styles.emptySubText}>
+                      {language === 'ko' ? '첫 번째 게시물을 작성해보세요!' : 'Be the first to post!'}
+                    </Text>
+                  </View>
+                )
+            )}
             {activeTab === 1 && (
               selectedGroup 
-                ? postsQuery.data?.filter(p => p.group_id === selectedGroup).map(renderPost)
+                ? (
+                  postsQuery.data && postsQuery.data.filter(p => p.group_id === selectedGroup).length > 0
+                    ? postsQuery.data?.filter(p => p.group_id === selectedGroup).map(renderPost)
+                    : (
+                      <View style={styles.emptyContainer}>
+                        <Text style={styles.emptyText}>
+                          {language === 'ko' ? '이 그룹에 게시물이 없습니다' : 'No posts in this group'}
+                        </Text>
+                      </View>
+                    )
+                )
                 : (
                   <View style={styles.emptyContainer}>
                     <Text style={styles.emptyText}>
@@ -684,7 +726,20 @@ export default function CommunityScreen() {
                   </View>
                 )
             )}
-            {activeTab === 2 && questionsQuery.data?.map(renderQuestion)}
+            {activeTab === 2 && (
+              questionsQuery.data && questionsQuery.data.length > 0
+                ? questionsQuery.data.map(renderQuestion)
+                : (
+                  <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>
+                      {language === 'ko' ? '아직 질문이 없습니다' : 'No questions yet'}
+                    </Text>
+                    <Text style={styles.emptySubText}>
+                      {language === 'ko' ? '첫 번째 질문을 등록해보세요!' : 'Ask the first question!'}
+                    </Text>
+                  </View>
+                )
+            )}
           </>
         )}
       </ScrollView>
@@ -1220,6 +1275,23 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     color: '#8E8E93',
+  },
+  emptySubText: {
+    fontSize: 14,
+    color: '#C7C7CC',
+    marginTop: 8,
+  },
+  retryButton: {
+    marginTop: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: '#007AFF',
+    borderRadius: 20,
+  },
+  retryButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   modalContainer: {
     flex: 1,
