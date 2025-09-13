@@ -50,9 +50,9 @@ export default function HomeScreen() {
   
   // Fetch exams from database
   const { data: exams, isLoading: isLoadingExams, refetch: refetchExams } = trpc.exams.getUserExams.useQuery(
-    { userId: user?.id || 'test-user' },
+    { userId: user?.id || '550e8400-e29b-41d4-a716-446655440000' },
     { 
-      enabled: true
+      enabled: !!user?.id
     }
   );
   
@@ -143,11 +143,11 @@ export default function HomeScreen() {
   
   // Seed exam data for test user on mount
   useEffect(() => {
-    const userId = user?.id || 'test-user';
-    if (userId === 'test-user' && exams && exams.length === 0 && !isLoadingExams) {
+    const userId = user?.id || '550e8400-e29b-41d4-a716-446655440000';
+    if (exams && exams.length === 0 && !isLoadingExams && user?.id) {
       seedExamDataMutation.mutate({ userId });
     }
-  }, [exams, isLoadingExams]);
+  }, [exams, isLoadingExams, user?.id]);
   
   // Debug logging
   useEffect(() => {
@@ -302,7 +302,7 @@ export default function HomeScreen() {
     }
 
     createExamMutation.mutate({
-      userId: user?.id || 'test-user',
+      userId: user?.id || '550e8400-e29b-41d4-a716-446655440000',
       title: newExamTitle,
       date: newExamDate,
       subject: 'General',
