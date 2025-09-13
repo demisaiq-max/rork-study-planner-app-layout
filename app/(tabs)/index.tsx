@@ -545,14 +545,7 @@ export default function HomeScreen() {
         >
           <Text style={styles.brainDumpTitle}>Brain Dump</Text>
           
-          {brainDumps && brainDumps.filter(item => item.is_pinned).length > 0 && (
-            <View style={styles.goalCard}>
-              <View style={styles.goalHeader}>
-                <Text style={styles.goalLabel}>Pinned Items</Text>
-                <Text style={styles.goalBadge}>📌</Text>
-              </View>
-            </View>
-          )}
+
 
           {isLoadingBrainDumps ? (
             <View style={styles.loadingContainer}>
@@ -560,20 +553,30 @@ export default function HomeScreen() {
             </View>
           ) : brainDumps && brainDumps.length > 0 ? (
             brainDumps.slice(0, 3).map((item) => (
-              <View key={item.id} style={styles.goalItem}>
+              <TouchableOpacity 
+                key={item.id} 
+                style={styles.goalItem}
+                onPress={() => {
+                  updateBrainDumpMutation.mutate({
+                    id: item.id,
+                    is_completed: !item.is_completed
+                  });
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.checkbox, item.is_completed && styles.checkboxChecked]}>
+                  {item.is_completed && <Check size={14} color="#FFFFFF" />}
+                </View>
                 <View style={styles.brainDumpPreview}>
-                  <Text style={styles.brainDumpPreviewTitle}>{item.title}</Text>
-                  <Text style={styles.brainDumpPreviewContent} numberOfLines={2}>
+                  <Text style={[styles.brainDumpPreviewTitle, item.is_completed && styles.brainDumpTextCompleted]}>{item.title}</Text>
+                  <Text style={[styles.brainDumpPreviewContent, item.is_completed && styles.brainDumpTextCompleted]} numberOfLines={2}>
                     {item.content}
                   </Text>
                   {item.category && (
-                    <Text style={styles.brainDumpCategory}>{item.category}</Text>
+                    <Text style={[styles.brainDumpCategory, item.is_completed && { color: '#C7C7CC' }]}>{item.category}</Text>
                   )}
                 </View>
-                {item.is_pinned && (
-                  <Text style={styles.pinnedIndicator}>📌</Text>
-                )}
-              </View>
+              </TouchableOpacity>
             ))
           ) : (
             <View style={styles.emptyBrainDump}>
@@ -1003,8 +1006,7 @@ const styles = StyleSheet.create({
   },
   goalItem: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#F2F2F7",
@@ -1019,6 +1021,10 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     borderWidth: 2,
     borderColor: "#C7C7CC",
+    marginRight: 12,
+    marginTop: 2,
+    justifyContent: "center",
+    alignItems: "center",
   },
   checkboxChecked: {
     backgroundColor: "#007AFF",
@@ -1400,6 +1406,7 @@ const styles = StyleSheet.create({
   },
   brainDumpPreview: {
     flex: 1,
+    paddingRight: 8,
   },
   brainDumpPreviewTitle: {
     fontSize: 14,
