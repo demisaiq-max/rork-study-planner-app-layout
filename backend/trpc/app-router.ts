@@ -66,44 +66,54 @@ import { addAnswerProcedure } from "./routes/community/questions/add-answer/rout
 import { likeQuestionProcedure } from "./routes/community/questions/like-question/route";
 import { incrementQuestionViewProcedure } from "./routes/community/questions/increment-view/route";
 
+// Debug: Log imported procedures
+console.log('Community procedures loaded:', {
+  getPostsProcedure: !!getPostsProcedure,
+  createPostProcedure: !!createPostProcedure,
+  likePostProcedure: !!likePostProcedure,
+  addCommentProcedure: !!addCommentProcedure,
+  getGroupsProcedure: !!getGroupsProcedure,
+  getQuestionsProcedure: !!getQuestionsProcedure,
+});
+
 export const appRouter = createTRPCRouter({
   example: createTRPCRouter({
     hi: hiProcedure,
   }),
   exams: createTRPCRouter({
-    getUserExams: getUserExams,
-    createExam: createExam,
-    updateExam: updateExam,
-    deleteExam: deleteExam,
-    getPriorityExams: getPriorityExams,
-    seedExamData: seedExamData,
+    getUserExams,
+    createExam,
+    updateExam,
+    deleteExam,
+    getPriorityExams,
+    seedExamData,
   }),
   grades: createTRPCRouter({
-    getSubjectGrades: getSubjectGrades,
-    updateSubjectGrade: updateSubjectGrade,
-    deleteSubjectGrade: deleteSubjectGrade,
+    getSubjectGrades,
+    updateSubjectGrade,
+    deleteSubjectGrade,
     seedDummyData: seedDummyDataProcedure,
   }),
   settings: createTRPCRouter({
-    getUserSettings: getUserSettings,
-    updateUserSettings: updateUserSettings,
+    getUserSettings,
+    updateUserSettings,
   }),
   study: createTRPCRouter({
-    createStudySession: createStudySession,
-    getStudySessions: getStudySessions,
+    createStudySession,
+    getStudySessions,
   }),
   tests: createTRPCRouter({
-    getSubjectTests: getSubjectTests,
-    createTest: createTest,
-    submitTestResult: submitTestResult,
-    getUserSubjects: getUserSubjects,
-    getLatestTestResults: getLatestTestResults,
-    getTestById: getTestById,
-    createSubject: createSubject,
-    deleteSubject: deleteSubject,
-    updateSubject: updateSubject,
-    seedTestData: seedTestData,
-    debugTestData: debugTestData,
+    getSubjectTests,
+    createTest,
+    submitTestResult,
+    getUserSubjects,
+    getLatestTestResults,
+    getTestById,
+    createSubject,
+    deleteSubject,
+    updateSubject,
+    seedTestData,
+    debugTestData,
   }),
   brainDumps: createTRPCRouter({
     getBrainDumps: getBrainDumpsProcedure,

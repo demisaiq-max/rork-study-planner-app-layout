@@ -20,6 +20,12 @@ app.onError((err, c) => {
   return c.json({ error: err.message }, 500);
 });
 
+// Add debug middleware
+app.use('*', async (c, next) => {
+  console.log(`${c.req.method} ${c.req.url}`);
+  await next();
+});
+
 // Mount tRPC router at /trpc
 app.use(
   "/trpc/*",
