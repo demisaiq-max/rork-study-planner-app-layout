@@ -389,7 +389,25 @@ export default function HomeScreen() {
                 <Text style={styles.noResultsText}>Error Loading</Text>
                 <Text style={styles.noResultsSubtext}>{(gradedExamsError as any)?.message || 'Failed to load exams'}</Text>
               </View>
-            ) : gradedExams && gradedExams.length > 0 ? (
+            ) : !gradedExams || gradedExams.length === 0 ? (
+              <TouchableOpacity 
+                style={styles.noResultsCard}
+                onPress={() => {
+                  if (user?.id && !seedTestDataMutation.isPending) {
+                    console.log('Manual seed triggered for user:', user.id);
+                    seedTestDataMutation.mutate({ userId: user.id });
+                  }
+                }}
+                disabled={seedTestDataMutation.isPending}
+              >
+                <Text style={styles.noResultsText}>
+                  {seedTestDataMutation.isPending ? 'Loading...' : 'No Graded Exams'}
+                </Text>
+                <Text style={styles.noResultsSubtext}>
+                  {seedTestDataMutation.isPending ? 'Creating sample data...' : 'Tap to create sample data'}
+                </Text>
+              </TouchableOpacity>
+            ) : (
               gradedExams.map((exam: any) => {
                 const isSelected = selectedGradedExam?.id === exam.id;
                 const percentile = exam.percentile || 0;
@@ -439,23 +457,6 @@ export default function HomeScreen() {
                   </TouchableOpacity>
                 );
               })
-            ) : (
-              <TouchableOpacity 
-                style={styles.noResultsCard}
-                onPress={() => {
-                  if (user?.id && !seedTestDataMutation.isPending) {
-                    seedTestDataMutation.mutate({ userId: user.id });
-                  }
-                }}
-                disabled={seedTestDataMutation.isPending}
-              >
-                <Text style={styles.noResultsText}>
-                  {seedTestDataMutation.isPending ? 'Loading...' : 'No Graded Exams'}
-                </Text>
-                <Text style={styles.noResultsSubtext}>
-                  {seedTestDataMutation.isPending ? 'Creating sample data...' : 'Tap to create sample data'}
-                </Text>
-              </TouchableOpacity>
             )}
           </ScrollView>
         </View>
