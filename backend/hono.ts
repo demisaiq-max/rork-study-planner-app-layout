@@ -33,7 +33,6 @@ app.use(
   trpcServer({
     router: appRouter,
     createContext,
-    endpoint: "/trpc",
     onError: ({ error, path }) => {
       console.error('tRPC error:', { path, error: error.message, stack: error.stack });
       // Return false to use tRPC's default error handling which returns proper JSON
