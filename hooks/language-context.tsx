@@ -31,7 +31,7 @@ const translations: Record<Language, Translation> = {
     undetermined: '미정',
     
     // Priority Tasks
-    priorityTasksTitle: '우선 순위 3가지',
+    priorityTasksTitle: '우선 순위 Top 3',
     emptyPriorityText: '우선순위 일정을 추가해보세요',
     
     // Goals
