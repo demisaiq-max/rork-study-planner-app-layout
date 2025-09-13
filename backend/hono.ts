@@ -22,7 +22,7 @@ app.onError((err, c) => {
 
 // Mount tRPC router
 app.use(
-  "/trpc/*",
+  "/*",
   trpcServer({
     router: appRouter,
     createContext,
