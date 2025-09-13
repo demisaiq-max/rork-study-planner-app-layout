@@ -127,8 +127,11 @@ export default function CommunityScreen() {
     groupId: activeTab === 1 && selectedGroup ? selectedGroup : undefined,
     limit: 50,
   }, {
-    enabled: !userLoading, // Only fetch when user is loaded
-    refetchInterval: 5000, // Refresh every 5 seconds for real-time updates
+    enabled: !userLoading && !!user, // Only fetch when user is loaded
+    refetchInterval: 30000, // Refresh every 30 seconds for real-time updates
+    retry: 1,
+    retryDelay: 1000,
+    staleTime: 5000,
   });
 
   // Fetch groups
@@ -136,14 +139,20 @@ export default function CommunityScreen() {
     userId: userId,
   }, {
     enabled: !userLoading && !!userId, // Only fetch when user is loaded
+    retry: 1,
+    retryDelay: 1000,
+    staleTime: 5000,
   });
 
   // Fetch questions
   const questionsQuery = trpc.community.questions.getQuestions.useQuery({
     limit: 50,
   }, {
-    enabled: !userLoading, // Only fetch when user is loaded
-    refetchInterval: 5000,
+    enabled: !userLoading && !!user, // Only fetch when user is loaded
+    refetchInterval: 30000,
+    retry: 1,
+    retryDelay: 1000,
+    staleTime: 5000,
   });
 
   // Mutations
@@ -238,6 +247,8 @@ export default function CommunityScreen() {
 
   // Set up real-time subscription for posts
   useEffect(() => {
+    if (!user) return;
+    
     const channel = supabase
       .channel('posts-changes')
       .on('postgres_changes', { 
@@ -266,10 +277,12 @@ export default function CommunityScreen() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [user, postsQuery]);
 
   // Set up real-time subscription for questions
   useEffect(() => {
+    if (!user) return;
+    
     const channel = supabase
       .channel('questions-changes')
       .on('postgres_changes', { 
@@ -291,7 +304,7 @@ export default function CommunityScreen() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [user, questionsQuery]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -614,8 +627,24 @@ export default function CommunityScreen() {
     );
   };
 
-  const isLoading = userLoading || postsQuery.isLoading || groupsQuery.isLoading || questionsQuery.isLoading;
+  const isLoading = userLoading || (postsQuery.isLoading && !postsQuery.data) || (groupsQuery.isLoading && !groupsQuery.data) || (questionsQuery.isLoading && !questionsQuery.data);
   const hasError = postsQuery.isError || groupsQuery.isError || questionsQuery.isError;
+  
+  // Log for debugging
+  useEffect(() => {
+    console.log('Community Screen Debug:', {
+      userLoading,
+      user,
+      userId,
+      postsLoading: postsQuery.isLoading,
+      postsError: postsQuery.error,
+      postsData: postsQuery.data,
+      groupsLoading: groupsQuery.isLoading,
+      groupsError: groupsQuery.error,
+      questionsLoading: questionsQuery.isLoading,
+      questionsError: questionsQuery.error,
+    });
+  }, [userLoading, user, postsQuery.isLoading, postsQuery.error, groupsQuery.isLoading, questionsQuery.isLoading]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -668,17 +697,27 @@ export default function CommunityScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
       >
-        {isLoading ? (
+        {userLoading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#007AFF" />
             <Text style={styles.loadingText}>
-              {language === 'ko' ? '로딩 중...' : 'Loading...'}
+              {language === 'ko' ? '사용자 정보 로딩 중...' : 'Loading user...'}
+            </Text>
+          </View>
+        ) : isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#007AFF" />
+            <Text style={styles.loadingText}>
+              {language === 'ko' ? '데이터 로딩 중...' : 'Loading data...'}
             </Text>
           </View>
         ) : hasError ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>
               {language === 'ko' ? '데이터를 불러오는 중 오류가 발생했습니다' : 'Error loading data'}
+            </Text>
+            <Text style={styles.emptySubText}>
+              {postsQuery.error?.message || groupsQuery.error?.message || questionsQuery.error?.message || 'Unknown error'}
             </Text>
             <TouchableOpacity 
               style={styles.retryButton}
@@ -758,7 +797,7 @@ export default function CommunityScreen() {
             <Text style={styles.modalTitle}>
               {language === 'ko' ? '그룹 선택' : 'Select Group'}
             </Text>
-            <View style={{ width: 24 }} />
+            <View style={styles.spacer} />
           </View>
           
           <ScrollView style={styles.modalContent}>
@@ -1495,5 +1534,8 @@ const styles = StyleSheet.create({
     fontSize: 28,
     color: '#FFFFFF',
     fontWeight: '400',
+  },
+  spacer: {
+    width: 24,
   },
 });
