@@ -2,7 +2,7 @@ import { publicProcedure } from '@/backend/trpc/create-context';
 import { supabase } from '@/lib/supabase';
 import { z } from 'zod';
 
-export const getLatestTestResults = publicProcedure
+const getLatestTestResults = publicProcedure
   .input(z.string().optional())
   .query(async ({ input }) => {
     try {
