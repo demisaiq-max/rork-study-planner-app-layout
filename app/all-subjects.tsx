@@ -6,9 +6,14 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  TextInput,
+  Alert,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { router } from 'expo-router';
-import { ArrowLeft, ChevronRight } from 'lucide-react-native';
+import { ArrowLeft, ChevronRight, Plus, Edit2, Trash2, X } from 'lucide-react-native';
 import { useUser } from '@/hooks/user-context';
 import { useLanguage } from '@/hooks/language-context';
 import { trpc } from '@/lib/trpc';
@@ -17,12 +22,54 @@ export default function AllSubjectsScreen() {
   const { user } = useUser();
   const { t } = useLanguage();
   const [isLoading, setIsLoading] = useState(true);
+  const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [newSubjectName, setNewSubjectName] = useState('');
+  const [editingSubject, setEditingSubject] = useState<string | null>(null);
+  const [editedSubjectName, setEditedSubjectName] = useState('');
+  const [isEditMode, setIsEditMode] = useState(false);
 
   // Fetch all user subjects
   const subjectsQuery = trpc.tests.getUserSubjects.useQuery(
     { userId: user?.id || '' },
     { enabled: !!user?.id }
   );
+
+  // Mutations
+  const createSubjectMutation = trpc.tests.createSubject.useMutation({
+    onSuccess: () => {
+      subjectsQuery.refetch();
+      setIsAddModalVisible(false);
+      setNewSubjectName('');
+      Alert.alert('Success', 'Subject created successfully');
+    },
+    onError: (error) => {
+      Alert.alert('Error', error.message || 'Failed to create subject');
+    },
+  });
+
+  const updateSubjectMutation = trpc.tests.updateSubject.useMutation({
+    onSuccess: () => {
+      subjectsQuery.refetch();
+      setIsEditModalVisible(false);
+      setEditingSubject(null);
+      setEditedSubjectName('');
+      Alert.alert('Success', 'Subject updated successfully');
+    },
+    onError: (error) => {
+      Alert.alert('Error', error.message || 'Failed to update subject');
+    },
+  });
+
+  const deleteSubjectMutation = trpc.tests.deleteSubject.useMutation({
+    onSuccess: () => {
+      subjectsQuery.refetch();
+      Alert.alert('Success', 'Subject deleted successfully');
+    },
+    onError: (error) => {
+      Alert.alert('Error', error.message || 'Failed to delete subject');
+    },
+  });
 
   useEffect(() => {
     if (subjectsQuery.data !== undefined) {
@@ -48,8 +95,72 @@ export default function AllSubjectsScreen() {
   }, [t]);
 
   const handleSubjectPress = useCallback((subject: string) => {
-    router.push(`/subject-tests?subject=${encodeURIComponent(subject)}`);
+    if (!isEditMode) {
+      router.push(`/subject-tests?subject=${encodeURIComponent(subject)}`);
+    }
+  }, [isEditMode]);
+
+  const handleAddSubject = useCallback(() => {
+    if (!newSubjectName.trim()) {
+      Alert.alert('Error', 'Please enter a subject name');
+      return;
+    }
+
+    if (!user?.id) {
+      Alert.alert('Error', 'User not found');
+      return;
+    }
+
+    createSubjectMutation.mutate({
+      userId: user.id,
+      subject: newSubjectName.trim(),
+    });
+  }, [newSubjectName, user?.id, createSubjectMutation]);
+
+  const handleEditSubject = useCallback((subject: string) => {
+    setEditingSubject(subject);
+    setEditedSubjectName(subject);
+    setIsEditModalVisible(true);
   }, []);
+
+  const handleUpdateSubject = useCallback(() => {
+    if (!editedSubjectName.trim()) {
+      Alert.alert('Error', 'Please enter a subject name');
+      return;
+    }
+
+    if (!user?.id || !editingSubject) {
+      Alert.alert('Error', 'Invalid request');
+      return;
+    }
+
+    updateSubjectMutation.mutate({
+      userId: user.id,
+      oldSubject: editingSubject,
+      newSubject: editedSubjectName.trim(),
+    });
+  }, [editedSubjectName, user?.id, editingSubject, updateSubjectMutation]);
+
+  const handleDeleteSubject = useCallback((subject: string) => {
+    Alert.alert(
+      'Delete Subject',
+      `Are you sure you want to delete "${subject}"? This will also delete all tests and results for this subject.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            if (!user?.id) return;
+            deleteSubjectMutation.mutate({
+              userId: user.id,
+              subject,
+            });
+          },
+        },
+      ]
+    );
+  }, [user?.id, deleteSubjectMutation]);
 
   if (isLoading) {
     return (
@@ -59,7 +170,7 @@ export default function AllSubjectsScreen() {
             <ArrowLeft size={24} color="#000000" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>All Subjects</Text>
-          <View style={styles.headerRight} />
+          <View style={styles.editButton} />
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007AFF" />
@@ -78,12 +189,28 @@ export default function AllSubjectsScreen() {
           <ArrowLeft size={24} color="#000000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>All Subjects</Text>
-        <View style={styles.headerRight} />
+        <TouchableOpacity 
+          onPress={() => setIsEditMode(!isEditMode)} 
+          style={styles.editButton}
+        >
+          <Text style={[styles.editButtonText, isEditMode && styles.editButtonTextActive]}>
+            {isEditMode ? 'Done' : 'Edit'}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.subjectsContainer}>
-          <Text style={styles.sectionTitle}>Select a Subject</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Select a Subject</Text>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => setIsAddModalVisible(true)}
+              activeOpacity={0.7}
+            >
+              <Plus size={20} color="#007AFF" />
+            </TouchableOpacity>
+          </View>
           
           {subjects.map((subject: string) => (
             <TouchableOpacity
@@ -101,7 +228,24 @@ export default function AllSubjectsScreen() {
                     View tests and grades
                   </Text>
                 </View>
-                <ChevronRight size={20} color="#8E8E93" />
+                {isEditMode ? (
+                  <View style={styles.editActions}>
+                    <TouchableOpacity
+                      style={styles.actionButton}
+                      onPress={() => handleEditSubject(subject)}
+                    >
+                      <Edit2 size={18} color="#007AFF" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.actionButton}
+                      onPress={() => handleDeleteSubject(subject)}
+                    >
+                      <Trash2 size={18} color="#FF3B30" />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <ChevronRight size={20} color="#8E8E93" />
+                )}
               </View>
             </TouchableOpacity>
           ))}
@@ -109,11 +253,135 @@ export default function AllSubjectsScreen() {
           {subjects.length === 0 && (
             <View style={styles.emptyState}>
               <Text style={styles.emptyText}>No subjects found</Text>
-              <Text style={styles.emptySubtext}>Add subjects to get started</Text>
+              <Text style={styles.emptySubtext}>Tap the + button to add subjects</Text>
             </View>
           )}
         </View>
       </ScrollView>
+
+      {/* Add Subject Modal */}
+      <Modal
+        visible={isAddModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsAddModalVisible(false)}
+      >
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalContainer}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add New Subject</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setIsAddModalVisible(false);
+                  setNewSubjectName('');
+                }}
+                style={styles.closeButton}
+              >
+                <X size={24} color="#000000" />
+              </TouchableOpacity>
+            </View>
+            
+            <TextInput
+              style={styles.input}
+              placeholder="Enter subject name"
+              value={newSubjectName}
+              onChangeText={setNewSubjectName}
+              autoFocus
+              returnKeyType="done"
+              onSubmitEditing={handleAddSubject}
+            />
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setIsAddModalVisible(false);
+                  setNewSubjectName('');
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={handleAddSubject}
+                disabled={createSubjectMutation.isPending}
+              >
+                {createSubjectMutation.isPending ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.confirmButtonText}>Add Subject</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Edit Subject Modal */}
+      <Modal
+        visible={isEditModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsEditModalVisible(false)}
+      >
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalContainer}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Subject</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setIsEditModalVisible(false);
+                  setEditingSubject(null);
+                  setEditedSubjectName('');
+                }}
+                style={styles.closeButton}
+              >
+                <X size={24} color="#000000" />
+              </TouchableOpacity>
+            </View>
+            
+            <TextInput
+              style={styles.input}
+              placeholder="Enter new subject name"
+              value={editedSubjectName}
+              onChangeText={setEditedSubjectName}
+              autoFocus
+              returnKeyType="done"
+              onSubmitEditing={handleUpdateSubject}
+            />
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setIsEditModalVisible(false);
+                  setEditingSubject(null);
+                  setEditedSubjectName('');
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={handleUpdateSubject}
+                disabled={updateSubjectMutation.isPending}
+              >
+                {updateSubjectMutation.isPending ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.confirmButtonText}>Update Subject</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -144,8 +412,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#000000',
   },
-  headerRight: {
-    width: 40,
+  editButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  editButtonText: {
+    fontSize: 16,
+    color: '#007AFF',
+    fontWeight: '500',
+  },
+  editButtonTextActive: {
+    fontWeight: '600',
   },
   scrollView: {
     flex: 1,
@@ -160,11 +437,36 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 40,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#000000',
-    marginBottom: 16,
+  },
+  addButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F2F2F7',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  editActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  actionButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F2F2F7',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   subjectCard: {
     backgroundColor: '#FFFFFF',
@@ -218,5 +520,74 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#C7C7CC',
     textAlign: 'center',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    width: '90%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 5,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 20,
+    backgroundColor: '#F8F9FA',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+  },
+  cancelButton: {
+    backgroundColor: '#F2F2F7',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#000000',
+  },
+  confirmButton: {
+    backgroundColor: '#007AFF',
+  },
+  confirmButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });
