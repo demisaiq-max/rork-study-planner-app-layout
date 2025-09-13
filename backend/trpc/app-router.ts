@@ -112,11 +112,6 @@ export const appRouter = createTRPCRouter({
     seedTestData,
     debugTestData,
   }),
-  trpc: createTRPCRouter({
-    tests: createTRPCRouter({
-      getLatestTestResults,
-    }),
-  }),
   brainDumps: createTRPCRouter({
     getBrainDumps: getBrainDumpsProcedure,
     createBrainDump: createBrainDumpProcedure,
