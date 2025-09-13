@@ -66,15 +66,7 @@ import { addAnswerProcedure } from "./routes/community/questions/add-answer/rout
 import { likeQuestionProcedure } from "./routes/community/questions/like-question/route";
 import { incrementQuestionViewProcedure } from "./routes/community/questions/increment-view/route";
 
-// Debug: Log imported procedures
-console.log('Community procedures loaded:', {
-  getPostsProcedure: !!getPostsProcedure,
-  createPostProcedure: !!createPostProcedure,
-  likePostProcedure: !!likePostProcedure,
-  addCommentProcedure: !!addCommentProcedure,
-  getGroupsProcedure: !!getGroupsProcedure,
-  getQuestionsProcedure: !!getQuestionsProcedure,
-});
+
 
 export const appRouter = createTRPCRouter({
   example: createTRPCRouter({
