@@ -54,4 +54,5 @@ const getLatestTestResults = publicProcedure
     }
   });
 
+export { getLatestTestResults };
 export default getLatestTestResults;

@@ -28,7 +28,7 @@ import getSubjectTests from "./routes/tests/get-subject-tests/route";
 import createTest from "./routes/tests/create-test/route";
 import submitTestResult from "./routes/tests/submit-test-result/route";
 import getUserSubjects from "./routes/tests/get-user-subjects/route";
-import getLatestTestResults from "./routes/tests/get-latest-test-results/route";
+import { getLatestTestResults } from "./routes/tests/get-latest-test-results/route";
 import getTestById from "./routes/tests/get-test-by-id/route";
 import createSubject from "./routes/tests/create-subject/route";
 import deleteSubject from "./routes/tests/delete-subject/route";
@@ -77,6 +77,7 @@ export const appRouter = createTRPCRouter({
   example: createTRPCRouter({
     hi: hiRoute,
   }),
+
   exams: createTRPCRouter({
     getUserExams,
     createExam,
