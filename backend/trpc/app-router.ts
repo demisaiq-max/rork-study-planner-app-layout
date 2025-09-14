@@ -7,13 +7,13 @@ import { createExam } from "./routes/exams/create-exam/route";
 import { getPriorityExams } from "./routes/exams/get-priority-exams/route";
 import { updateExam } from "./routes/exams/update-exam/route";
 import { deleteExam } from "./routes/exams/delete-exam/route";
-import { seedExamData } from "./routes/exams/seed-exam-data/route";
+
 
 // Grade routes
 import { getSubjectGrades } from "./routes/grades/get-subject-grades/route";
 import { updateSubjectGrade } from "./routes/grades/update-subject-grade/route";
 import { deleteSubjectGrade } from "./routes/grades/delete-subject-grade/route";
-import { seedDummyDataProcedure } from "./routes/grades/seed-dummy-data/route";
+
 
 // Settings routes
 import { getUserSettings } from "./routes/settings/get-user-settings/route";
@@ -33,8 +33,7 @@ import { getTestById } from "./routes/tests/get-test-by-id/route";
 import { createSubject } from "./routes/tests/create-subject/route";
 import { deleteSubject } from "./routes/tests/delete-subject/route";
 import { updateSubject } from "./routes/tests/update-subject/route";
-import { seedTestData, debugTestData } from "./routes/tests/seed-test-data/route";
-import { supabaseTestProcedure } from "./routes/tests/supabase-test/route";
+
 
 // Brain dump routes
 import { getBrainDumpsProcedure } from "./routes/brain-dumps/get-brain-dumps/route";
@@ -74,32 +73,7 @@ import { getTimerSessionsProcedure } from "./routes/timers/get-timer-sessions/ro
 import { getActiveTimerProcedure } from "./routes/timers/get-active-timer/route";
 import { createPauseLogProcedure } from "./routes/timers/create-pause-log/route";
 
-console.log('🚀 Loading tRPC app router...');
-console.log('📋 Validating procedure imports...');
 
-// Validate critical procedures
-const validationResults = {
-  getLatestTestResults: !!getLatestTestResults,
-  getPostsProcedure: !!getPostsProcedure,
-  getGroupsProcedure: !!getGroupsProcedure,
-  getQuestionsProcedure: !!getQuestionsProcedure,
-  supabaseTestProcedure: !!supabaseTestProcedure,
-};
-
-console.log('✅ Procedure validation results:', validationResults);
-
-if (!getLatestTestResults) {
-  console.error('❌ ERROR: getLatestTestResults is not properly imported!');
-}
-if (!getPostsProcedure) {
-  console.error('❌ ERROR: getPostsProcedure is not properly imported!');
-}
-if (!getGroupsProcedure) {
-  console.error('❌ ERROR: getGroupsProcedure is not properly imported!');
-}
-if (!getQuestionsProcedure) {
-  console.error('❌ ERROR: getQuestionsProcedure is not properly imported!');
-}
 
 export const appRouter = createTRPCRouter({
   example: createTRPCRouter({
@@ -113,13 +87,13 @@ export const appRouter = createTRPCRouter({
     updateExam: updateExam,
     deleteExam: deleteExam,
     getPriorityExams: getPriorityExams,
-    seedExamData: seedExamData,
+
   }),
   grades: createTRPCRouter({
     getSubjectGrades: getSubjectGrades,
     updateSubjectGrade: updateSubjectGrade,
     deleteSubjectGrade: deleteSubjectGrade,
-    seedDummyData: seedDummyDataProcedure,
+
   }),
   settings: createTRPCRouter({
     getUserSettings: getUserSettings,
@@ -139,9 +113,7 @@ export const appRouter = createTRPCRouter({
     createSubject: createSubject,
     deleteSubject: deleteSubject,
     updateSubject: updateSubject,
-    seedTestData: seedTestData,
-    debugTestData: debugTestData,
-    supabaseTest: supabaseTestProcedure,
+
   }),
   brainDumps: createTRPCRouter({
     getBrainDumps: getBrainDumpsProcedure,

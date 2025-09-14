@@ -85,20 +85,9 @@ export default function ExamManagementScreen() {
     }
   });
   
-  // Seed data for test user
-  const seedDataMutation = trpc.exams.seedExamData.useMutation({
-    onSuccess: () => {
-      examsQuery.refetch();
-    }
-  });
+
   
-  // Seed data on mount if test user and no exams
-  useEffect(() => {
-    const userId = user?.id || 'test-user';
-    if (userId === 'test-user' && examsQuery.data && examsQuery.data.length === 0) {
-      seedDataMutation.mutate({ userId });
-    }
-  }, [examsQuery.data]);
+
   
   const resetAddForm = () => {
     setNewExamTitle("");

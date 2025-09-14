@@ -111,24 +111,6 @@ export default function HomeScreen() {
     },
   });
   
-  // Seed test data mutation
-  const seedTestDataMutation = trpc.tests.seedTestData.useMutation({
-    onSuccess: () => {
-      console.log('Test data seeded successfully');
-      refetchGradedExams();
-    },
-    onError: (error) => {
-      console.error('Error seeding test data:', error);
-    }
-  });
-  
-  // Seed exam data mutation
-  const seedExamDataMutation = trpc.exams.seedExamData.useMutation({
-    onSuccess: () => {
-      refetchExams();
-    }
-  });
-  
   // Create exam mutation
   const createExamMutation = trpc.exams.createExam.useMutation({
     onSuccess: () => {
@@ -146,27 +128,11 @@ export default function HomeScreen() {
   useEffect(() => {
     const userId = user?.id || '550e8400-e29b-41d4-a716-446655440000';
     if (exams && exams.length === 0 && !isLoadingExams && user?.id) {
-      seedExamDataMutation.mutate({ userId });
+
     }
   }, [exams, isLoadingExams, user?.id]);
   
-  // Debug logging
-  useEffect(() => {
-    console.log('User ID:', user?.id);
-    console.log('Graded exams data:', gradedExams);
-    console.log('Is loading graded exams:', isLoadingGradedExams);
-    console.log('Graded exams error:', gradedExamsError);
-    if (gradedExams) {
-      console.log('Graded exams loaded:', gradedExams.length);
-    }
-    if (gradedExamsError) {
-      console.error('Error loading graded exams:', gradedExamsError);
-      // Log more details about the error
-      if ((gradedExamsError as any)?.data?.code === 'PARSE_ERROR') {
-        console.error('Backend returned non-JSON response. The backend server may not be running or configured correctly.');
-      }
-    }
-  }, [user?.id, gradedExams, isLoadingGradedExams, gradedExamsError]);
+
   
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showAddExamModal, setShowAddExamModal] = useState(false);
@@ -367,12 +333,7 @@ export default function HomeScreen() {
             </View>
           </TouchableOpacity>
           
-          <TouchableOpacity 
-            style={styles.debugButton}
-            onPress={() => router.push('/supabase-test')}
-          >
-            <Database size={20} color="#007AFF" />
-          </TouchableOpacity>
+
         </View>
 
         {/* Study Progress Card */}
@@ -460,23 +421,14 @@ export default function HomeScreen() {
                 </TouchableOpacity>
               </View>
             ) : !gradedExams || gradedExams.length === 0 ? (
-              <TouchableOpacity 
-                style={styles.noResultsCard}
-                onPress={() => {
-                  if (user?.id && !seedTestDataMutation.isPending) {
-                    console.log('Manual seed triggered for user:', user.id);
-                    seedTestDataMutation.mutate({ userId: user.id });
-                  }
-                }}
-                disabled={seedTestDataMutation.isPending}
-              >
+              <View style={styles.noResultsCard}>
                 <Text style={styles.noResultsText}>
-                  {seedTestDataMutation.isPending ? 'Loading...' : 'No Graded Exams'}
+                  No Graded Exams
                 </Text>
                 <Text style={styles.noResultsSubtext}>
-                  {seedTestDataMutation.isPending ? 'Creating sample data...' : 'Tap to create sample data'}
+                  Complete some tests to see your results here
                 </Text>
-              </TouchableOpacity>
+              </View>
             ) : (
               gradedExams.map((exam: any) => {
                 const isSelected = selectedGradedExam?.id === exam.id;

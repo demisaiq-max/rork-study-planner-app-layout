@@ -4,11 +4,6 @@ import { cors } from "hono/cors";
 import { appRouter } from "./trpc/app-router";
 import { createContext } from "./trpc/create-context";
 
-// Log server startup
-console.log('🚀 Starting Hono server...');
-console.log('📦 App router loaded:', typeof appRouter);
-console.log('🔧 Available routes:', Object.keys(appRouter as any));
-
 
 // app will be mounted at /api
 const app = new Hono();
@@ -64,51 +59,16 @@ app.options("*", (c) => {
   return new Response(null, { status: 204 });
 });
 
-// Enhanced error handling middleware
 app.onError((err, c) => {
-  console.error('Hono error details:', {
-    message: err.message,
-    stack: err.stack,
-    name: err.name,
-    timestamp: new Date().toISOString(),
-    url: c.req.url,
-    method: c.req.method,
-  });
-  
   return c.json({ 
     error: {
       message: err.message || 'Internal server error',
-      code: 'INTERNAL_SERVER_ERROR',
-      timestamp: new Date().toISOString(),
+      code: 'INTERNAL_SERVER_ERROR'
     }
   }, 500);
 });
 
-// Enhanced request logging middleware
-app.use('/trpc/*', async (c, next) => {
-  const start = Date.now();
-  const fullPath = c.req.path;
-  const procedurePath = fullPath.replace('/api/trpc/', '');
-  
-  console.log('tRPC request started:', {
-    method: c.req.method,
-    fullPath,
-    procedurePath,
-    url: c.req.url,
-    userAgent: c.req.header('user-agent'),
-    origin: c.req.header('origin'),
-    timestamp: new Date().toISOString(),
-  });
-  
-  await next();
-  
-  const duration = Date.now() - start;
-  console.log('tRPC request completed:', {
-    procedurePath,
-    duration: `${duration}ms`,
-    timestamp: new Date().toISOString(),
-  });
-});
+
 
 // Mount tRPC router at /trpc
 app.use(
@@ -116,109 +76,21 @@ app.use(
   trpcServer({
     router: appRouter,
     createContext,
-    onError: ({ error, path }) => {
-      console.error('tRPC error:', { 
-        path, 
-        error: error.message, 
-        code: error.code,
-        cause: error.cause,
-      });
-      // Return false to use tRPC's default error handling which returns proper JSON
-      return false;
-    },
-    responseMeta() {
-      return {
-        headers: {
-          'content-type': 'application/json',
-        },
-      };
-    },
+
+
   })
 );
 
-// Simple health check endpoint
 app.get("/", (c) => {
   return c.json({ 
     status: "ok", 
-    message: "API is running",
-    timestamp: new Date().toISOString(),
-    env: {
-      supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ? 'configured' : 'missing',
-      supabaseKey: process.env.EXPO_PUBLIC_SUPABASE_KEY ? 'configured' : 'missing',
-      apiBaseUrl: process.env.EXPO_PUBLIC_RORK_API_BASE_URL ? 'configured' : 'missing'
-    }
+    message: "API is running"
   });
 });
 
-// Direct Supabase test endpoint
-app.get("/test-supabase", async (c) => {
-  try {
-    const { supabase } = await import('@/lib/supabase');
-    
-    // Test basic connection
-    const { data, error } = await supabase
-      .from('users')
-      .select('id')
-      .limit(1);
-    
-    if (error) {
-      return c.json({ 
-        status: "error", 
-        message: "Supabase connection failed",
-        error: error.message,
-        details: error,
-        timestamp: new Date().toISOString()
-      }, 500);
-    }
-    
-    return c.json({ 
-      status: "ok", 
-      message: "Supabase connection successful",
-      hasData: !!data,
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('❌ Supabase test error:', error);
-    return c.json({ 
-      status: "error", 
-      message: "Supabase test failed",
-      error: error instanceof Error ? error.message : String(error),
-      timestamp: new Date().toISOString()
-    }, 500);
-  }
-});
 
-// Debug endpoint to check tRPC router
-app.get("/debug", (c) => {
-  try {
-    console.log('🔍 Debug endpoint called');
-    
-    // Simple debug info without accessing internal properties
-    const routerKeys = Object.keys(appRouter as any);
-    console.log('📋 Router keys:', routerKeys);
-    
-    return c.json({ 
-      status: "ok", 
-      message: "tRPC router loaded successfully",
-      timestamp: new Date().toISOString(),
-      routerKeys,
-      routerType: typeof appRouter,
-      hasTests: routerKeys.includes('tests'),
-      hasCommunity: routerKeys.includes('community'),
-      hasExams: routerKeys.includes('exams'),
-      hasBrainDumps: routerKeys.includes('brainDumps'),
-      supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ? 'configured' : 'missing'
-    });
-  } catch (error) {
-    console.error('❌ Debug endpoint error:', error);
-    return c.json({ 
-      status: "error", 
-      message: "tRPC router debug failed",
-      error: error instanceof Error ? error.message : String(error),
-      timestamp: new Date().toISOString()
-    }, 500);
-  }
-});
+
+
 
 // Catch-all for unmatched routes
 app.all("*", (c) => {
