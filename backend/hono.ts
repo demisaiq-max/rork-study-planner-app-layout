@@ -13,38 +13,101 @@ console.log('🔧 Available routes:', Object.keys(appRouter as any));
 // app will be mounted at /api
 const app = new Hono();
 
-// Enable CORS for all routes
+// Enhanced CORS configuration for all environments
 app.use("*", cors({
-  origin: '*',
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization', 'content-type'],
+  origin: (origin, c) => {
+    // Allow all localhost variants for development
+    if (!origin) return '*'; // Allow requests with no origin (mobile apps)
+    
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:19000', // Expo default
+      'http://localhost:19006', // Expo web
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:19000',
+      'http://127.0.0.1:19006',
+      'exp://localhost:19000', // Expo scheme
+      'exp://127.0.0.1:19000',
+    ];
+    
+    // Check if origin matches allowed patterns
+    const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1');
+    const isRorkDomain = origin.includes('.rork.com');
+    
+    if (allowedOrigins.includes(origin) || isLocalhost || isRorkDomain) {
+      return origin;
+    }
+    
+    return '*'; // Fallback for development
+  },
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'X-Requested-With',
+    'Accept',
+    'Origin',
+    'User-Agent',
+    'DNT',
+    'Cache-Control',
+    'X-Mx-ReqToken',
+    'Keep-Alive',
+    'content-type'
+  ],
+  exposeHeaders: ['Content-Length'],
   credentials: true,
+  maxAge: 86400, // 24 hours
 }));
 
-// Add error handling middleware
+// Add preflight handling for all routes
+app.options("*", (c) => {
+  return c.text("", 204);
+});
+
+// Enhanced error handling middleware
 app.onError((err, c) => {
-  console.error('Hono error:', err);
-  // Always return valid JSON
+  console.error('Hono error details:', {
+    message: err.message,
+    stack: err.stack,
+    name: err.name,
+    timestamp: new Date().toISOString(),
+    url: c.req.url,
+    method: c.req.method,
+  });
+  
   return c.json({ 
     error: {
       message: err.message || 'Internal server error',
-      code: 'INTERNAL_SERVER_ERROR'
+      code: 'INTERNAL_SERVER_ERROR',
+      timestamp: new Date().toISOString(),
     }
   }, 500);
 });
 
-// Add request logging middleware
+// Enhanced request logging middleware
 app.use('/trpc/*', async (c, next) => {
+  const start = Date.now();
   const fullPath = c.req.path;
   const procedurePath = fullPath.replace('/api/trpc/', '');
   
-  console.log('tRPC request:', {
+  console.log('tRPC request started:', {
     method: c.req.method,
     fullPath,
     procedurePath,
     url: c.req.url,
+    userAgent: c.req.header('user-agent'),
+    origin: c.req.header('origin'),
+    timestamp: new Date().toISOString(),
   });
+  
   await next();
+  
+  const duration = Date.now() - start;
+  console.log('tRPC request completed:', {
+    procedurePath,
+    duration: `${duration}ms`,
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // Mount tRPC router at /trpc

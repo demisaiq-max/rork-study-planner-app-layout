@@ -19,6 +19,8 @@ export default function SupabaseTestScreen() {
   const [debugInfo, setDebugInfo] = useState<{
     server?: any;
     serverError?: string;
+    networkInfo?: any;
+    networkTest?: string;
   }>({});
   
   // Test basic server connection
@@ -29,17 +31,59 @@ export default function SupabaseTestScreen() {
         
         console.log('🔍 Testing server connection to:', baseUrl);
         
-        const response = await fetch(`${baseUrl}/api/debug`);
-        const data = await response.json();
+        // First test basic connectivity
+        const healthResponse = await fetch(`${baseUrl}/api/`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+        });
         
-        console.log('✅ Server debug response:', data);
+        if (!healthResponse.ok) {
+          throw new Error(`Server returned ${healthResponse.status}: ${healthResponse.statusText}`);
+        }
         
-        setDebugInfo((prev) => ({ ...prev, server: data }));
+        const healthData = await healthResponse.json();
+        console.log('✅ Server health response:', healthData);
+        
+        // Then test debug endpoint
+        const debugResponse = await fetch(`${baseUrl}/api/debug`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        const debugData = await debugResponse.json();
+        console.log('✅ Server debug response:', debugData);
+        
+        setDebugInfo((prev) => ({ 
+          ...prev, 
+          server: { health: healthData, debug: debugData },
+          networkTest: 'Server is reachable'
+        }));
         setConnectionStatus((prev) => ({ ...prev, server: 'connected' }));
       } catch (error) {
         console.error('❌ Server connection failed:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        setDebugInfo((prev) => ({ ...prev, serverError: errorMessage }));
+        
+        // Additional network diagnostics
+        const networkInfo = {
+          error: errorMessage,
+          timestamp: new Date().toISOString(),
+          userAgent: navigator.userAgent || 'Unknown',
+          online: navigator.onLine !== undefined ? navigator.onLine : 'Unknown'
+        };
+        
+        console.log('🔍 Network diagnostics:', networkInfo);
+        
+        setDebugInfo((prev) => ({ 
+          ...prev, 
+          serverError: errorMessage,
+          networkInfo
+        }));
         setConnectionStatus((prev) => ({ ...prev, server: 'failed' }));
       }
     };
