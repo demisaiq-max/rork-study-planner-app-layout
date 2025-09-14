@@ -1,75 +1,217 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
 import {
   StyleSheet,
   Text,
   View,
   ScrollView,
-  Dimensions,
+  ActivityIndicator,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TrendingUp, Award, Target, Clock } from "lucide-react-native";
-import { useStudyStore } from "@/hooks/study-store";
+import { useLanguage } from "@/hooks/language-context";
+import { useUser } from "@/hooks/user-context";
+import { trpc } from "@/lib/trpc";
 
-const { width } = Dimensions.get("window");
+
 
 export default function StatsScreen() {
-  const { todayStudyTime, weeklyStudyTime, monthlyGoal } = useStudyStore();
+  const { t } = useLanguage();
+  const { user } = useUser();
+  const [monthlyGoal] = useState(150); // Keep monthly goal as 150h as requested
   
-  const weekData = [
-    { day: "Mon", hours: 3.5 },
-    { day: "Tue", hours: 4.2 },
-    { day: "Wed", hours: 2.8 },
-    { day: "Thu", hours: 5.1 },
-    { day: "Fri", hours: 4.7 },
-    { day: "Sat", hours: 6.2 },
-    { day: "Sun", hours: todayStudyTime / 60 },
-  ];
+  // Get timer sessions data
+  const timerSessionsQuery = trpc.timers.getTimerSessions.useQuery(
+    {
+      userId: user?.id || '',
+      limit: 1000,
+      completedOnly: true,
+    },
+    {
+      enabled: !!user?.id,
+      refetchInterval: 30000, // Refetch every 30 seconds for live data
+    }
+  );
 
-  const maxHours = Math.max(...weekData.map(d => d.hours));
+  // Calculate statistics from timer sessions
+  const stats = useMemo(() => {
+    if (!timerSessionsQuery.data) {
+      return {
+        todayHours: 0,
+        todayMinutes: 0,
+        weeklyHours: 0,
+        dayStreak: 0,
+        weekData: [],
+        subjectDistribution: [],
+      };
+    }
+
+    const sessions = timerSessionsQuery.data;
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - today.getDay()); // Start of week (Sunday)
+    
+    // Calculate today's study time
+    const todaySessions = sessions.filter(session => {
+      const sessionDate = new Date(session.start_time);
+      return sessionDate >= today && sessionDate < new Date(today.getTime() + 24 * 60 * 60 * 1000);
+    });
+    
+    const todayTotalMinutes = todaySessions.reduce((total, session) => {
+      return total + (session.duration_seconds || 0) / 60;
+    }, 0);
+    
+    const todayHours = Math.floor(todayTotalMinutes / 60);
+    const todayMinutes = Math.floor(todayTotalMinutes % 60);
+
+    // Calculate weekly study time
+    const weeklySessions = sessions.filter(session => {
+      const sessionDate = new Date(session.start_time);
+      return sessionDate >= weekStart;
+    });
+    
+    const weeklyTotalMinutes = weeklySessions.reduce((total, session) => {
+      return total + (session.duration_seconds || 0) / 60;
+    }, 0);
+    
+    const weeklyHours = Math.floor(weeklyTotalMinutes / 60);
+
+    // Calculate day streak
+    const uniqueDays = new Set();
+    sessions.forEach(session => {
+      const sessionDate = new Date(session.start_time);
+      const dayKey = `${sessionDate.getFullYear()}-${sessionDate.getMonth()}-${sessionDate.getDate()}`;
+      uniqueDays.add(dayKey);
+    });
+    
+    let dayStreak = 0;
+    const checkDate = new Date(today);
+    while (true) {
+      const dayKey = `${checkDate.getFullYear()}-${checkDate.getMonth()}-${checkDate.getDate()}`;
+      if (uniqueDays.has(dayKey)) {
+        dayStreak++;
+        checkDate.setDate(checkDate.getDate() - 1);
+      } else {
+        break;
+      }
+    }
+
+    // Calculate week data for chart
+    const weekDays = ['일', '월', '화', '수', '목', '금', '토'];
+    const weekData = weekDays.map((day, index) => {
+      const dayDate = new Date(weekStart);
+      dayDate.setDate(weekStart.getDate() + index);
+      const dayEnd = new Date(dayDate.getTime() + 24 * 60 * 60 * 1000);
+      
+      const daySessions = sessions.filter(session => {
+        const sessionDate = new Date(session.start_time);
+        return sessionDate >= dayDate && sessionDate < dayEnd;
+      });
+      
+      const dayMinutes = daySessions.reduce((total, session) => {
+        return total + (session.duration_seconds || 0) / 60;
+      }, 0);
+      
+      return {
+        day,
+        hours: dayMinutes / 60,
+      };
+    });
+
+    // Calculate subject distribution
+    const subjectMap = new Map<string, number>();
+    sessions.forEach(session => {
+      const subject = session.subject || t('generalTimer');
+      const minutes = (session.duration_seconds || 0) / 60;
+      subjectMap.set(subject, (subjectMap.get(subject) || 0) + minutes);
+    });
+    
+    const totalMinutes = Array.from(subjectMap.values()).reduce((sum, minutes) => sum + minutes, 0);
+    const subjectDistribution = Array.from(subjectMap.entries())
+      .map(([subject, minutes]) => ({
+        name: subject,
+        percentage: totalMinutes > 0 ? Math.round((minutes / totalMinutes) * 100) : 0,
+        color: getSubjectColor(subject),
+      }))
+      .sort((a, b) => b.percentage - a.percentage)
+      .slice(0, 4); // Top 4 subjects
+
+    return {
+      todayHours,
+      todayMinutes,
+      weeklyHours,
+      dayStreak,
+      weekData,
+      subjectDistribution,
+    };
+  }, [timerSessionsQuery.data, t]);
+
+  const getSubjectColor = (subject: string): string => {
+    const colors = ['#007AFF', '#34C759', '#FF9500', '#AF52DE', '#FF3B30', '#00C7BE'];
+    let hash = 0;
+    for (let i = 0; i < subject.length; i++) {
+      hash = subject.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+  };
+
+  const maxHours = Math.max(...stats.weekData.map(d => d.hours), 1);
+  const insets = useSafeAreaInsets();
+
+  if (timerSessionsQuery.isLoading) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+          <Text style={styles.loadingText}>{t('loading')}</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Study Statistics</Text>
-          <Text style={styles.subtitle}>Track your progress</Text>
+          <Text style={styles.title}>{t('stats')}</Text>
+          <Text style={styles.subtitle}>{t('progress')}</Text>
         </View>
 
         <View style={styles.statsGrid}>
           <View style={[styles.statCard, styles.statCardPrimary]}>
             <Clock size={24} color="#FFFFFF" />
-            <Text style={styles.statValueLight}>{Math.floor(todayStudyTime / 60)}h {todayStudyTime % 60}m</Text>
-            <Text style={styles.statLabelLight}>Today's Study</Text>
+            <Text style={styles.statValueLight}>{stats.todayHours}{t('hours')} {stats.todayMinutes}{t('minutes')}</Text>
+            <Text style={styles.statLabelLight}>{t('todayStudy')}</Text>
           </View>
           
           <View style={styles.statCard}>
             <TrendingUp size={24} color="#34C759" />
-            <Text style={styles.statValue}>{weeklyStudyTime}h</Text>
-            <Text style={styles.statLabel}>This Week</Text>
+            <Text style={styles.statValue}>{stats.weeklyHours}{t('hours')}</Text>
+            <Text style={styles.statLabel}>{t('thisWeek')}</Text>
           </View>
           
           <View style={styles.statCard}>
             <Target size={24} color="#FF9500" />
-            <Text style={styles.statValue}>{monthlyGoal}h</Text>
-            <Text style={styles.statLabel}>Monthly Goal</Text>
+            <Text style={styles.statValue}>{monthlyGoal}{t('hours')}</Text>
+            <Text style={styles.statLabel}>{t('monthlyGoal')}</Text>
           </View>
           
           <View style={styles.statCard}>
             <Award size={24} color="#AF52DE" />
-            <Text style={styles.statValue}>15</Text>
-            <Text style={styles.statLabel}>Day Streak</Text>
+            <Text style={styles.statValue}>{stats.dayStreak}</Text>
+            <Text style={styles.statLabel}>{t('dayStreak')}</Text>
           </View>
         </View>
 
         <View style={styles.chartContainer}>
-          <Text style={styles.chartTitle}>Weekly Overview</Text>
+          <Text style={styles.chartTitle}>{t('weeklyOverview')}</Text>
           <View style={styles.chart}>
-            {weekData.map((data, index) => (
-              <View key={index} style={styles.barContainer}>
+            {stats.weekData.map((data, index) => (
+              <View key={`week-${data.day}-${index}`} style={styles.barContainer}>
                 <View style={styles.barWrapper}>
                   <View 
                     style={[
@@ -82,54 +224,72 @@ export default function StatsScreen() {
                   />
                 </View>
                 <Text style={styles.barLabel}>{data.day}</Text>
-                <Text style={styles.barValue}>{data.hours.toFixed(1)}h</Text>
+                <Text style={styles.barValue}>{data.hours.toFixed(1)}{t('hours')}</Text>
               </View>
             ))}
           </View>
         </View>
 
         <View style={styles.subjectsContainer}>
-          <Text style={styles.sectionTitle}>Subject Distribution</Text>
+          <Text style={styles.sectionTitle}>{t('subjectDistribution')}</Text>
           <View style={styles.subjectsList}>
-            {[
-              { name: "Mathematics", percentage: 35, color: "#007AFF" },
-              { name: "Korean", percentage: 25, color: "#34C759" },
-              { name: "English", percentage: 20, color: "#FF9500" },
-              { name: "Science", percentage: 20, color: "#AF52DE" },
-            ].map((subject, index) => (
-              <View key={index} style={styles.subjectItem}>
-                <View style={styles.subjectInfo}>
-                  <View style={[styles.subjectDot, { backgroundColor: subject.color }]} />
-                  <Text style={styles.subjectName}>{subject.name}</Text>
-                  <Text style={styles.subjectPercentage}>{subject.percentage}%</Text>
+            {stats.subjectDistribution.length > 0 ? (
+              stats.subjectDistribution.map((subject, index) => (
+                <View key={`subject-${subject.name}-${index}`} style={styles.subjectItem}>
+                  <View style={styles.subjectInfo}>
+                    <View style={[styles.subjectDot, { backgroundColor: subject.color }]} />
+                    <Text style={styles.subjectName}>{subject.name}</Text>
+                    <Text style={styles.subjectPercentage}>{subject.percentage}%</Text>
+                  </View>
+                  <View style={styles.subjectBar}>
+                    <View 
+                      style={[
+                        styles.subjectProgress, 
+                        { width: `${subject.percentage}%`, backgroundColor: subject.color }
+                      ]} 
+                    />
+                  </View>
                 </View>
-                <View style={styles.subjectBar}>
-                  <View 
-                    style={[
-                      styles.subjectProgress, 
-                      { width: `${subject.percentage}%`, backgroundColor: subject.color }
-                    ]} 
-                  />
-                </View>
+              ))
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>{t('noStudyDataYet')}</Text>
+                <Text style={styles.emptyStateSubtext}>{t('startStudyingToSeeStats')}</Text>
               </View>
-            ))}
+            )}
           </View>
         </View>
 
         <View style={styles.achievementsContainer}>
-          <Text style={styles.sectionTitle}>Recent Achievements</Text>
+          <Text style={styles.sectionTitle}>{t('recentAchievements')}</Text>
           <ScrollView 
             horizontal 
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.achievementsScroll}
           >
             {[
-              { icon: "🔥", title: "7 Day Streak", date: "2 days ago" },
-              { icon: "⭐", title: "100 Tasks Done", date: "1 week ago" },
-              { icon: "🎯", title: "Goal Achieved", date: "2 weeks ago" },
-              { icon: "📚", title: "50 Hours Studied", date: "3 weeks ago" },
+              { 
+                icon: "🔥", 
+                title: `${stats.dayStreak}${t('dayStreakAchievement')}`, 
+                date: stats.dayStreak > 0 ? t('current') : t('notStarted')
+              },
+              { 
+                icon: "⭐", 
+                title: `${stats.weeklyHours}${t('hoursThisWeek')}`, 
+                date: t('thisWeek')
+              },
+              { 
+                icon: "🎯", 
+                title: `${Math.round((stats.weeklyHours / monthlyGoal) * 100)}% ${t('monthlyProgress')}`, 
+                date: t('monthlyGoal')
+              },
+              { 
+                icon: "📚", 
+                title: `${stats.todayHours + stats.todayMinutes / 60}${t('hoursToday')}`, 
+                date: t('today')
+              },
             ].map((achievement, index) => (
-              <View key={index} style={styles.achievementCard}>
+              <View key={`achievement-${achievement.icon}-${index}`} style={styles.achievementCard}>
                 <Text style={styles.achievementIcon}>{achievement.icon}</Text>
                 <Text style={styles.achievementTitle}>{achievement.title}</Text>
                 <Text style={styles.achievementDate}>{achievement.date}</Text>
@@ -138,7 +298,7 @@ export default function StatsScreen() {
           </ScrollView>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -177,7 +337,7 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    minWidth: (width - 52) / 2,
+    minWidth: 150,
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 16,
@@ -341,5 +501,30 @@ const styles = StyleSheet.create({
   achievementDate: {
     fontSize: 11,
     color: "#8E8E93",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 16,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#8E8E93",
+  },
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: 32,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#8E8E93",
+    marginBottom: 8,
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: "#C7C7CC",
+    textAlign: "center",
   },
 });
