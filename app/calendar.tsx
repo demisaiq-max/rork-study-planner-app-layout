@@ -474,13 +474,18 @@ export default function CalendarScreen() {
                         </TouchableOpacity>
                       </View>
                       <View style={styles.timePickerContent}>
-                        <ScrollView style={styles.timePickerColumn} showsVerticalScrollIndicator={false}>
+                        <ScrollView 
+                          style={styles.timePickerColumn} 
+                          showsVerticalScrollIndicator={false}
+                          contentContainerStyle={{ alignItems: 'center' }}
+                        >
                           {[...Array(12)].map((_, i) => {
                             const hour = i + 1;
+                            const isSelected = (selectedTime.getHours() % 12 || 12) === hour;
                             return (
                               <TouchableOpacity
                                 key={`hour-${hour}`}
-                                style={styles.timePickerOption}
+                                style={[styles.timePickerOption, isSelected && styles.selectedTimeOption]}
                                 onPress={() => {
                                   const newTime = new Date(selectedTime);
                                   const isPM = selectedTime.getHours() >= 12;
@@ -490,7 +495,7 @@ export default function CalendarScreen() {
                               >
                                 <Text style={[
                                   styles.timePickerOptionText,
-                                  (selectedTime.getHours() % 12 || 12) === hour && styles.selectedTimeText
+                                  isSelected && styles.selectedTimeText
                                 ]}>
                                   {hour.toString().padStart(2, '0')}
                                 </Text>
@@ -499,13 +504,18 @@ export default function CalendarScreen() {
                           })}
                         </ScrollView>
                         <Text style={styles.timePickerSeparator}>:</Text>
-                        <ScrollView style={styles.timePickerColumn} showsVerticalScrollIndicator={false}>
+                        <ScrollView 
+                          style={styles.timePickerColumn} 
+                          showsVerticalScrollIndicator={false}
+                          contentContainerStyle={{ alignItems: 'center' }}
+                        >
                           {[...Array(60)].map((_, i) => {
                             if (i % 5 !== 0) return null;
+                            const isSelected = selectedTime.getMinutes() === i;
                             return (
                               <TouchableOpacity
                                 key={`minute-${i}`}
-                                style={styles.timePickerOption}
+                                style={[styles.timePickerOption, isSelected && styles.selectedTimeOption]}
                                 onPress={() => {
                                   const newTime = new Date(selectedTime);
                                   newTime.setMinutes(i);
@@ -514,7 +524,7 @@ export default function CalendarScreen() {
                               >
                                 <Text style={[
                                   styles.timePickerOptionText,
-                                  selectedTime.getMinutes() === i && styles.selectedTimeText
+                                  isSelected && styles.selectedTimeText
                                 ]}>
                                   {i.toString().padStart(2, '0')}
                                 </Text>
@@ -524,7 +534,7 @@ export default function CalendarScreen() {
                         </ScrollView>
                         <View style={styles.timePickerColumn}>
                           <TouchableOpacity
-                            style={styles.timePickerOption}
+                            style={[styles.timePickerOption, selectedTime.getHours() < 12 && styles.selectedTimeOption]}
                             onPress={() => {
                               const newTime = new Date(selectedTime);
                               const hours = newTime.getHours();
@@ -540,7 +550,7 @@ export default function CalendarScreen() {
                             ]}>AM</Text>
                           </TouchableOpacity>
                           <TouchableOpacity
-                            style={styles.timePickerOption}
+                            style={[styles.timePickerOption, selectedTime.getHours() >= 12 && styles.selectedTimeOption]}
                             onPress={() => {
                               const newTime = new Date(selectedTime);
                               const hours = newTime.getHours();
@@ -932,6 +942,11 @@ const styles = StyleSheet.create({
     width: '80%',
     maxWidth: 320,
     padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 10,
   },
   timePickerHeader: {
     flexDirection: 'row',
@@ -966,11 +981,13 @@ const styles = StyleSheet.create({
   },
   timePickerOptionText: {
     fontSize: 18,
-    color: '#8E8E93',
+    color: '#000000',
+    fontWeight: '500',
   },
   selectedTimeText: {
     color: '#007AFF',
-    fontWeight: '600',
+    fontWeight: '700',
+    fontSize: 20,
   },
   timePickerDoneButton: {
     backgroundColor: '#007AFF',
@@ -983,5 +1000,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  selectedTimeOption: {
+    backgroundColor: '#E5F3FF',
+    borderRadius: 8,
+    paddingHorizontal: 12,
   },
 });
