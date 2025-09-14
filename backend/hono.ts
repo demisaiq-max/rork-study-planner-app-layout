@@ -4,6 +4,11 @@ import { cors } from "hono/cors";
 import { appRouter } from "./trpc/app-router";
 import { createContext } from "./trpc/create-context";
 
+// Log server startup
+console.log('🚀 Starting Hono server...');
+console.log('📦 App router loaded:', typeof appRouter);
+console.log('🔧 Available routes:', Object.keys(appRouter as any));
+
 
 // app will be mounted at /api
 const app = new Hono();
@@ -34,6 +39,7 @@ app.use('/trpc/*', async (c, next) => {
     method: c.req.method,
     path: c.req.path,
     url: c.req.url,
+    headers: Object.fromEntries(c.req.raw.headers.entries()),
   });
   await next();
 });
