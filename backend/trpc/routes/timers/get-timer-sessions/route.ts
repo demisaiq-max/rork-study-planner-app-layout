@@ -9,6 +9,7 @@ export const getTimerSessionsProcedure = publicProcedure
     subject: z.string().optional(),
     startDate: z.string().optional(),
     endDate: z.string().optional(),
+    completedOnly: z.boolean().optional().default(false),
   }))
   .query(async ({ input }) => {
     try {
@@ -29,6 +30,10 @@ export const getTimerSessionsProcedure = publicProcedure
 
       if (input.endDate) {
         query = query.lte('start_time', input.endDate);
+      }
+
+      if (input.completedOnly) {
+        query = query.eq('is_completed', true);
       }
 
       const { data, error } = await query;

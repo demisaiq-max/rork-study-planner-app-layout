@@ -53,11 +53,12 @@ export default function TimerScreen() {
     }
   );
   
-  // Query for timer sessions history
+  // Query for timer sessions history (only completed sessions)
   const { data: timerSessions, refetch: refetchSessions } = trpc.timers.getTimerSessions.useQuery(
     { 
       userId: user?.id || '550e8400-e29b-41d4-a716-446655440000',
-      limit: 10
+      limit: 10,
+      completedOnly: true
     },
     { enabled: !!user?.id }
   );
@@ -90,7 +91,7 @@ export default function TimerScreen() {
     }
   }, [activeTimer, currentSessionId]);
   
-  // Calculate today's total focus time from sessions
+  // Calculate today's total focus time from sessions (already filtered to completed only)
   const todaysTotalTime = timerSessions ? (() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -98,7 +99,7 @@ export default function TimerScreen() {
     const todaysSessions = timerSessions.filter(session => {
       const sessionDate = new Date(session.start_time);
       sessionDate.setHours(0, 0, 0, 0);
-      return sessionDate.getTime() === today.getTime() && session.is_completed;
+      return sessionDate.getTime() === today.getTime();
     });
     
     return todaysSessions.reduce((total, session) => total + session.duration, 0);
@@ -111,7 +112,7 @@ export default function TimerScreen() {
     return timerSessions.filter(session => {
       const sessionDate = new Date(session.start_time);
       sessionDate.setHours(0, 0, 0, 0);
-      return sessionDate.getTime() === today.getTime() && session.is_completed;
+      return sessionDate.getTime() === today.getTime();
     }).length;
   })() : 0;
 
@@ -156,6 +157,7 @@ export default function TimerScreen() {
           id: currentSessionId,
           endTime: new Date().toISOString(),
           isCompleted: true,
+          duration: sessionDuration, // Ensure duration reflects actual time
         });
         
         // Refetch sessions to update stats
@@ -274,16 +276,18 @@ export default function TimerScreen() {
   }, [isRunning, currentSessionId, initialTime, activeTab, user?.id, createTimerSession, updateTimerSession, createPauseLog, activeTimer]);
 
   const resetTimer = useCallback(async () => {
-    // For general timer, save the session when reset
+    // Save the session when reset (only if there's actual time spent)
     if (currentSessionId) {
       try {
-        if (activeTab === 'general' && timeElapsed > 0) {
-          // Save the general timer session with actual elapsed time
+        const actualTimeSpent = activeTab === 'general' ? timeElapsed : (initialTime - timeLeft);
+        
+        if (actualTimeSpent > 0) {
+          // Save the session with actual time spent
           await updateTimerSession.mutateAsync({
             id: currentSessionId,
             endTime: new Date().toISOString(),
             isCompleted: true,
-            duration: timeElapsed, // Update duration to actual elapsed time
+            duration: actualTimeSpent, // Update duration to actual time spent
           });
           
           // Refetch sessions to update stats
@@ -293,12 +297,12 @@ export default function TimerScreen() {
           if (Platform.OS !== 'web') {
             Alert.alert(
               t('sessionSaved') || '세션 저장됨',
-              `${Math.floor(timeElapsed / 60)}${t('minutes') || '분'} ${Math.floor(timeElapsed % 60)}${t('seconds') || '초'} ${t('sessionSavedMessage') || '세션이 저장되었습니다.'}`,
+              `${Math.floor(actualTimeSpent / 60)}${t('minutes') || '분'} ${Math.floor(actualTimeSpent % 60)}${t('seconds') || '초'} ${t('sessionSavedMessage') || '세션이 저장되었습니다.'}`,
               [{ text: 'OK' }]
             );
           }
         } else {
-          // Cancel other timer sessions
+          // Cancel session if no time was spent
           await updateTimerSession.mutateAsync({
             id: currentSessionId,
             endTime: new Date().toISOString(),
@@ -318,7 +322,7 @@ export default function TimerScreen() {
     } else {
       setTimeLeft(initialTime);
     }
-  }, [initialTime, timeElapsed, activeTab, currentSessionId, updateTimerSession, refetchSessions, t]);
+  }, [initialTime, timeElapsed, timeLeft, activeTab, currentSessionId, updateTimerSession, refetchSessions, t]);
 
   const formatTime = useCallback((seconds: number) => {
     const mins = Math.floor(seconds / 60);
