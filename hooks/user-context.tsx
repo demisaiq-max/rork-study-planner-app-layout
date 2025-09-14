@@ -6,6 +6,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  profilePictureUrl?: string;
 }
 
 export const [UserProvider, useUser] = createContextHook(() => {
@@ -26,7 +27,8 @@ export const [UserProvider, useUser] = createContextHook(() => {
         const defaultUser: User = {
           id: '550e8400-e29b-41d4-a716-446655440000',
           email: 'test@example.com',
-          name: 'Test User'
+          name: 'Test User',
+          profilePictureUrl: undefined
         };
         setUser(defaultUser);
         await AsyncStorage.setItem('user', JSON.stringify(defaultUser));

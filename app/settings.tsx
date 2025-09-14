@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,19 +9,33 @@ import {
   Image,
   Alert,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, router } from 'expo-router';
 import { ArrowLeft, Camera, User, Check } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { useUser } from '@/hooks/user-context';
 import { useLanguage, Language } from '@/hooks/language-context';
+import { trpc } from '@/lib/trpc';
 
 export default function SettingsScreen() {
   const { user, updateUser } = useUser();
   const { language, changeLanguage, t } = useLanguage();
   const [name, setName] = useState(user?.name || '');
-  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [profileImage, setProfileImage] = useState<string | null>(user?.profilePictureUrl || null);
   const [showLanguageSelector, setShowLanguageSelector] = useState(false);
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [isUpdatingName, setIsUpdatingName] = useState(false);
+
+  const updateProfileMutation = trpc.users.updateUserProfile.useMutation();
+
+  useEffect(() => {
+    if (user) {
+      setName(user.name);
+      setProfileImage(user.profilePictureUrl || null);
+    }
+  }, [user]);
 
   const handleSaveName = async () => {
     if (!user || !name.trim()) {
@@ -29,14 +43,25 @@ export default function SettingsScreen() {
       return;
     }
 
+    setIsUpdatingName(true);
     try {
-      await updateUser({
-        ...user,
+      const updatedProfile = await updateProfileMutation.mutateAsync({
+        userId: user.id,
         name: name.trim(),
       });
+      
+      await updateUser({
+        ...user,
+        name: updatedProfile.name,
+        profilePictureUrl: updatedProfile.profilePictureUrl,
+      });
+      
       Alert.alert(t('notification'), 'Name updated successfully');
     } catch (error) {
+      console.error('Failed to update name:', error);
       Alert.alert(t('error'), 'Failed to update name');
+    } finally {
+      setIsUpdatingName(false);
     }
   };
 
@@ -53,9 +78,88 @@ export default function SettingsScreen() {
     
     Alert.alert(
       t('profilePicture'),
-      'Profile picture functionality will be available soon',
-      [{ text: 'OK', style: 'default' }]
+      'Choose an option',
+      [
+        {
+          text: 'Camera',
+          onPress: () => pickImage('camera'),
+        },
+        {
+          text: 'Gallery',
+          onPress: () => pickImage('gallery'),
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+      ]
     );
+  };
+
+  const pickImage = async (source: 'camera' | 'gallery') => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please grant permission to access photos');
+        return;
+      }
+
+      let result;
+      if (source === 'camera') {
+        const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
+        if (cameraStatus !== 'granted') {
+          Alert.alert('Permission needed', 'Please grant permission to access camera');
+          return;
+        }
+        result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.8,
+        });
+      } else {
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.8,
+        });
+      }
+
+      if (!result.canceled && result.assets[0]) {
+        const imageUri = result.assets[0].uri;
+        await uploadProfilePicture(imageUri);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert(t('error'), 'Failed to pick image');
+    }
+  };
+
+  const uploadProfilePicture = async (imageUri: string) => {
+    if (!user) return;
+
+    setIsUpdatingProfile(true);
+    try {
+      const updatedProfile = await updateProfileMutation.mutateAsync({
+        userId: user.id,
+        profilePictureUrl: imageUri,
+      });
+      
+      await updateUser({
+        ...user,
+        name: updatedProfile.name,
+        profilePictureUrl: updatedProfile.profilePictureUrl,
+      });
+      
+      setProfileImage(updatedProfile.profilePictureUrl || null);
+      Alert.alert(t('notification'), 'Profile picture updated successfully');
+    } catch (error) {
+      console.error('Failed to update profile picture:', error);
+      Alert.alert(t('error'), 'Failed to update profile picture');
+    } finally {
+      setIsUpdatingProfile(false);
+    }
   };
 
   return (
@@ -90,6 +194,7 @@ export default function SettingsScreen() {
             <TouchableOpacity 
               style={styles.profilePictureContainer}
               onPress={handleProfilePicturePress}
+              disabled={isUpdatingProfile}
             >
               {profileImage ? (
                 <Image source={{ uri: profileImage }} style={styles.profileImage} />
@@ -99,7 +204,11 @@ export default function SettingsScreen() {
                 </View>
               )}
               <View style={styles.cameraIcon}>
-                <Camera size={16} color="#FFFFFF" />
+                {isUpdatingProfile ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Camera size={16} color="#FFFFFF" />
+                )}
               </View>
             </TouchableOpacity>
             <Text style={styles.profilePictureLabel}>{t('profilePicture')}</Text>
@@ -117,10 +226,15 @@ export default function SettingsScreen() {
                 placeholderTextColor="#8E8E93"
               />
               <TouchableOpacity 
-                style={styles.saveNameButton}
+                style={[styles.saveNameButton, isUpdatingName && styles.saveNameButtonDisabled]}
                 onPress={handleSaveName}
+                disabled={isUpdatingName}
               >
-                <Text style={styles.saveNameText}>{t('save')}</Text>
+                {isUpdatingName ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.saveNameText}>{t('save')}</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -283,6 +397,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  saveNameButtonDisabled: {
+    opacity: 0.6,
   },
   languageSelector: {
     flexDirection: 'row',

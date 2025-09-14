@@ -85,6 +85,10 @@ import { createStudyNoteProcedure } from "./routes/study-notes/create-study-note
 import { updateStudyNoteProcedure } from "./routes/study-notes/update-study-note/route";
 import { deleteStudyNoteProcedure } from "./routes/study-notes/delete-study-note/route";
 
+// User profile routes
+import { getUserProfileProcedure } from "./routes/users/get-user-profile/route";
+import { updateUserProfileProcedure } from "./routes/users/update-user-profile/route";
+
 
 
 export const appRouter = createTRPCRouter({
@@ -178,6 +182,10 @@ export const appRouter = createTRPCRouter({
     createStudyNote: createStudyNoteProcedure,
     updateStudyNote: updateStudyNoteProcedure,
     deleteStudyNote: deleteStudyNoteProcedure,
+  }),
+  users: createTRPCRouter({
+    getUserProfile: getUserProfileProcedure,
+    updateUserProfile: updateUserProfileProcedure,
   }),
 });
 
