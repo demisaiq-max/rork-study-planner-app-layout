@@ -298,7 +298,8 @@ export default function TimerScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: getTimerColor() + "10" }]}>
-      <View style={[styles.safeArea, { paddingTop: insets.top }]}>
+      {/* Main Timer Content */}
+      <View style={[styles.mainContent, { paddingTop: insets.top }]}>
         {/* Tab Navigation */}
         <View style={styles.tabContainer}>
           <TouchableOpacity
@@ -398,12 +399,12 @@ export default function TimerScreen() {
         </View>
       </View>
       
-      {/* Recent Sessions - Only show if there are sessions */}
+      {/* Recent Sessions - Fixed at bottom, doesn't affect main content */}
       {timerSessions && timerSessions.length > 0 && (
-        <View style={styles.recentSessionsContainer}>
+        <View style={[styles.recentSessionsContainer, { paddingBottom: insets.bottom }]}>
           <ScrollView style={styles.recentSessions} showsVerticalScrollIndicator={false}>
             <Text style={styles.recentTitle}>{t('recentSessions') || '최근 세션'}</Text>
-            {timerSessions.slice(0, 5).map((session) => {
+            {timerSessions.slice(0, 3).map((session) => {
               const hours = Math.floor(session.duration / 3600);
               const minutes = Math.floor((session.duration % 3600) / 60);
               const seconds = session.duration % 60;
@@ -451,8 +452,6 @@ export default function TimerScreen() {
           </ScrollView>
         </View>
       )}
-      
-      {/* Remove time picker modal since all timers are now stopwatch style */}
     </View>
   );
 }
@@ -461,21 +460,31 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  safeArea: {
+  mainContent: {
     flex: 1,
+    minHeight: 0,
   },
   timerSection: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 20,
+    minHeight: 300,
   },
   recentSessionsContainer: {
-    maxHeight: 200,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    maxHeight: 180,
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    marginTop: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
   },
   tabContainer: {
     flexDirection: 'row',
@@ -590,7 +599,8 @@ const styles = StyleSheet.create({
   },
   recentSessions: {
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingTop: 15,
+    paddingBottom: 10,
   },
   recentTitle: {
     fontSize: 16,
@@ -602,10 +612,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    padding: 12,
+    backgroundColor: "#F8F9FA",
+    padding: 10,
     borderRadius: 8,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   sessionInfo: {
     flexDirection: "row",
