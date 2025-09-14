@@ -25,10 +25,7 @@ export default function SupabaseTestScreen() {
   useEffect(() => {
     const testServerConnection = async () => {
       try {
-        const baseUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
-        if (!baseUrl) {
-          throw new Error('EXPO_PUBLIC_RORK_API_BASE_URL not configured');
-        }
+        const baseUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL || 'https://7twaok3a9gdls7o4bz61l.rork.com';
         
         console.log('🔍 Testing server connection to:', baseUrl);
         
@@ -91,11 +88,7 @@ export default function SupabaseTestScreen() {
   
   const testDirectConnection = async () => {
     try {
-      const baseUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
-      if (!baseUrl) {
-        Alert.alert('Error', 'Base URL not configured');
-        return;
-      }
+      const baseUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL || 'https://7twaok3a9gdls7o4bz61l.rork.com';
       
       const response = await fetch(`${baseUrl}/api/`);
       const data = await response.json();

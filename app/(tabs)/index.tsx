@@ -12,7 +12,7 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Plus, User, X, Check, Edit2, Trash2, ArrowUpRight } from "lucide-react-native";
+import { Plus, User, X, Check, Edit2, Trash2, ArrowUpRight, Database } from "lucide-react-native";
 import { router } from "expo-router";
 import CircularProgress from "@/components/CircularProgress";
 import DayCard from "@/components/DayCard";
@@ -365,6 +365,13 @@ export default function HomeScreen() {
               <Text style={styles.examType}>{t('examType')}</Text>
               <Text style={styles.userName}>{user?.name || t('userName')}</Text>
             </View>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.debugButton}
+            onPress={() => router.push('/supabase-test')}
+          >
+            <Database size={20} color="#007AFF" />
           </TouchableOpacity>
         </View>
 
@@ -980,6 +987,14 @@ const styles = StyleSheet.create({
     color: "#000000",
   },
   addButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#E8F3FF",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  debugButton: {
     width: 32,
     height: 32,
     borderRadius: 16,

@@ -18,9 +18,10 @@ const getBaseUrl = () => {
     return baseUrl;
   }
 
-  throw new Error(
-    "❌ No base URL found, please set EXPO_PUBLIC_RORK_API_BASE_URL environment variable"
-  );
+  // Fallback to Rork development server
+  const rorkUrl = 'https://7twaok3a9gdls7o4bz61l.rork.com';
+  console.log('🔄 Using Rork development server:', rorkUrl);
+  return rorkUrl;
 };
 
 let trpcUrl: string;
