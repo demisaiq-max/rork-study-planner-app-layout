@@ -299,7 +299,13 @@ export default function TimerScreen() {
   return (
     <View style={[styles.container, { backgroundColor: getTimerColor() + "10" }]}>
       {/* Main Timer Content */}
-      <View style={[styles.mainContent, { paddingTop: insets.top }]}>
+      <View style={[
+        styles.mainContent, 
+        { 
+          paddingTop: insets.top,
+          paddingBottom: timerSessions && timerSessions.length > 0 ? 200 : insets.bottom + 20
+        }
+      ]}>
         {/* Tab Navigation */}
         <View style={styles.tabContainer}>
           <TouchableOpacity
@@ -345,7 +351,7 @@ export default function TimerScreen() {
             <View style={styles.progressWrapper}>
               <CircularProgress
                 percentage={getProgress()}
-                size={width * 0.65}
+                size={width * 0.6}
                 strokeWidth={16}
                 color={getTimerColor()}
               />
@@ -468,8 +474,8 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 20,
-    minHeight: 300,
+    paddingVertical: 10,
+    minHeight: 250,
   },
   recentSessionsContainer: {
     position: 'absolute',
@@ -550,7 +556,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    paddingBottom: 40,
+    paddingVertical: 20,
     gap: 30,
   },
   controlButton: {
@@ -582,7 +588,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-around",
     paddingHorizontal: 40,
-    paddingBottom: 20,
+    paddingBottom: 10,
   },
   statItem: {
     alignItems: "center",
