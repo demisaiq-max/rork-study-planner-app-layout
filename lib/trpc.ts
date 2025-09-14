@@ -3,6 +3,7 @@ import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import type { AppRouter } from "@/backend/trpc/app-router";
 import superjson from "superjson";
 
+// Create the tRPC React hooks
 export const trpc = createTRPCReact<AppRouter>();
 
 const getBaseUrl = () => {
@@ -17,6 +18,7 @@ const getBaseUrl = () => {
 
 const trpcUrl = `${getBaseUrl()}/api/trpc`;
 
+// Create the tRPC client
 export const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
