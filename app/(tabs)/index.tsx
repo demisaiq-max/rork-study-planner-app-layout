@@ -21,7 +21,7 @@ import TaskItem from "@/components/TaskItem";
 import { useStudyStore } from "@/hooks/study-store";
 import { useUser } from "@/hooks/user-context";
 import { useLanguage } from "@/hooks/language-context";
-import { trpc } from "@/lib/trpc";
+import { trpc, formatTRPCError } from "@/lib/trpc";
 import FormattedDateInput from "@/components/FormattedDateInput";
 
 const { width } = Dimensions.get("window");
@@ -450,9 +450,7 @@ export default function HomeScreen() {
               <View style={styles.noResultsCard}>
                 <Text style={styles.noResultsText}>Connection Error</Text>
                 <Text style={styles.noResultsSubtext}>
-                  {(gradedExamsError as any)?.data?.code === 'PARSE_ERROR' 
-                    ? 'Backend not responding' 
-                    : (gradedExamsError as any)?.message || 'Failed to load exams'}
+                  {formatTRPCError(gradedExamsError)}
                 </Text>
               </View>
             ) : !gradedExams || gradedExams.length === 0 ? (

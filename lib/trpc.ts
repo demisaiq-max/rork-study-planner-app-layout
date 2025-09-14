@@ -183,9 +183,14 @@ export const trpcClient = trpc.createClient({
             console.error('❌ tRPC Network Error:', errorInfo);
             
             if (attempt === maxRetries) {
-              // Create a more informative error
-              const networkError = new Error(`Network request failed after ${maxRetries} attempts: ${error instanceof Error ? error.message : String(error)}`);
+              // Create a more informative error with better serialization
+              const errorMessage = error instanceof Error ? error.message : String(error);
+              const networkError = new Error(`Network request failed after ${maxRetries} attempts: ${errorMessage}`);
               networkError.name = 'NetworkError';
+              // Add additional context for debugging
+              (networkError as any).originalError = error;
+              (networkError as any).url = parsedUrl.toString();
+              (networkError as any).attempts = maxRetries;
               throw networkError;
             }
             
@@ -205,6 +210,40 @@ export const trpcClient = trpc.createClient({
   ],
 });
 
+// Utility function to format tRPC errors for display
+export const formatTRPCError = (error: any): string => {
+  if (!error) return 'Unknown error';
+  
+  // Handle TRPCClientError
+  if (error.name === 'TRPCClientError') {
+    // Check for network errors
+    if (error.message?.includes('Network request failed') || error.message?.includes('Failed to fetch')) {
+      return 'Network connection failed. Please check your internet connection.';
+    }
+    
+    // Check for parse errors (backend not responding with JSON)
+    if (error.data?.code === 'PARSE_ERROR') {
+      return 'Server is not responding properly. Please try again later.';
+    }
+    
+    // Return the error message if available
+    return error.message || 'Server error occurred';
+  }
+  
+  // Handle NetworkError
+  if (error.name === 'NetworkError') {
+    return 'Network connection failed. Please check your internet connection.';
+  }
+  
+  // Handle generic errors
+  if (error.message) {
+    return error.message;
+  }
+  
+  // Fallback for unknown error types
+  return 'An unexpected error occurred';
+};
+
 // Global error handler for unhandled tRPC errors
 if (typeof window !== 'undefined') {
   window.addEventListener('unhandledrejection', (event) => {
@@ -213,6 +252,7 @@ if (typeof window !== 'undefined') {
         message: event.reason.message,
         data: event.reason.data,
         shape: event.reason.shape,
+        formatted: formatTRPCError(event.reason),
       });
     }
   });
