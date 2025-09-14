@@ -1,257 +1,260 @@
-// BACKEND DISABLED - Using mock data instead of network requests
-import React from 'react';
+import { createTRPCReact } from "@trpc/react-query";
+import { httpBatchLink } from "@trpc/client";
+import type { AppRouter } from "@/backend/trpc/app-router";
+import superjson from "superjson";
 
-console.log('🚫 Backend disabled - using mock data');
+export const trpc = createTRPCReact<AppRouter>();
 
-// Mock tRPC client that returns mock data instead of making network requests
-const createMockTrpcClient = () => {
-  const mockData = {
-    exams: {
-      getUserExams: () => Promise.resolve([]),
-      getPriorityExams: () => Promise.resolve([]),
-      createExam: () => Promise.resolve({ id: 'mock-exam-id', title: 'Mock Exam' }),
-      updateExam: () => Promise.resolve({ success: true }),
-      deleteExam: () => Promise.resolve({ success: true }),
-    },
-    tests: {
-      supabaseTest: () => Promise.resolve({ status: 'mock', message: 'Backend disabled' }),
-      getLatestTestResults: () => Promise.resolve([]),
-      getSubjectTests: () => Promise.resolve([]),
-      getUserSubjects: () => Promise.resolve([]),
-      getTestById: () => Promise.resolve(null),
-      createTest: () => Promise.resolve({ id: 'mock-test-id' }),
-      submitTestResult: () => Promise.resolve({ success: true }),
-      createSubject: () => Promise.resolve({ id: 'mock-subject-id' }),
-      updateSubject: () => Promise.resolve({ success: true }),
-      deleteSubject: () => Promise.resolve({ success: true }),
-    },
-    community: {
-      posts: {
-        getPosts: () => Promise.resolve([]),
-        createPost: () => Promise.resolve({ id: 'mock-post-id' }),
-        likePost: () => Promise.resolve({ success: true }),
-        addComment: () => Promise.resolve({ id: 'mock-comment-id' }),
-        incrementView: () => Promise.resolve({ success: true }),
-      },
-      groups: {
-        getGroups: () => Promise.resolve([]),
-        joinGroup: () => Promise.resolve({ success: true }),
-        leaveGroup: () => Promise.resolve({ success: true }),
-      },
-      questions: {
-        getQuestions: () => Promise.resolve([]),
-        createQuestion: () => Promise.resolve({ id: 'mock-question-id' }),
-        addAnswer: () => Promise.resolve({ id: 'mock-answer-id' }),
-        likeQuestion: () => Promise.resolve({ success: true }),
-        incrementView: () => Promise.resolve({ success: true }),
-      },
-    },
-    grades: {
-      getSubjectGrades: () => Promise.resolve([]),
-      updateSubjectGrade: () => Promise.resolve({ success: true }),
-      deleteSubjectGrade: () => Promise.resolve({ success: true }),
-    },
-    settings: {
-      getUserSettings: () => Promise.resolve({ theme: 'light', notifications: true }),
-      updateUserSettings: () => Promise.resolve({ success: true }),
-    },
-    study: {
-      getStudySessions: () => Promise.resolve([]),
-      createStudySession: () => Promise.resolve({ id: 'mock-session-id' }),
-    },
-    brainDumps: {
-      getBrainDumps: () => Promise.resolve([]),
-      createBrainDump: () => Promise.resolve({ id: 'mock-brain-dump-id' }),
-      updateBrainDump: () => Promise.resolve({ success: true }),
-      deleteBrainDump: () => Promise.resolve({ success: true }),
-    },
-    priorityTasks: {
-      getPriorityTasks: () => Promise.resolve([]),
-      createPriorityTask: () => Promise.resolve({ id: 'mock-task-id' }),
-      updatePriorityTask: () => Promise.resolve({ success: true }),
-      deletePriorityTask: () => Promise.resolve({ success: true }),
-    },
-    timers: {
-      getTimerSessions: () => Promise.resolve([]),
-      createTimerSession: () => Promise.resolve({ id: 'mock-timer-id' }),
-      updateTimerSession: () => Promise.resolve({ success: true }),
-      getActiveTimer: () => Promise.resolve(null),
-      createPauseLog: () => Promise.resolve({ id: 'mock-pause-id' }),
-    },
-  };
+// Validate that trpc is properly initialized
+if (!trpc || typeof trpc.createClient !== 'function') {
+  console.error('❌ CRITICAL: tRPC not properly initialized!');
+  console.error('trpc object:', trpc);
+  console.error('trpc type:', typeof trpc);
+}
 
-  // Create a proxy that intercepts all property access and returns mock query objects
-  const createMockQuery = (data: any) => ({
-    data,
-    isLoading: false,
-    isError: false,
-    error: null,
-    refetch: () => Promise.resolve({ data }),
-    isSuccess: true,
-    status: 'success' as const,
+const getBaseUrl = () => {
+  const baseUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
+  
+  console.log('🌐 tRPC Base URL Configuration:', {
+    envVar: 'EXPO_PUBLIC_RORK_API_BASE_URL',
+    value: baseUrl,
+    configured: !!baseUrl
   });
+  
+  if (baseUrl) {
+    return baseUrl;
+  }
 
-  const createMockMutation = (mockFn: Function) => ({
-    mutate: mockFn,
-    mutateAsync: mockFn,
-    isLoading: false,
-    isError: false,
-    error: null,
-    isSuccess: true,
-    status: 'idle' as const,
-  });
+  // Fallback to Rork development server
+  const rorkUrl = 'https://7twaok3a9gdls7o4bz61l.rork.com';
+  console.log('🔄 Using Rork development server:', rorkUrl);
+  return rorkUrl;
+};
 
-  const createMockProcedure = (mockFn: Function) => ({
-    useQuery: (input?: any, options?: any) => {
-      console.log('🎭 Mock query called with:', input);
-      
-      // Use React hooks properly
-      const [data, setData] = React.useState<any>(null);
-      const [isLoading, setIsLoading] = React.useState<boolean>(false);
-      const [isError, setIsError] = React.useState<boolean>(false);
-      const [error, setError] = React.useState<any>(null);
-      
-      // Use useEffect to prevent state updates during render
-      React.useEffect(() => {
-        if (options?.enabled === false) {
-          return;
-        }
-        
-        setIsLoading(true);
-        setIsError(false);
-        setError(null);
-        
-        // Use setTimeout to simulate async behavior and prevent render-time state updates
-        const timer = setTimeout(async () => {
-          try {
-            const result = await mockFn();
-            setData(result);
-            setIsLoading(false);
-          } catch (err) {
-            setError(err);
-            setIsError(true);
-            setIsLoading(false);
-          }
-        }, 1);
-        
-        return () => clearTimeout(timer);
-      }, [input, options?.enabled]);
-      
-      const refetch = React.useCallback(async () => {
-        setIsLoading(true);
-        try {
-          const result = await mockFn();
-          setData(result);
-          setIsLoading(false);
-          return { data: result };
-        } catch (err) {
-          setError(err);
-          setIsError(true);
-          setIsLoading(false);
-          throw err;
-        }
-      }, []);
-      
-      return {
-        data,
-        isLoading,
-        isError,
-        error,
-        refetch,
-        isSuccess: !isLoading && !isError && data !== null,
-        status: isLoading ? 'loading' as const : isError ? 'error' as const : 'success' as const,
-      };
-    },
-    useMutation: (options?: any) => {
-      console.log('🎭 Mock mutation created');
-      const [isLoading, setIsLoading] = React.useState<boolean>(false);
-      const [isError, setIsError] = React.useState<boolean>(false);
-      const [error, setError] = React.useState<any>(null);
-      const [isSuccess, setIsSuccess] = React.useState<boolean>(false);
-      
-      const mutate = React.useCallback(async (variables?: any) => {
-        setIsLoading(true);
-        setIsError(false);
-        setError(null);
-        setIsSuccess(false);
-        
-        try {
-          const result = await mockFn(variables);
-          setIsSuccess(true);
-          if (options?.onSuccess) {
-            // Use setTimeout to prevent state updates during render
-            setTimeout(() => options.onSuccess(result), 0);
-          }
-          return result;
-        } catch (err) {
-          setIsError(true);
-          setError(err);
-          if (options?.onError) {
-            setTimeout(() => options.onError(err), 0);
-          }
-          throw err;
-        } finally {
-          setIsLoading(false);
-        }
-      }, [options]);
-      
-      return {
-        mutate,
-        mutateAsync: mutate,
-        isLoading,
-        isError,
-        error,
-        isSuccess,
-        status: isLoading ? 'loading' as const : 'idle' as const,
-        isPending: isLoading,
-      };
-    },
-    query: mockFn,
-    mutate: mockFn,
-  });
+let trpcUrl: string;
+try {
+  // IMPORTANT: The URL should point to /api/trpc without any additional path
+  // The tRPC client will append the procedure paths automatically
+  trpcUrl = `${getBaseUrl()}/api/trpc`;
+  console.log('✅ tRPC Client URL:', trpcUrl);
+} catch (error) {
+  console.error('❌ Failed to get tRPC URL:', error);
+  throw error;
+}
 
-  const createMockRouter = (routes: any): any => {
-    const router: any = {};
+// Test backend connectivity with comprehensive diagnostics
+const testBackendConnection = async () => {
+  try {
+    const baseUrl = getBaseUrl();
+    const healthUrl = `${baseUrl}/api`;
     
-    for (const [key, value] of Object.entries(routes)) {
-      if (typeof value === 'function') {
-        router[key] = createMockProcedure(value);
-      } else if (typeof value === 'object' && value !== null) {
-        router[key] = createMockRouter(value);
-      }
+    console.log('🏥 Testing backend health at:', healthUrl);
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+    
+    const response = await fetch(healthUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log('✅ Backend is healthy:', data);
+      return true;
+    } else {
+      console.error('❌ Backend health check failed:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: healthUrl
+      });
+      return false;
     }
-    
-    return router;
-  };
-
-  return createMockRouter(mockData);
+  } catch (error) {
+    console.error('❌ Server connection failed:', {
+      error: error instanceof Error ? error.message : String(error),
+      url: `${getBaseUrl()}/api`
+    });
+    return false;
+  }
 };
 
-export const trpcClient = createMockTrpcClient();
+// Run health check on initialization with delay to ensure environment is ready
+setTimeout(() => {
+  testBackendConnection().catch((err: unknown) => {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error('❌ Health check failed:', errorMessage);
+  });
+}, 2000);
 
-// Mock trpc react client
-export const trpc = {
-  ...trpcClient,
-  createClient: () => trpcClient,
-  Provider: ({ children, client, queryClient }: any) => children,
-  useContext: () => ({
-    invalidate: () => Promise.resolve(),
-    refetch: () => Promise.resolve(),
-  }),
-};
+export const trpcClient = trpc.createClient({
+  links: [
+    httpBatchLink({
+      url: trpcUrl,
+      transformer: superjson,
+      headers: () => ({
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      }),
+      fetch: async (url, options) => {
+        const urlString = url.toString();
+        const parsedUrl = new URL(urlString);
+        
+        // Fix duplicate trpc paths
+        if (parsedUrl.pathname.includes('/trpc/trpc/')) {
+          console.warn('⚠️ Duplicate trpc path detected, fixing...');
+          parsedUrl.pathname = parsedUrl.pathname.replace('/trpc/trpc/', '/trpc/');
+        }
+        
+        console.log('🚀 tRPC Request:', {
+          url: parsedUrl.toString(),
+          method: options?.method || 'GET',
+          hasBody: !!options?.body,
+          timestamp: new Date().toISOString(),
+        });
+        
+        const maxRetries = 3;
+        const baseDelay = 1000;
+        
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => {
+              controller.abort();
+              console.log(`⏰ Request timeout after 10s (attempt ${attempt})`);
+            }, 10000);
+            
+            const response = await fetch(parsedUrl.toString(), {
+              ...options,
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                ...options?.headers,
+              },
+              signal: controller.signal,
+            });
+            
+            clearTimeout(timeoutId);
+            
+            console.log(`✅ tRPC Response (attempt ${attempt}):`, {
+              url: parsedUrl.toString(),
+              status: response.status,
+              ok: response.ok,
+              timestamp: new Date().toISOString(),
+            });
+            
+            return response;
+          } catch (error) {
+            const isLastAttempt = attempt === maxRetries;
+            const errorInfo = {
+              url: parsedUrl.toString(),
+              error: error instanceof Error ? {
+                message: error.message,
+                name: error.name,
+              } : String(error),
+              attempt,
+              maxRetries,
+              isLastAttempt,
+              timestamp: new Date().toISOString(),
+            };
+            
+            console.error('❌ tRPC Network Error:', errorInfo);
+            
+            if (isLastAttempt) {
+              const errorMessage = error instanceof Error ? error.message : String(error);
+              const networkError = new Error(`Network request failed after ${maxRetries} attempts: ${errorMessage}`);
+              networkError.name = 'NetworkError';
+              throw networkError;
+            }
+            
+            // Exponential backoff with jitter
+            const delay = baseDelay * Math.pow(2, attempt - 1) + Math.random() * 500;
+            console.log(`⏳ Retrying in ${Math.round(delay)}ms...`);
+            await new Promise((resolve: (value: unknown) => void) => setTimeout(resolve, delay));
+          }
+        }
+        
+        throw new Error('All retry attempts failed');
+      },
+    }),
+  ],
+});
 
-// Utility function to format errors (simplified for mock mode)
+// Utility function to format tRPC errors for display
 export const formatTRPCError = (error: any): string => {
   if (!error) return 'Unknown error';
   
-  // Since backend is disabled, most errors should not occur
-  // But we keep this for any remaining client-side errors
+  console.log('🔍 Formatting error:', {
+    name: error.name,
+    message: error.message,
+    data: error.data,
+    shape: error.shape,
+  });
+  
+  // Handle TRPCClientError
+  if (error.name === 'TRPCClientError') {
+    // Check for network errors
+    if (error.message?.includes('Network request failed') || error.message?.includes('Failed to fetch')) {
+      return 'Network connection failed. Please check your internet connection and try again.';
+    }
+    
+    // Check for parse errors (backend not responding with JSON)
+    if (error.data?.code === 'PARSE_ERROR') {
+      return 'Server is not responding properly. Please try again later.';
+    }
+    
+    // Check for timeout errors
+    if (error.message?.includes('timeout') || error.message?.includes('aborted')) {
+      return 'Request timed out. Please check your connection and try again.';
+    }
+    
+    // Return the error message if available
+    return error.message || 'Server error occurred';
+  }
+  
+  // Handle NetworkError
+  if (error.name === 'NetworkError') {
+    return 'Network connection failed. Please check your internet connection and try again.';
+  }
+  
+  // Handle AbortError (timeout)
+  if (error.name === 'AbortError') {
+    return 'Request timed out. Please try again.';
+  }
+  
+  // Handle generic errors
   if (error.message) {
     return error.message;
   }
   
-  return 'An error occurred';
+  // Fallback for unknown error types
+  return 'An unexpected error occurred. Please try again.';
 };
 
-console.log('🎭 Mock tRPC Client initialized - Backend disabled');
-console.log('📋 All API calls will return mock data');
+// Global error handler for unhandled tRPC errors
+if (typeof window !== 'undefined') {
+  window.addEventListener('unhandledrejection', (event) => {
+    if (event.reason?.name === 'TRPCClientError' || event.reason?.name === 'NetworkError') {
+      console.error('❌ Unhandled tRPC Error:', {
+        message: event.reason.message,
+        name: event.reason.name,
+        data: event.reason.data,
+        shape: event.reason.shape,
+        formatted: formatTRPCError(event.reason),
+        timestamp: new Date().toISOString(),
+      });
+      
+      // Prevent the error from being logged to console again
+      event.preventDefault();
+    }
+  });
+}
+
+console.log('📋 tRPC Client initialized successfully');
+console.log('🔗 Available tRPC methods will be logged when used');
