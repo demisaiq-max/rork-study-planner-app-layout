@@ -34,6 +34,7 @@ import { createSubject } from "./routes/tests/create-subject/route";
 import { deleteSubject } from "./routes/tests/delete-subject/route";
 import { updateSubject } from "./routes/tests/update-subject/route";
 import { seedTestData, debugTestData } from "./routes/tests/seed-test-data/route";
+import { supabaseTestProcedure } from "./routes/tests/supabase-test/route";
 
 // Brain dump routes
 import { getBrainDumpsProcedure } from "./routes/brain-dumps/get-brain-dumps/route";
@@ -154,6 +155,7 @@ export const appRouter = createTRPCRouter({
     updateSubject: updateSubject,
     seedTestData: seedTestData,
     debugTestData: debugTestData,
+    supabaseTest: supabaseTestProcedure,
   }),
   brainDumps: createTRPCRouter({
     getBrainDumps: getBrainDumpsProcedure,
