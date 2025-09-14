@@ -74,8 +74,8 @@ import { getActiveTimerProcedure } from "./routes/timers/get-active-timer/route"
 import { createPauseLogProcedure } from "./routes/timers/create-pause-log/route";
 
 // Add debug logging
-console.log('🔧 Loading app router...');
-console.log('📋 Available procedures:', {
+console.log('Loading app router...');
+console.log('Available procedures:', {
   tests: {
     getLatestTestResults: typeof getLatestTestResults,
   },
@@ -94,21 +94,21 @@ console.log('📋 Available procedures:', {
 
 // Validate that all procedures are properly imported
 if (!getLatestTestResults) {
-  console.error('❌ ERROR: getLatestTestResults is not properly imported!');
+  console.error('ERROR: getLatestTestResults is not properly imported!');
 }
 if (!getPostsProcedure) {
-  console.error('❌ ERROR: getPostsProcedure is not properly imported!');
+  console.error('ERROR: getPostsProcedure is not properly imported!');
 }
 if (!getGroupsProcedure) {
-  console.error('❌ ERROR: getGroupsProcedure is not properly imported!');
+  console.error('ERROR: getGroupsProcedure is not properly imported!');
 }
 if (!getQuestionsProcedure) {
-  console.error('❌ ERROR: getQuestionsProcedure is not properly imported!');
+  console.error('ERROR: getQuestionsProcedure is not properly imported!');
 }
 
 // Log the router creation process
-console.log('🏗️ Creating app router...');
-console.log('🔍 Router functions available:', {
+console.log('Creating app router...');
+console.log('Router functions available:', {
   createTRPCRouter: typeof createTRPCRouter,
   hiRoute: typeof hiRoute,
   getLatestTestResults: typeof getLatestTestResults,

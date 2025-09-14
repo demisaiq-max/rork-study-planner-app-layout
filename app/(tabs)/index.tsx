@@ -440,25 +440,14 @@ export default function HomeScreen() {
                 <Text style={styles.loadingText}>Loading exams...</Text>
               </View>
             ) : gradedExamsError ? (
-              <TouchableOpacity 
-                style={styles.noResultsCard}
-                onPress={() => {
-                  console.log('Retrying graded exams fetch...');
-                  refetchGradedExams();
-                }}
-              >
+              <View style={styles.noResultsCard}>
                 <Text style={styles.noResultsText}>Connection Error</Text>
                 <Text style={styles.noResultsSubtext}>
-                  {(gradedExamsError as any)?.message?.includes('Backend server is not running') 
-                    ? 'Backend server not running' 
-                    : (gradedExamsError as any)?.data?.code === 'PARSE_ERROR' 
+                  {(gradedExamsError as any)?.data?.code === 'PARSE_ERROR' 
                     ? 'Backend not responding' 
                     : (gradedExamsError as any)?.message || 'Failed to load exams'}
                 </Text>
-                <Text style={[styles.noResultsSubtext, { marginTop: 4, fontSize: 9, color: '#007AFF' }]}>
-                  Tap to retry
-                </Text>
-              </TouchableOpacity>
+              </View>
             ) : !gradedExams || gradedExams.length === 0 ? (
               <TouchableOpacity 
                 style={styles.noResultsCard}
