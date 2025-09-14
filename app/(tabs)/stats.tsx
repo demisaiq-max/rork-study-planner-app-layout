@@ -34,6 +34,15 @@ export default function StatsScreen() {
 
   // Calculate statistics from timer sessions
   const stats = useMemo(() => {
+    const getSubjectColor = (subject: string): string => {
+      const colors = ['#007AFF', '#34C759', '#FF9500', '#AF52DE', '#FF3B30', '#00C7BE'];
+      let hash = 0;
+      for (let i = 0; i < subject.length; i++) {
+        hash = subject.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      return colors[Math.abs(hash) % colors.length];
+    };
+
     if (!timerSessionsQuery.data) {
       return {
         todayHours: 0,
@@ -145,15 +154,6 @@ export default function StatsScreen() {
       subjectDistribution,
     };
   }, [timerSessionsQuery.data, t]);
-
-  const getSubjectColor = (subject: string): string => {
-    const colors = ['#007AFF', '#34C759', '#FF9500', '#AF52DE', '#FF3B30', '#00C7BE'];
-    let hash = 0;
-    for (let i = 0; i < subject.length; i++) {
-      hash = subject.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    return colors[Math.abs(hash) % colors.length];
-  };
 
   const maxHours = Math.max(...stats.weekData.map(d => d.hours), 1);
   const insets = useSafeAreaInsets();
