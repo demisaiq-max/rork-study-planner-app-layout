@@ -11,11 +11,12 @@ import {
   ScrollView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Play, Pause, RotateCcw, Clock, Coffee, UtensilsCrossed } from "lucide-react-native";
+import { Play, Pause, RotateCcw, Clock, Coffee, UtensilsCrossed, ChevronRight } from "lucide-react-native";
 import CircularProgress from "@/components/CircularProgress";
 import { useLanguage } from "@/hooks/language-context";
 import { useUser } from "@/hooks/user-context";
 import { trpc } from "@/lib/trpc";
+import { router } from "expo-router";
 
 type TimerType = 'general' | 'tea' | 'lunch';
 
@@ -409,7 +410,16 @@ export default function TimerScreen() {
       {timerSessions && timerSessions.length > 0 && (
         <View style={[styles.recentSessionsContainer, { paddingBottom: insets.bottom }]}>
           <ScrollView style={styles.recentSessions} showsVerticalScrollIndicator={false}>
-            <Text style={styles.recentTitle}>{t('recentSessions') || '최근 세션'}</Text>
+            <View style={styles.recentHeader}>
+              <Text style={styles.recentTitle}>{t('recentSessions') || '최근 세션'}</Text>
+              <TouchableOpacity 
+                style={styles.viewAllButton}
+                onPress={() => router.push('/timer-sessions')}
+              >
+                <Text style={styles.viewAllText}>{t('viewAll') || '모두 보기'}</Text>
+                <ChevronRight size={16} color="#007AFF" />
+              </TouchableOpacity>
+            </View>
             {timerSessions.slice(0, 3).map((session) => {
               const hours = Math.floor(session.duration / 3600);
               const minutes = Math.floor((session.duration % 3600) / 60);
@@ -608,11 +618,26 @@ const styles = StyleSheet.create({
     paddingTop: 15,
     paddingBottom: 10,
   },
+  recentHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   recentTitle: {
     fontSize: 16,
     fontWeight: "600",
     color: "#000000",
-    marginBottom: 12,
+  },
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  viewAllText: {
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: '500',
   },
   sessionItem: {
     flexDirection: "row",
