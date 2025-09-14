@@ -586,6 +586,8 @@ ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 -- Study groups policies
 DROP POLICY IF EXISTS "Public read access" ON study_groups;
 DROP POLICY IF EXISTS "Public write access" ON study_groups;
+DROP POLICY IF EXISTS "Public update access" ON study_groups;
+DROP POLICY IF EXISTS "Public delete access" ON study_groups;
 CREATE POLICY "Public read access" ON study_groups FOR SELECT USING (true);
 CREATE POLICY "Public write access" ON study_groups FOR INSERT WITH CHECK (true);
 CREATE POLICY "Public update access" ON study_groups FOR UPDATE USING (true);
@@ -594,6 +596,8 @@ CREATE POLICY "Public delete access" ON study_groups FOR DELETE USING (true);
 -- Group members policies
 DROP POLICY IF EXISTS "Public read access" ON group_members;
 DROP POLICY IF EXISTS "Public write access" ON group_members;
+DROP POLICY IF EXISTS "Public update access" ON group_members;
+DROP POLICY IF EXISTS "Public delete access" ON group_members;
 CREATE POLICY "Public read access" ON group_members FOR SELECT USING (true);
 CREATE POLICY "Public write access" ON group_members FOR INSERT WITH CHECK (true);
 CREATE POLICY "Public update access" ON group_members FOR UPDATE USING (true);
@@ -602,6 +606,8 @@ CREATE POLICY "Public delete access" ON group_members FOR DELETE USING (true);
 -- Daily posts policies
 DROP POLICY IF EXISTS "Public read access" ON daily_posts;
 DROP POLICY IF EXISTS "Public write access" ON daily_posts;
+DROP POLICY IF EXISTS "Public update access" ON daily_posts;
+DROP POLICY IF EXISTS "Public delete access" ON daily_posts;
 CREATE POLICY "Public read access" ON daily_posts FOR SELECT USING (true);
 CREATE POLICY "Public write access" ON daily_posts FOR INSERT WITH CHECK (true);
 CREATE POLICY "Public update access" ON daily_posts FOR UPDATE USING (true);
@@ -610,6 +616,8 @@ CREATE POLICY "Public delete access" ON daily_posts FOR DELETE USING (true);
 -- Post likes policies
 DROP POLICY IF EXISTS "Public read access" ON post_likes;
 DROP POLICY IF EXISTS "Public write access" ON post_likes;
+DROP POLICY IF EXISTS "Public update access" ON post_likes;
+DROP POLICY IF EXISTS "Public delete access" ON post_likes;
 CREATE POLICY "Public read access" ON post_likes FOR SELECT USING (true);
 CREATE POLICY "Public write access" ON post_likes FOR INSERT WITH CHECK (true);
 CREATE POLICY "Public update access" ON post_likes FOR UPDATE USING (true);
@@ -618,6 +626,8 @@ CREATE POLICY "Public delete access" ON post_likes FOR DELETE USING (true);
 -- Post comments policies
 DROP POLICY IF EXISTS "Public read access" ON post_comments;
 DROP POLICY IF EXISTS "Public write access" ON post_comments;
+DROP POLICY IF EXISTS "Public update access" ON post_comments;
+DROP POLICY IF EXISTS "Public delete access" ON post_comments;
 CREATE POLICY "Public read access" ON post_comments FOR SELECT USING (true);
 CREATE POLICY "Public write access" ON post_comments FOR INSERT WITH CHECK (true);
 CREATE POLICY "Public update access" ON post_comments FOR UPDATE USING (true);
@@ -626,6 +636,8 @@ CREATE POLICY "Public delete access" ON post_comments FOR DELETE USING (true);
 -- Questions policies
 DROP POLICY IF EXISTS "Public read access" ON questions;
 DROP POLICY IF EXISTS "Public write access" ON questions;
+DROP POLICY IF EXISTS "Public update access" ON questions;
+DROP POLICY IF EXISTS "Public delete access" ON questions;
 CREATE POLICY "Public read access" ON questions FOR SELECT USING (true);
 CREATE POLICY "Public write access" ON questions FOR INSERT WITH CHECK (true);
 CREATE POLICY "Public update access" ON questions FOR UPDATE USING (true);
@@ -634,6 +646,8 @@ CREATE POLICY "Public delete access" ON questions FOR DELETE USING (true);
 -- Question likes policies
 DROP POLICY IF EXISTS "Public read access" ON question_likes;
 DROP POLICY IF EXISTS "Public write access" ON question_likes;
+DROP POLICY IF EXISTS "Public update access" ON question_likes;
+DROP POLICY IF EXISTS "Public delete access" ON question_likes;
 CREATE POLICY "Public read access" ON question_likes FOR SELECT USING (true);
 CREATE POLICY "Public write access" ON question_likes FOR INSERT WITH CHECK (true);
 CREATE POLICY "Public update access" ON question_likes FOR UPDATE USING (true);
@@ -642,6 +656,8 @@ CREATE POLICY "Public delete access" ON question_likes FOR DELETE USING (true);
 -- Answers policies
 DROP POLICY IF EXISTS "Public read access" ON answers;
 DROP POLICY IF EXISTS "Public write access" ON answers;
+DROP POLICY IF EXISTS "Public update access" ON answers;
+DROP POLICY IF EXISTS "Public delete access" ON answers;
 CREATE POLICY "Public read access" ON answers FOR SELECT USING (true);
 CREATE POLICY "Public write access" ON answers FOR INSERT WITH CHECK (true);
 CREATE POLICY "Public update access" ON answers FOR UPDATE USING (true);
@@ -650,6 +666,8 @@ CREATE POLICY "Public delete access" ON answers FOR DELETE USING (true);
 -- Answer likes policies
 DROP POLICY IF EXISTS "Public read access" ON answer_likes;
 DROP POLICY IF EXISTS "Public write access" ON answer_likes;
+DROP POLICY IF EXISTS "Public update access" ON answer_likes;
+DROP POLICY IF EXISTS "Public delete access" ON answer_likes;
 CREATE POLICY "Public read access" ON answer_likes FOR SELECT USING (true);
 CREATE POLICY "Public write access" ON answer_likes FOR INSERT WITH CHECK (true);
 CREATE POLICY "Public update access" ON answer_likes FOR UPDATE USING (true);
@@ -658,6 +676,8 @@ CREATE POLICY "Public delete access" ON answer_likes FOR DELETE USING (true);
 -- Notifications policies
 DROP POLICY IF EXISTS "Users read own notifications" ON notifications;
 DROP POLICY IF EXISTS "Public write access" ON notifications;
+DROP POLICY IF EXISTS "Public update access" ON notifications;
+DROP POLICY IF EXISTS "Public delete access" ON notifications;
 CREATE POLICY "Users read own notifications" ON notifications FOR SELECT USING (true);
 CREATE POLICY "Public write access" ON notifications FOR INSERT WITH CHECK (true);
 CREATE POLICY "Public update access" ON notifications FOR UPDATE USING (true);
@@ -737,6 +757,8 @@ ALTER TABLE timer_pause_logs ENABLE ROW LEVEL SECURITY;
 -- Create RLS policies for timer tables
 DROP POLICY IF EXISTS "Public read access" ON timer_sessions;
 DROP POLICY IF EXISTS "Public write access" ON timer_sessions;
+DROP POLICY IF EXISTS "Public update access" ON timer_sessions;
+DROP POLICY IF EXISTS "Public delete access" ON timer_sessions;
 CREATE POLICY "Public read access" ON timer_sessions FOR SELECT USING (true);
 CREATE POLICY "Public write access" ON timer_sessions FOR INSERT WITH CHECK (true);
 CREATE POLICY "Public update access" ON timer_sessions FOR UPDATE USING (true);
@@ -744,6 +766,8 @@ CREATE POLICY "Public delete access" ON timer_sessions FOR DELETE USING (true);
 
 DROP POLICY IF EXISTS "Public read access" ON timer_pause_logs;
 DROP POLICY IF EXISTS "Public write access" ON timer_pause_logs;
+DROP POLICY IF EXISTS "Public update access" ON timer_pause_logs;
+DROP POLICY IF EXISTS "Public delete access" ON timer_pause_logs;
 CREATE POLICY "Public read access" ON timer_pause_logs FOR SELECT USING (true);
 CREATE POLICY "Public write access" ON timer_pause_logs FOR INSERT WITH CHECK (true);
 CREATE POLICY "Public update access" ON timer_pause_logs FOR UPDATE USING (true);
