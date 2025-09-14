@@ -106,7 +106,7 @@ export default function StatsScreen() {
     }
 
     // Calculate week data for chart
-    const weekDays = ['일', '월', '화', '수', '목', '금', '토'];
+    const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const weekData = weekDays.map((day, index) => {
       const dayDate = new Date(weekStart);
       dayDate.setDate(weekStart.getDate() + index);
