@@ -61,7 +61,7 @@ app.use("*", cors({
 
 // Add preflight handling for all routes
 app.options("*", (c) => {
-  return c.text("", 204);
+  return c.text("", { status: 204 });
 });
 
 // Enhanced error handling middleware
