@@ -79,6 +79,12 @@ import { createCalendarEventProcedure } from "./routes/calendar-events/create-ca
 import { updateCalendarEventProcedure } from "./routes/calendar-events/update-calendar-event/route";
 import { deleteCalendarEventProcedure } from "./routes/calendar-events/delete-calendar-event/route";
 
+// Study notes routes
+import { getStudyNotesProcedure } from "./routes/study-notes/get-study-notes/route";
+import { createStudyNoteProcedure } from "./routes/study-notes/create-study-note/route";
+import { updateStudyNoteProcedure } from "./routes/study-notes/update-study-note/route";
+import { deleteStudyNoteProcedure } from "./routes/study-notes/delete-study-note/route";
+
 
 
 export const appRouter = createTRPCRouter({
@@ -166,6 +172,12 @@ export const appRouter = createTRPCRouter({
     createCalendarEvent: createCalendarEventProcedure,
     updateCalendarEvent: updateCalendarEventProcedure,
     deleteCalendarEvent: deleteCalendarEventProcedure,
+  }),
+  studyNotes: createTRPCRouter({
+    getStudyNotes: getStudyNotesProcedure,
+    createStudyNote: createStudyNoteProcedure,
+    updateStudyNote: updateStudyNoteProcedure,
+    deleteStudyNote: deleteStudyNoteProcedure,
   }),
 });
 

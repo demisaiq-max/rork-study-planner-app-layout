@@ -820,3 +820,52 @@ INSERT INTO calendar_events (user_id, title, date, start_time, end_time, locatio
 ('550e8400-e29b-41d4-a716-446655440000', 'English Test', '2025-09-16', '10:00 AM', '12:00 PM', 'Classroom A', 'Midterm English examination', '#FF3B30'),
 ('550e8400-e29b-41d4-a716-446655440000', 'Study Group Meeting', '2025-09-17', '3:00 PM', '5:00 PM', 'Study Hall', 'Weekly study group session', '#34C759')
 ON CONFLICT DO NOTHING;
+
+-- ============================================
+-- STUDY NOTES DATABASE SCHEMA
+-- ============================================
+
+-- Study notes table for storing user study tasks/notes
+CREATE TABLE IF NOT EXISTS study_notes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    subject VARCHAR(100),
+    due_date VARCHAR(20),
+    estimated_time INTEGER, -- in minutes
+    priority VARCHAR(20) NOT NULL DEFAULT 'medium' CHECK (priority IN ('high', 'medium', 'low')),
+    description TEXT,
+    completed BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create indexes for study notes
+CREATE INDEX IF NOT EXISTS idx_study_notes_user_id ON study_notes(user_id);
+CREATE INDEX IF NOT EXISTS idx_study_notes_subject ON study_notes(subject);
+CREATE INDEX IF NOT EXISTS idx_study_notes_created_at ON study_notes(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_study_notes_completed ON study_notes(completed);
+
+-- Create trigger for study notes updated_at
+DROP TRIGGER IF EXISTS update_study_notes_updated_at ON study_notes;
+CREATE TRIGGER update_study_notes_updated_at BEFORE UPDATE ON study_notes FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Enable Row Level Security for study notes
+ALTER TABLE study_notes ENABLE ROW LEVEL SECURITY;
+
+-- Create RLS policies for study notes
+DROP POLICY IF EXISTS "Public read access" ON study_notes;
+DROP POLICY IF EXISTS "Public write access" ON study_notes;
+DROP POLICY IF EXISTS "Public update access" ON study_notes;
+DROP POLICY IF EXISTS "Public delete access" ON study_notes;
+CREATE POLICY "Public read access" ON study_notes FOR SELECT USING (true);
+CREATE POLICY "Public write access" ON study_notes FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public update access" ON study_notes FOR UPDATE USING (true);
+CREATE POLICY "Public delete access" ON study_notes FOR DELETE USING (true);
+
+-- Sample study notes for test user
+INSERT INTO study_notes (user_id, title, subject, due_date, estimated_time, priority, description, completed) VALUES
+('550e8400-e29b-41d4-a716-446655440000', '아침 조정하기', NULL, NULL, 0, 'high', NULL, false),
+('550e8400-e29b-41d4-a716-446655440000', '2025년 6월 모의고사 풀기', '수학', NULL, 0, 'high', NULL, false),
+('550e8400-e29b-41d4-a716-446655440000', '학원가기', NULL, NULL, 0, 'medium', NULL, true)
+ON CONFLICT DO NOTHING;

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   StyleSheet,
   Text,
@@ -14,27 +14,28 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Plus, Search, Calendar, Clock, CheckCircle, Trash2, Edit3, X } from "lucide-react-native";
-import { useStudyStore } from "@/hooks/study-store";
 import { useLanguage } from "@/hooks/language-context";
+import { trpc } from "@/lib/trpc";
 
-interface Task {
+interface StudyNote {
   id: string;
   title: string;
   completed: boolean;
   subject?: string;
-  dueDate?: string;
-  estimatedTime?: number;
+  due_date?: string;
+  estimated_time?: number;
   priority?: "high" | "medium" | "low";
   description?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export default function NotesScreen() {
-  const { tasks, subjects, addTask, toggleTask, updateTask, deleteTask } = useStudyStore();
   const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editingTask, setEditingTask] = useState<StudyNote | null>(null);
   const [taskTitle, setTaskTitle] = useState("");
   const [taskSubject, setTaskSubject] = useState("");
   const [taskDueDate, setTaskDueDate] = useState("");
@@ -42,11 +43,55 @@ export default function NotesScreen() {
   const [taskPriority, setTaskPriority] = useState<"high" | "medium" | "low">("medium");
   const [taskDescription, setTaskDescription] = useState("");
 
-  const filteredTasks = tasks.filter(task => {
-    const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesSubject = !selectedSubject || task.subject === selectedSubject;
-    return matchesSearch && matchesSubject;
+  // Fetch study notes from database
+  const studyNotesQuery = trpc.studyNotes.getStudyNotes.useQuery({
+    subject: selectedSubject || undefined,
   });
+
+  const createNoteMutation = trpc.studyNotes.createStudyNote.useMutation({
+    onSuccess: () => {
+      studyNotesQuery.refetch();
+      setModalVisible(false);
+    },
+    onError: (error) => {
+      Alert.alert(t('error') || "Error", error.message);
+    },
+  });
+
+  const updateNoteMutation = trpc.studyNotes.updateStudyNote.useMutation({
+    onSuccess: () => {
+      studyNotesQuery.refetch();
+      setModalVisible(false);
+    },
+    onError: (error) => {
+      Alert.alert(t('error') || "Error", error.message);
+    },
+  });
+
+  const deleteNoteMutation = trpc.studyNotes.deleteStudyNote.useMutation({
+    onSuccess: () => {
+      studyNotesQuery.refetch();
+    },
+    onError: (error) => {
+      Alert.alert(t('error') || "Error", error.message);
+    },
+  });
+
+  const tasks = studyNotesQuery.data || [];
+
+  const filteredTasks = useMemo(() => {
+    return tasks.filter(task => {
+      const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSubject = !selectedSubject || task.subject === selectedSubject;
+      return matchesSearch && matchesSubject;
+    });
+  }, [tasks, searchQuery, selectedSubject]);
+
+  // Get unique subjects from tasks
+  const subjects = useMemo(() => {
+    const uniqueSubjects = Array.from(new Set(tasks.map(task => task.subject).filter(Boolean)));
+    return uniqueSubjects as string[];
+  }, [tasks]);
 
   const completedCount = tasks.filter(t => t.completed).length;
   const totalCount = tasks.length;
@@ -63,12 +108,12 @@ export default function NotesScreen() {
     setModalVisible(true);
   };
 
-  const openEditModal = (task: Task) => {
+  const openEditModal = (task: StudyNote) => {
     setEditingTask(task);
     setTaskTitle(task.title);
     setTaskSubject(task.subject || "");
-    setTaskDueDate(task.dueDate || "");
-    setTaskEstimatedTime(task.estimatedTime?.toString() || "");
+    setTaskDueDate(task.due_date || "");
+    setTaskEstimatedTime(task.estimated_time?.toString() || "");
     setTaskPriority(task.priority || "medium");
     setTaskDescription(task.description || "");
     setModalVisible(true);
@@ -76,13 +121,12 @@ export default function NotesScreen() {
 
   const handleSaveTask = () => {
     if (!taskTitle.trim()) {
-      Alert.alert(t('error'), t('taskTitleError'));
+      Alert.alert(t('error') || "Error", t('taskTitleError') || "Task title is required");
       return;
     }
 
     const taskData = {
       title: taskTitle.trim(),
-      completed: editingTask?.completed || false,
       subject: taskSubject.trim() || undefined,
       dueDate: taskDueDate.trim() || undefined,
       estimatedTime: taskEstimatedTime ? parseInt(taskEstimatedTime) : undefined,
@@ -92,13 +136,14 @@ export default function NotesScreen() {
 
     if (editingTask) {
       // Update existing task
-      updateTask(editingTask.id, taskData);
+      updateNoteMutation.mutate({
+        id: editingTask.id,
+        ...taskData,
+      });
     } else {
       // Add new task
-      addTask(taskData);
+      createNoteMutation.mutate(taskData);
     }
-
-    setModalVisible(false);
   };
 
   const handleDeleteTask = (taskId: string) => {
@@ -111,11 +156,18 @@ export default function NotesScreen() {
           text: t('delete') || "Delete",
           style: "destructive",
           onPress: () => {
-            deleteTask(taskId);
+            deleteNoteMutation.mutate({ id: taskId });
           },
         },
       ]
     );
+  };
+
+  const handleToggleTask = (task: StudyNote) => {
+    updateNoteMutation.mutate({
+      id: task.id,
+      completed: !task.completed,
+    });
   };
 
   return (
@@ -191,7 +243,7 @@ export default function NotesScreen() {
           <View key={task.id} style={styles.taskCard}>
             <TouchableOpacity
               style={styles.taskContent}
-              onPress={() => toggleTask(task.id)}
+              onPress={() => handleToggleTask(task)}
               activeOpacity={0.7}
             >
               <View style={styles.taskHeader}>
@@ -202,11 +254,11 @@ export default function NotesScreen() {
                   <View style={styles.taskMeta}>
                     <View style={styles.taskMetaItem}>
                       <Calendar size={12} color="#8E8E93" />
-                      <Text style={styles.taskMetaText}>{task.dueDate || t('noDueDate') || "No due date"}</Text>
+                      <Text style={styles.taskMetaText}>{task.due_date || t('noDueDate') || "No due date"}</Text>
                     </View>
                     <View style={styles.taskMetaItem}>
                       <Clock size={12} color="#8E8E93" />
-                      <Text style={styles.taskMetaText}>{task.estimatedTime || "0"} {t('min') || "min"}</Text>
+                      <Text style={styles.taskMetaText}>{task.estimated_time || "0"} {t('min') || "min"}</Text>
                     </View>
                   </View>
                 </View>
