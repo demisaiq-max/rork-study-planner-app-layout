@@ -11,7 +11,7 @@ import {
   ScrollView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Play, Pause, RotateCcw, Clock, Coffee, UtensilsCrossed, ChevronRight } from "lucide-react-native";
+import { Play, Pause, RotateCcw, Clock, Coffee, UtensilsCrossed, ChevronRight, History } from "lucide-react-native";
 import CircularProgress from "@/components/CircularProgress";
 import { useLanguage } from "@/hooks/language-context";
 import { useUser } from "@/hooks/user-context";
@@ -388,9 +388,12 @@ export default function TimerScreen() {
             )}
           </TouchableOpacity>
           
-          <View style={styles.controlButton}>
-            {/* Empty space for symmetry */}
-          </View>
+          <TouchableOpacity
+            style={[styles.controlButton, { backgroundColor: '#FF3B30' }]}
+            onPress={() => router.push('/timer-sessions')}
+          >
+            <History size={24} color="#FFFFFF" />
+          </TouchableOpacity>
         </View>
 
         {/* Stats */}
