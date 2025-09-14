@@ -1,18 +1,9 @@
-import React, { useState, useCallback, useRef, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, Dimensions } from "react-native";
+import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView } from "react-native";
 import { useRouter, useFocusEffect } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Calendar, Clock, MapPin, X } from 'lucide-react-native';
-
-interface Event {
-  id: string;
-  title: string;
-  date: string;
-  time: string;
-  location?: string;
-  description?: string;
-  color: string;
-}
+import { trpc } from '@/lib/trpc';
+import { useUser } from '@/hooks/user-context';
 
 interface CalendarWidgetProps {
   currentDate: Date;
@@ -20,7 +11,7 @@ interface CalendarWidgetProps {
 
 export default function CalendarWidget({ currentDate }: CalendarWidgetProps) {
   const router = useRouter();
-  const [events, setEvents] = useState<Event[]>([]);
+  const { user } = useUser();
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -28,43 +19,47 @@ export default function CalendarWidget({ currentDate }: CalendarWidgetProps) {
   
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
-  const date = currentDate.getDate();
   
-  const monthNames = ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"];
-  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  
-  // Load events when component mounts and when screen comes into focus
-  useFocusEffect(
-    useCallback(() => {
-      loadEvents();
-    }, [])
+  // Fetch events from database
+  const eventsQuery = trpc.calendarEvents.getCalendarEvents.useQuery(
+    { userId: user?.id || '' },
+    { enabled: !!user?.id }
   );
   
-  const loadEvents = async () => {
-    try {
-      const stored = await AsyncStorage.getItem('calendar_events');
-      if (stored) {
-        setEvents(JSON.parse(stored));
-      }
-    } catch (error) {
-      console.error('Error loading events:', error);
-    }
-  };
+  const events = useMemo(() => eventsQuery.data || [], [eventsQuery.data]);
   
-  const formatDate = (date: Date) => {
+  const monthNames = useMemo(() => ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"], []);
+  const dayNames = useMemo(() => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], []);
+  
+  // Refetch events when component comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (user?.id) {
+        eventsQuery.refetch();
+      }
+    }, [user?.id, eventsQuery])
+  );
+  
+  const formatDate = useCallback((date: Date) => {
+    if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+      return '';
+    }
     // Use local date formatting to avoid timezone issues
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
-  };
+  }, []);
   
 
   
-  const getEventsForDate = (checkDate: Date) => {
+  const getEventsForDate = useCallback((checkDate: Date) => {
+    if (!checkDate || !(checkDate instanceof Date) || isNaN(checkDate.getTime()) || !events) {
+      return [];
+    }
     const dateStr = formatDate(checkDate);
-    return events.filter(event => event.date === dateStr);
-  };
+    return events.filter(event => event?.date === dateStr);
+  }, [events, formatDate]);
   
   const getAllDates = () => {
     const allDates = [];
@@ -96,10 +91,13 @@ export default function CalendarWidget({ currentDate }: CalendarWidgetProps) {
     return allDates;
   };
   
-  const handleDatePress = (dateItem: any) => {
+  const handleDatePress = useCallback((dateItem: { fullDate: Date }) => {
+    if (!dateItem?.fullDate || !(dateItem.fullDate instanceof Date) || isNaN(dateItem.fullDate.getTime())) {
+      return;
+    }
     setSelectedDate(dateItem.fullDate);
     setModalVisible(true);
-  };
+  }, []);
   
   const selectedDateEvents = selectedDate ? getEventsForDate(selectedDate) : [];
   
@@ -110,31 +108,34 @@ export default function CalendarWidget({ currentDate }: CalendarWidgetProps) {
     const todayIndex = allDates.findIndex(item => item.isToday);
     if (todayIndex !== -1 && scrollViewRef.current) {
       // Delay to ensure layout is complete
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         scrollViewRef.current?.scrollTo({ 
           x: Math.max(0, todayIndex * 56 - 100), // 56 is approx width of each date item
           animated: false 
         });
       }, 100);
+      
+      return () => clearTimeout(timeoutId);
     }
-  }, []);
+  }, [allDates]);
   
   // Update current month based on scroll position
-  const handleScroll = (event: any) => {
+  const handleScroll = useCallback((event: any) => {
+    if (!event?.nativeEvent?.contentOffset) return;
     const scrollX = event.nativeEvent.contentOffset.x;
     const index = Math.floor((scrollX + 100) / 56); // 56 is approx width of each date item
-    if (allDates[index]) {
+    if (allDates[index] && monthNames[allDates[index].month]) {
       const monthYear = `${allDates[index].year}년 ${monthNames[allDates[index].month]}`;
       if (monthYear !== currentMonth) {
         setCurrentMonth(monthYear);
       }
     }
-  };
+  }, [allDates, monthNames, currentMonth]);
   
   // Initialize current month on mount
   useEffect(() => {
     setCurrentMonth(`${year}년 ${monthNames[month]}`);
-  }, []);
+  }, [year, month, monthNames]);
   
   return (
     <View style={styles.container}>
@@ -159,7 +160,7 @@ export default function CalendarWidget({ currentDate }: CalendarWidgetProps) {
       >
         {allDates.map((item, index) => (
           <TouchableOpacity 
-            key={index} 
+            key={`${item.year}-${item.month}-${item.date}`} 
             style={[styles.dayItem, item.isToday && styles.todayItem]}
             onPress={() => handleDatePress(item)}
           >
@@ -173,7 +174,7 @@ export default function CalendarWidget({ currentDate }: CalendarWidgetProps) {
               <View style={styles.eventIndicators}>
                 {item.eventColors.map((color, i) => (
                   <View
-                    key={i}
+                    key={`${item.year}-${item.month}-${item.date}-event-${i}`}
                     style={[styles.eventDot, { backgroundColor: color }]}
                   />
                 ))}
@@ -220,7 +221,7 @@ export default function CalendarWidget({ currentDate }: CalendarWidgetProps) {
                       
                       <View style={styles.eventDetail}>
                         <Clock size={14} color="#8E8E93" />
-                        <Text style={styles.eventDetailText}>{event.time}</Text>
+                        <Text style={styles.eventDetailText}>{event.start_time} - {event.end_time}</Text>
                       </View>
                       
                       {event.location && (
