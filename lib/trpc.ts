@@ -1,5 +1,5 @@
 import { createTRPCReact } from "@trpc/react-query";
-import { httpBatchLink } from "@trpc/client";
+import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import type { AppRouter } from "@/backend/trpc/app-router";
 import superjson from "superjson";
 
@@ -32,3 +32,15 @@ export const trpcClient = trpc.createClient({
     }),
   ],
 });
+
+export const formatTRPCError = (error: unknown): string => {
+  if (error instanceof TRPCClientError) {
+    return error.message || 'Network request failed';
+  }
+  
+  if (error && typeof error === 'object' && 'message' in error) {
+    return String(error.message);
+  }
+  
+  return 'An unexpected error occurred';
+};
