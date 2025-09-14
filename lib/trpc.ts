@@ -1,5 +1,5 @@
 import { createTRPCReact } from "@trpc/react-query";
-import { httpBatchLink, TRPCClientError } from "@trpc/client";
+import { httpBatchLink } from "@trpc/client";
 import type { AppRouter } from "@/backend/trpc/app-router";
 import superjson from "superjson";
 
@@ -87,8 +87,9 @@ const testBackendConnection = async () => {
 
 // Run health check on initialization with delay to ensure environment is ready
 setTimeout(() => {
-  testBackendConnection().catch(err => {
-    console.error('❌ Health check failed:', err);
+  testBackendConnection().catch((err: unknown) => {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error('❌ Health check failed:', errorMessage);
   });
 }, 2000);
 
@@ -97,85 +98,60 @@ export const trpcClient = trpc.createClient({
     httpBatchLink({
       url: trpcUrl,
       transformer: superjson,
-      headers: () => {
-        return {
-          'content-type': 'application/json',
-          'Accept': 'application/json',
-        };
-      },
+      headers: () => ({
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      }),
       fetch: async (url, options) => {
-        // Parse the URL to check for path issues
         const urlString = url.toString();
         const parsedUrl = new URL(urlString);
         
-        // Check if the path has duplicate 'trpc' segments
+        // Fix duplicate trpc paths
         if (parsedUrl.pathname.includes('/trpc/trpc/')) {
           console.warn('⚠️ Duplicate trpc path detected, fixing...');
           parsedUrl.pathname = parsedUrl.pathname.replace('/trpc/trpc/', '/trpc/');
         }
         
-        const requestInfo = {
+        console.log('🚀 tRPC Request:', {
           url: parsedUrl.toString(),
           method: options?.method || 'GET',
           hasBody: !!options?.body,
           timestamp: new Date().toISOString(),
-        };
+        });
         
-        console.log('🚀 tRPC Request:', requestInfo);
-        
-        // Implement retry logic for network failures
-        const maxRetries = 2;
+        const maxRetries = 3;
         const baseDelay = 1000;
         
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
           try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 15000); // Reduced timeout
+            const timeoutId = setTimeout(() => {
+              controller.abort();
+              console.log(`⏰ Request timeout after 10s (attempt ${attempt})`);
+            }, 10000);
             
             const response = await fetch(parsedUrl.toString(), {
               ...options,
               headers: {
-                ...options?.headers,
-                'content-type': 'application/json',
+                'Content-Type': 'application/json',
                 'Accept': 'application/json',
+                ...options?.headers,
               },
               signal: controller.signal,
             });
             
             clearTimeout(timeoutId);
             
-            if (response.ok) {
-              console.log('✅ tRPC Response Success:', {
-                url: parsedUrl.toString(),
-                status: response.status,
-                timestamp: new Date().toISOString(),
-              });
-              return response;
-            } else {
-              const errorText = await response.text().catch(() => 'Unable to read response');
-              const errorInfo = {
-                url: parsedUrl.toString(),
-                status: response.status,
-                statusText: response.statusText,
-                responseText: errorText.substring(0, 200), // Limit log size
-                attempt,
-                maxRetries,
-                timestamp: new Date().toISOString(),
-              };
-              
-              console.error('❌ tRPC HTTP Error:', errorInfo);
-              
-              // Don't retry on 4xx errors
-              if (response.status >= 400 && response.status < 500) {
-                return response;
-              }
-              
-              // Continue to retry on 5xx errors
-              if (attempt === maxRetries) {
-                return response;
-              }
-            }
+            console.log(`✅ tRPC Response (attempt ${attempt}):`, {
+              url: parsedUrl.toString(),
+              status: response.status,
+              ok: response.ok,
+              timestamp: new Date().toISOString(),
+            });
+            
+            return response;
           } catch (error) {
+            const isLastAttempt = attempt === maxRetries;
             const errorInfo = {
               url: parsedUrl.toString(),
               error: error instanceof Error ? {
@@ -184,33 +160,26 @@ export const trpcClient = trpc.createClient({
               } : String(error),
               attempt,
               maxRetries,
+              isLastAttempt,
               timestamp: new Date().toISOString(),
             };
             
             console.error('❌ tRPC Network Error:', errorInfo);
             
-            if (attempt === maxRetries) {
-              // Create a more informative error with better serialization
+            if (isLastAttempt) {
               const errorMessage = error instanceof Error ? error.message : String(error);
               const networkError = new Error(`Network request failed after ${maxRetries} attempts: ${errorMessage}`);
               networkError.name = 'NetworkError';
-              // Add additional context for debugging
-              (networkError as any).originalError = error;
-              (networkError as any).url = parsedUrl.toString();
-              (networkError as any).attempts = maxRetries;
               throw networkError;
             }
             
-            // Exponential backoff
-            const delay = baseDelay * Math.pow(2, attempt - 1);
-            console.log(`⏳ Retrying in ${delay}ms...`);
-            await new Promise((resolve) => {
-              setTimeout(resolve, delay);
-            });
+            // Exponential backoff with jitter
+            const delay = baseDelay * Math.pow(2, attempt - 1) + Math.random() * 500;
+            console.log(`⏳ Retrying in ${Math.round(delay)}ms...`);
+            await new Promise((resolve: (value: unknown) => void) => setTimeout(resolve, delay));
           }
         }
         
-        // If we get here, all retries failed
         throw new Error('All retry attempts failed');
       },
     }),
@@ -221,16 +190,28 @@ export const trpcClient = trpc.createClient({
 export const formatTRPCError = (error: any): string => {
   if (!error) return 'Unknown error';
   
+  console.log('🔍 Formatting error:', {
+    name: error.name,
+    message: error.message,
+    data: error.data,
+    shape: error.shape,
+  });
+  
   // Handle TRPCClientError
   if (error.name === 'TRPCClientError') {
     // Check for network errors
     if (error.message?.includes('Network request failed') || error.message?.includes('Failed to fetch')) {
-      return 'Network connection failed. Please check your internet connection.';
+      return 'Network connection failed. Please check your internet connection and try again.';
     }
     
     // Check for parse errors (backend not responding with JSON)
     if (error.data?.code === 'PARSE_ERROR') {
       return 'Server is not responding properly. Please try again later.';
+    }
+    
+    // Check for timeout errors
+    if (error.message?.includes('timeout') || error.message?.includes('aborted')) {
+      return 'Request timed out. Please check your connection and try again.';
     }
     
     // Return the error message if available
@@ -239,7 +220,12 @@ export const formatTRPCError = (error: any): string => {
   
   // Handle NetworkError
   if (error.name === 'NetworkError') {
-    return 'Network connection failed. Please check your internet connection.';
+    return 'Network connection failed. Please check your internet connection and try again.';
+  }
+  
+  // Handle AbortError (timeout)
+  if (error.name === 'AbortError') {
+    return 'Request timed out. Please try again.';
   }
   
   // Handle generic errors
@@ -248,19 +234,24 @@ export const formatTRPCError = (error: any): string => {
   }
   
   // Fallback for unknown error types
-  return 'An unexpected error occurred';
+  return 'An unexpected error occurred. Please try again.';
 };
 
 // Global error handler for unhandled tRPC errors
 if (typeof window !== 'undefined') {
   window.addEventListener('unhandledrejection', (event) => {
-    if (event.reason?.name === 'TRPCClientError') {
+    if (event.reason?.name === 'TRPCClientError' || event.reason?.name === 'NetworkError') {
       console.error('❌ Unhandled tRPC Error:', {
         message: event.reason.message,
+        name: event.reason.name,
         data: event.reason.data,
         shape: event.reason.shape,
         formatted: formatTRPCError(event.reason),
+        timestamp: new Date().toISOString(),
       });
+      
+      // Prevent the error from being logged to console again
+      event.preventDefault();
     }
   });
 }
