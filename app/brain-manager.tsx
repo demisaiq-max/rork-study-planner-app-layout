@@ -40,10 +40,29 @@ export default function BrainManagerScreen() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   // Fetch brain dumps
-  const { data: brainDumps, isLoading, refetch } = trpc.brainDumps.getBrainDumps.useQuery(
+  const { data: brainDumps, isLoading, error, refetch } = trpc.brainDumps.getBrainDumps.useQuery(
     { limit: 100 },
-    { enabled: !!user?.id }
+    { 
+      enabled: !!user?.id
+    }
   );
+
+  // Debug logging
+  React.useEffect(() => {
+    console.log('Brain Manager Debug:');
+    console.log('- User:', user);
+    console.log('- User ID:', user?.id);
+    console.log('- Is Loading:', isLoading);
+    console.log('- Error:', error);
+    console.log('- Brain Dumps:', brainDumps?.length || 0, 'items');
+    
+    if (error) {
+      console.error('Error fetching brain dumps:', error);
+    }
+    if (brainDumps) {
+      console.log('Brain dumps fetched successfully:', brainDumps.length, 'items');
+    }
+  }, [user, isLoading, error, brainDumps]);
 
   // Mutations
   const createMutation = trpc.brainDumps.createBrainDump.useMutation({
@@ -177,7 +196,7 @@ export default function BrainManagerScreen() {
   const pinnedCount = brainDumps?.filter(item => item.is_pinned).length || 0;
   const totalCount = brainDumps?.length || 0;
 
-  if (isLoading) {
+  if (isLoading || !user) {
     return (
       <View style={styles.container}>
         <Stack.Screen
@@ -193,7 +212,12 @@ export default function BrainManagerScreen() {
         />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Loading brain dumps...</Text>
+          <Text style={styles.loadingText}>
+            {!user ? 'Loading user...' : 'Loading brain dumps...'}
+          </Text>
+          {error && (
+            <Text style={styles.errorText}>Error: {error.message}</Text>
+          )}
         </View>
       </View>
     );
@@ -727,5 +751,12 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 16,
     color: "#8E8E93",
+  },
+  errorText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: "#FF3B30",
+    textAlign: "center",
+    paddingHorizontal: 20,
   },
 });
