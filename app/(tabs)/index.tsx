@@ -606,14 +606,7 @@ export default function HomeScreen() {
               );
             })}
             
-            {(dbPriorityTasks || priorityTasks)?.length > 3 && (
-              <TouchableOpacity 
-                style={styles.seeAllTasksButton}
-                onPress={() => router.push('/priority-management')}
-              >
-                <Text style={styles.seeAllTasksText}>모두 보기</Text>
-              </TouchableOpacity>
-            )}
+
             
             {((!dbPriorityTasks && !priorityTasks) || (dbPriorityTasks?.length === 0 && priorityTasks?.length === 0)) && (
               <View style={styles.emptyPriorityTasks}>
