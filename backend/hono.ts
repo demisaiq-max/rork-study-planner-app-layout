@@ -57,20 +57,20 @@ app.get("/", (c) => {
 app.get("/debug", (c) => {
   try {
     const routerDef = (appRouter as any)._def;
-    const procedures = routerDef.procedures || {};
-    const record = routerDef.record || {};
+    const procedures = routerDef?.procedures || {};
+    const record = routerDef?.record || {};
     
     // Helper function to recursively get all procedure paths
     const getAllProcedurePaths = (obj: any, prefix = ''): string[] => {
       const paths: string[] = [];
       
       if (obj && typeof obj === 'object') {
-        if (obj._def && obj._def.procedures) {
+        if (obj._def?.procedures) {
           // This is a procedure
           Object.keys(obj._def.procedures).forEach(key => {
             paths.push(prefix + key);
           });
-        } else if (obj._def && obj._def.record) {
+        } else if (obj._def?.record) {
           // This is a nested router
           Object.keys(obj._def.record).forEach(key => {
             const nestedPaths = getAllProcedurePaths(obj._def.record[key], prefix + key + '.');
@@ -100,8 +100,8 @@ app.get("/debug", (c) => {
       routerType: typeof appRouter,
       hasTests: 'tests' in record,
       hasCommunity: 'community' in record,
-      testsKeys: record.tests ? Object.keys((record.tests as any)._def.record || {}) : [],
-      communityKeys: record.community ? Object.keys((record.community as any)._def.record || {}) : [],
+      testsKeys: record.tests ? Object.keys((record.tests as any)._def?.record || {}) : [],
+      communityKeys: record.community ? Object.keys((record.community as any)._def?.record || {}) : [],
       allProcedurePaths: allPaths
     });
   } catch (error) {
