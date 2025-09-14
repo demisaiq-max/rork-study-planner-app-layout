@@ -35,6 +35,36 @@ try {
   throw error;
 }
 
+// Test backend connectivity
+const testBackendConnection = async () => {
+  try {
+    const healthUrl = `${getBaseUrl()}/api`;
+    console.log('🏥 Testing backend health at:', healthUrl);
+    
+    const response = await fetch(healthUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log('✅ Backend is healthy:', data);
+      return true;
+    } else {
+      console.error('❌ Backend health check failed:', response.status, response.statusText);
+      return false;
+    }
+  } catch (error) {
+    console.error('❌ Cannot connect to backend:', error);
+    return false;
+  }
+};
+
+// Run health check on initialization
+testBackendConnection();
+
 export const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
@@ -43,6 +73,7 @@ export const trpcClient = trpc.createClient({
       headers: () => {
         return {
           'content-type': 'application/json',
+          'Accept': 'application/json',
         };
       },
       fetch: async (url, options) => {
@@ -78,46 +109,79 @@ export const trpcClient = trpc.createClient({
         
         console.log('🚀 tRPC Request:', requestInfo);
         
-        try {
-          const response = await fetch(parsedUrl.toString(), {
-            ...options,
-            headers: {
-              ...options?.headers,
-              'content-type': 'application/json',
-            },
-          });
-          
-          const responseInfo = {
-            url: parsedUrl.toString(),
-            status: response.status,
-            statusText: response.statusText,
-            ok: response.ok,
-            timestamp: new Date().toISOString(),
-          };
-          
-          if (response.ok) {
-            console.log('✅ tRPC Response:', responseInfo);
-          } else {
-            console.error('❌ tRPC Response Error:', responseInfo);
+        // Implement retry logic for network failures
+        let lastError: Error | null = null;
+        const maxRetries = 3;
+        const retryDelay = 1000; // 1 second
+        
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
             
-            // Try to get error details from response
-            try {
-              const errorText = await response.text();
-              console.error('❌ Error details:', errorText);
-            } catch {
-              console.error('❌ Could not read error response');
+            const response = await fetch(parsedUrl.toString(), {
+              ...options,
+              headers: {
+                ...options?.headers,
+                'content-type': 'application/json',
+                'Accept': 'application/json',
+              },
+              signal: controller.signal,
+            });
+            
+            clearTimeout(timeoutId);
+            
+            const responseInfo = {
+              url: parsedUrl.toString(),
+              status: response.status,
+              statusText: response.statusText,
+              ok: response.ok,
+              timestamp: new Date().toISOString(),
+            };
+            
+            if (response.ok) {
+              console.log('✅ tRPC Response:', responseInfo);
+              return response;
+            } else {
+              console.error('❌ tRPC HTTP Error:', responseInfo);
+              
+              // Try to get error details from response
+              try {
+                const errorText = await response.text();
+                console.error('❌ Error details:', errorText);
+              } catch {
+                console.error('❌ Could not read error response');
+              }
+              
+              // Don't retry on 4xx errors (client errors)
+              if (response.status >= 400 && response.status < 500) {
+                return response;
+              }
+              
+              // For 5xx errors, continue to retry
+              lastError = new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
+          } catch (error) {
+            lastError = error as Error;
+            console.error(`❌ tRPC Network Error (attempt ${attempt}/${maxRetries}):`, {
+              url: parsedUrl.toString(),
+              error: error instanceof Error ? error.message : String(error),
+              timestamp: new Date().toISOString(),
+            });
+            
+            // If it's the last attempt, throw the error
+            if (attempt === maxRetries) {
+              throw error;
+            }
+            
+            // Wait before retrying
+            console.log(`⏳ Retrying in ${retryDelay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
           }
-          
-          return response;
-        } catch (error) {
-          console.error('❌ tRPC Network Error:', {
-            url: parsedUrl.toString(),
-            error: error instanceof Error ? error.message : String(error),
-            timestamp: new Date().toISOString(),
-          });
-          throw error;
         }
+        
+        // If we get here, all retries failed
+        throw lastError || new Error('All retry attempts failed');
       },
     }),
   ],
