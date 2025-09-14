@@ -433,25 +433,38 @@ export default function CalendarScreen() {
               </TouchableOpacity>
 
               {showTimePicker && Platform.OS !== 'web' && (
-                <DateTimePicker
-                  value={selectedTime}
-                  mode="time"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={(event, date) => {
-                    if (Platform.OS === 'android') {
-                      setShowTimePicker(false);
-                    }
-                    if (date) {
-                      setSelectedTime(date);
-                      const hours = date.getHours();
-                      const minutes = date.getMinutes();
-                      const period = hours >= 12 ? 'PM' : 'AM';
-                      const displayHours = hours % 12 || 12;
-                      const timeString = `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
-                      setEventForm({...eventForm, time: timeString});
-                    }
-                  }}
-                />
+                <View style={styles.dateTimePickerContainer}>
+                  <DateTimePicker
+                    value={selectedTime}
+                    mode="time"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    textColor="#000000"
+                    accentColor="#007AFF"
+                    themeVariant="light"
+                    onChange={(event, date) => {
+                      if (Platform.OS === 'android') {
+                        setShowTimePicker(false);
+                      }
+                      if (date) {
+                        setSelectedTime(date);
+                        const hours = date.getHours();
+                        const minutes = date.getMinutes();
+                        const period = hours >= 12 ? 'PM' : 'AM';
+                        const displayHours = hours % 12 || 12;
+                        const timeString = `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+                        setEventForm({...eventForm, time: timeString});
+                      }
+                    }}
+                  />
+                  {Platform.OS === 'ios' && (
+                    <TouchableOpacity
+                      style={styles.timePickerDoneButtonIOS}
+                      onPress={() => setShowTimePicker(false)}
+                    >
+                      <Text style={styles.timePickerDoneTextIOS}>Done</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               )}
 
               {showTimePicker && Platform.OS === 'web' && (
@@ -1007,5 +1020,23 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 4,
+  },
+  dateTimePickerContainer: {
+    backgroundColor: '#F2F2F7',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  timePickerDoneButtonIOS: {
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+    paddingVertical: 10,
+    marginTop: 12,
+    alignItems: 'center',
+  },
+  timePickerDoneTextIOS: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });
