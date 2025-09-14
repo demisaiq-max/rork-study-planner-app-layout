@@ -1,10 +1,13 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Stack } from 'expo-router';
-import { trpc } from '@/lib/trpc';
+import { trpc, formatTRPCError } from '@/lib/trpc';
 
 export default function TRPCDebugScreen() {
   const [debugInfo, setDebugInfo] = React.useState<any>({});
+  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [connectionResult, setConnectionResult] = useState<string>('');
+  const [trpcTestResult, setTrpcTestResult] = useState<string>('');
 
   useEffect(() => {
     console.log('🔍 === TRPC DEBUG START ===');

@@ -69,18 +69,18 @@ const testBackendConnection = async () => {
       console.log('✅ Backend is healthy:', data);
       return true;
     } else {
+      const errorText = await response.text().catch(() => 'Unable to read response');
       console.error('❌ Backend health check failed:', {
         status: response.status,
         statusText: response.statusText,
-        url: healthUrl
+        url: healthUrl,
+        responseText: errorText.substring(0, 200)
       });
       return false;
     }
   } catch (error) {
-    console.error('❌ Server connection failed:', {
-      error: error instanceof Error ? error.message : String(error),
-      url: `${getBaseUrl()}/api`
-    });
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('❌ Server connection failed:', errorMessage);
     return false;
   }
 };

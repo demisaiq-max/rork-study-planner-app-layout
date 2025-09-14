@@ -452,6 +452,12 @@ export default function HomeScreen() {
                 <Text style={styles.noResultsSubtext}>
                   {formatTRPCError(gradedExamsError)}
                 </Text>
+                <TouchableOpacity 
+                  style={styles.retryButton}
+                  onPress={() => refetchGradedExams()}
+                >
+                  <Text style={styles.retryButtonText}>Retry</Text>
+                </TouchableOpacity>
               </View>
             ) : !gradedExams || gradedExams.length === 0 ? (
               <TouchableOpacity 
@@ -1698,5 +1704,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#8E8E93",
+  },
+  retryButton: {
+    backgroundColor: "#007AFF",
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginTop: 8,
+  },
+  retryButtonText: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#FFFFFF",
+    textAlign: "center",
   },
 });
