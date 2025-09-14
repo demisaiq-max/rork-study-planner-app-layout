@@ -18,7 +18,7 @@ const getBaseUrl = () => {
 export const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
-      url: `${getBaseUrl()}/api/trpc`,
+      url: `${getBaseUrl()}/trpc`,
       transformer: superjson,
       fetch: (url, options) => {
         console.log('tRPC Client Request:', {
