@@ -74,47 +74,32 @@ import { getTimerSessionsProcedure } from "./routes/timers/get-timer-sessions/ro
 import { getActiveTimerProcedure } from "./routes/timers/get-active-timer/route";
 import { createPauseLogProcedure } from "./routes/timers/create-pause-log/route";
 
-// Add debug logging
-console.log('Loading app router...');
-console.log('Available procedures:', {
-  tests: {
-    getLatestTestResults: typeof getLatestTestResults,
-  },
-  community: {
-    posts: {
-      getPosts: typeof getPostsProcedure,
-    },
-    groups: {
-      getGroups: typeof getGroupsProcedure,
-    },
-    questions: {
-      getQuestions: typeof getQuestionsProcedure,
-    },
-  },
-});
+console.log('🚀 Loading tRPC app router...');
+console.log('📋 Validating procedure imports...');
 
-// Validate that all procedures are properly imported
+// Validate critical procedures
+const validationResults = {
+  getLatestTestResults: !!getLatestTestResults,
+  getPostsProcedure: !!getPostsProcedure,
+  getGroupsProcedure: !!getGroupsProcedure,
+  getQuestionsProcedure: !!getQuestionsProcedure,
+  supabaseTestProcedure: !!supabaseTestProcedure,
+};
+
+console.log('✅ Procedure validation results:', validationResults);
+
 if (!getLatestTestResults) {
-  console.error('ERROR: getLatestTestResults is not properly imported!');
+  console.error('❌ ERROR: getLatestTestResults is not properly imported!');
 }
 if (!getPostsProcedure) {
-  console.error('ERROR: getPostsProcedure is not properly imported!');
+  console.error('❌ ERROR: getPostsProcedure is not properly imported!');
 }
 if (!getGroupsProcedure) {
-  console.error('ERROR: getGroupsProcedure is not properly imported!');
+  console.error('❌ ERROR: getGroupsProcedure is not properly imported!');
 }
 if (!getQuestionsProcedure) {
-  console.error('ERROR: getQuestionsProcedure is not properly imported!');
+  console.error('❌ ERROR: getQuestionsProcedure is not properly imported!');
 }
-
-// Log the router creation process
-console.log('Creating app router...');
-console.log('Router functions available:', {
-  createTRPCRouter: typeof createTRPCRouter,
-  hiRoute: typeof hiRoute,
-  getLatestTestResults: typeof getLatestTestResults,
-  getPostsProcedure: typeof getPostsProcedure,
-});
 
 export const appRouter = createTRPCRouter({
   example: createTRPCRouter({

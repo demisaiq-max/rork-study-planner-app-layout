@@ -1,21 +1,126 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Stack } from 'expo-router';
 import { trpc } from '@/lib/trpc';
 
+type ConnectionStatus = {
+  server: 'checking' | 'connected' | 'failed';
+  supabase: 'checking' | 'connected' | 'failed';
+  trpc: 'checking' | 'connected' | 'failed';
+};
+
 export default function SupabaseTestScreen() {
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>({
+    server: 'checking',
+    supabase: 'checking',
+    trpc: 'checking'
+  });
+  
+  const [debugInfo, setDebugInfo] = useState<{
+    server?: any;
+    serverError?: string;
+  }>({});
+  
+  // Test basic server connection
+  useEffect(() => {
+    const testServerConnection = async () => {
+      try {
+        const baseUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
+        if (!baseUrl) {
+          throw new Error('EXPO_PUBLIC_RORK_API_BASE_URL not configured');
+        }
+        
+        console.log('🔍 Testing server connection to:', baseUrl);
+        
+        const response = await fetch(`${baseUrl}/api/debug`);
+        const data = await response.json();
+        
+        console.log('✅ Server debug response:', data);
+        
+        setDebugInfo((prev) => ({ ...prev, server: data }));
+        setConnectionStatus((prev) => ({ ...prev, server: 'connected' }));
+      } catch (error) {
+        console.error('❌ Server connection failed:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        setDebugInfo((prev) => ({ ...prev, serverError: errorMessage }));
+        setConnectionStatus((prev) => ({ ...prev, server: 'failed' }));
+      }
+    };
+    
+    testServerConnection();
+  }, []);
+  
   const supabaseTest = trpc.tests.supabaseTest.useQuery();
-  const latestTestResults = trpc.tests.getLatestTestResults.useQuery('550e8400-e29b-41d4-a716-446655440000');
-  const communityPosts = trpc.community.posts.getPosts.useQuery({});
-  const communityGroups = trpc.community.groups.getGroups.useQuery({});
-  const communityQuestions = trpc.community.questions.getQuestions.useQuery({});
+  
+  // Handle supabase test results
+  React.useEffect(() => {
+    if (supabaseTest.data) {
+      console.log('✅ Supabase test successful:', supabaseTest.data);
+      setConnectionStatus((prev) => ({ ...prev, supabase: 'connected', trpc: 'connected' }));
+    }
+    if (supabaseTest.error) {
+      console.error('❌ Supabase test failed:', supabaseTest.error);
+      setConnectionStatus((prev) => ({ ...prev, supabase: 'failed', trpc: 'failed' }));
+    }
+  }, [supabaseTest.data, supabaseTest.error]);
+  
+  const latestTestResults = trpc.tests.getLatestTestResults.useQuery('550e8400-e29b-41d4-a716-446655440000', {
+    enabled: connectionStatus.trpc === 'connected'
+  });
+  
+  const communityPosts = trpc.community.posts.getPosts.useQuery({}, {
+    enabled: connectionStatus.trpc === 'connected'
+  });
+  
+  const communityGroups = trpc.community.groups.getGroups.useQuery({}, {
+    enabled: connectionStatus.trpc === 'connected'
+  });
+  
+  const communityQuestions = trpc.community.questions.getQuestions.useQuery({}, {
+    enabled: connectionStatus.trpc === 'connected'
+  });
 
   const refetchAll = () => {
+    console.log('🔄 Refetching all queries...');
     supabaseTest.refetch();
     latestTestResults.refetch();
     communityPosts.refetch();
     communityGroups.refetch();
     communityQuestions.refetch();
+  };
+  
+  const testDirectConnection = async () => {
+    try {
+      const baseUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
+      if (!baseUrl) {
+        Alert.alert('Error', 'Base URL not configured');
+        return;
+      }
+      
+      const response = await fetch(`${baseUrl}/api/`);
+      const data = await response.json();
+      
+      Alert.alert('Direct API Test', JSON.stringify(data, null, 2));
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      Alert.alert('Direct API Test Failed', errorMessage);
+    }
+  };
+  
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'connected': return '#28a745';
+      case 'failed': return '#dc3545';
+      default: return '#ffc107';
+    }
+  };
+  
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'connected': return '✅ Connected';
+      case 'failed': return '❌ Failed';
+      default: return '🔄 Checking...';
+    }
   };
 
   return (
@@ -23,9 +128,41 @@ export default function SupabaseTestScreen() {
       <Stack.Screen options={{ title: 'Database Connection Test' }} />
       
       <ScrollView style={styles.scrollView}>
-        <TouchableOpacity style={styles.refreshButton} onPress={refetchAll}>
-          <Text style={styles.refreshButtonText}>Refresh All Tests</Text>
-        </TouchableOpacity>
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity style={styles.refreshButton} onPress={refetchAll}>
+            <Text style={styles.refreshButtonText}>Refresh All Tests</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.testButton} onPress={testDirectConnection}>
+            <Text style={styles.testButtonText}>Test Direct API</Text>
+          </TouchableOpacity>
+        </View>
+        
+        {/* Connection Status */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Connection Status</Text>
+          
+          <View style={styles.statusRow}>
+            <Text style={styles.statusLabel}>Server:</Text>
+            <Text style={[styles.statusValue, { color: getStatusColor(connectionStatus.server) }]}>
+              {getStatusText(connectionStatus.server)}
+            </Text>
+          </View>
+          
+          <View style={styles.statusRow}>
+            <Text style={styles.statusLabel}>tRPC:</Text>
+            <Text style={[styles.statusValue, { color: getStatusColor(connectionStatus.trpc) }]}>
+              {getStatusText(connectionStatus.trpc)}
+            </Text>
+          </View>
+          
+          <View style={styles.statusRow}>
+            <Text style={styles.statusLabel}>Supabase:</Text>
+            <Text style={[styles.statusValue, { color: getStatusColor(connectionStatus.supabase) }]}>
+              {getStatusText(connectionStatus.supabase)}
+            </Text>
+          </View>
+        </View>
 
         {/* Supabase Connection Test */}
         <View style={styles.section}>
@@ -118,8 +255,29 @@ export default function SupabaseTestScreen() {
             User ID: 550e8400-e29b-41d4-a716-446655440000
           </Text>
           <Text style={styles.debugText}>
-            Supabase URL: https://bmxtcqpuhfrvnajozzlw.supabase.co
+            Supabase URL: {process.env.EXPO_PUBLIC_SUPABASE_URL || 'Not configured'}
           </Text>
+          <Text style={styles.debugText}>
+            API Base URL: {process.env.EXPO_PUBLIC_RORK_API_BASE_URL || 'Not configured'}
+          </Text>
+          
+          {debugInfo.server && (
+            <View style={styles.debugData}>
+              <Text style={styles.debugTitle}>Server Response:</Text>
+              <Text style={styles.debugJson}>
+                {JSON.stringify(debugInfo.server, null, 2)}
+              </Text>
+            </View>
+          )}
+          
+          {debugInfo.serverError && (
+            <View style={styles.debugData}>
+              <Text style={styles.debugTitle}>Server Error:</Text>
+              <Text style={styles.errorText}>
+                {debugInfo.serverError}
+              </Text>
+            </View>
+          )}
         </View>
       </ScrollView>
     </View>
@@ -135,17 +293,70 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
+  buttonContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
   refreshButton: {
     backgroundColor: '#007AFF',
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
-    marginBottom: 20,
+    flex: 1,
   },
   refreshButtonText: {
     color: 'white',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  testButton: {
+    backgroundColor: '#28a745',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    flex: 1,
+  },
+  testButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  statusLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+  },
+  statusValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  debugData: {
+    marginTop: 12,
+    padding: 8,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 4,
+  },
+  debugTitle: {
+    fontWeight: 'bold',
+    marginBottom: 4,
+    color: '#333',
+  },
+  debugJson: {
+    fontSize: 12,
+    fontFamily: 'monospace',
+    color: '#666',
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#dc3545',
+    fontFamily: 'monospace',
   },
   section: {
     backgroundColor: 'white',
@@ -201,5 +412,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6c757d',
     fontFamily: 'monospace',
+    marginBottom: 4,
   },
 });

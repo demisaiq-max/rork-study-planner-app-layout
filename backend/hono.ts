@@ -73,45 +73,31 @@ app.get("/", (c) => {
 // Debug endpoint to check tRPC router
 app.get("/debug", (c) => {
   try {
-    // Simple debug info without accessing internal _def properties
+    console.log('🔍 Debug endpoint called');
+    
+    // Simple debug info without accessing internal properties
     const routerKeys = Object.keys(appRouter as any);
-    
-    // Helper function to get router structure
-    const getRouterStructure = (router: any): any => {
-      if (!router || typeof router !== 'object') return null;
-      
-      const structure: any = {};
-      Object.keys(router).forEach(key => {
-        const value = router[key];
-        if (value && typeof value === 'object') {
-          // Check if it's a nested router
-          if (typeof value.query === 'function' || typeof value.mutate === 'function') {
-            structure[key] = 'procedure';
-          } else {
-            structure[key] = getRouterStructure(value);
-          }
-        }
-      });
-      return structure;
-    };
-    
-    const routerStructure = getRouterStructure(appRouter);
+    console.log('📋 Router keys:', routerKeys);
     
     return c.json({ 
       status: "ok", 
-      message: "tRPC router loaded",
+      message: "tRPC router loaded successfully",
+      timestamp: new Date().toISOString(),
       routerKeys,
       routerType: typeof appRouter,
-      routerStructure,
-      hasTests: 'tests' in (appRouter as any),
-      hasCommunity: 'community' in (appRouter as any)
+      hasTests: routerKeys.includes('tests'),
+      hasCommunity: routerKeys.includes('community'),
+      hasExams: routerKeys.includes('exams'),
+      hasBrainDumps: routerKeys.includes('brainDumps'),
+      supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ? 'configured' : 'missing'
     });
   } catch (error) {
-    console.error('Debug endpoint error:', error);
+    console.error('❌ Debug endpoint error:', error);
     return c.json({ 
       status: "error", 
-      message: "tRPC router error",
-      error: error instanceof Error ? error.message : String(error)
+      message: "tRPC router debug failed",
+      error: error instanceof Error ? error.message : String(error),
+      timestamp: new Date().toISOString()
     }, 500);
   }
 });

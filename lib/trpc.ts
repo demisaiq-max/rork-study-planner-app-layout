@@ -6,42 +6,81 @@ import superjson from "superjson";
 export const trpc = createTRPCReact<AppRouter>();
 
 const getBaseUrl = () => {
-  if (process.env.EXPO_PUBLIC_RORK_API_BASE_URL) {
-    return process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
+  const baseUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
+  
+  console.log('🌐 tRPC Base URL Configuration:', {
+    envVar: 'EXPO_PUBLIC_RORK_API_BASE_URL',
+    value: baseUrl,
+    configured: !!baseUrl
+  });
+  
+  if (baseUrl) {
+    return baseUrl;
   }
 
   throw new Error(
-    "No base url found, please set EXPO_PUBLIC_RORK_API_BASE_URL"
+    "❌ No base URL found, please set EXPO_PUBLIC_RORK_API_BASE_URL environment variable"
   );
 };
+
+let trpcUrl: string;
+try {
+  trpcUrl = `${getBaseUrl()}/api/trpc`;
+  console.log('✅ tRPC Client URL:', trpcUrl);
+} catch (error) {
+  console.error('❌ Failed to get tRPC URL:', error);
+  throw error;
+}
 
 export const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
-      url: `${getBaseUrl()}/api/trpc`,
+      url: trpcUrl,
       transformer: superjson,
       fetch: (url, options) => {
-        console.log('tRPC Client Request:', {
+        const requestInfo = {
           url: url.toString(),
-          method: options?.method,
-          headers: options?.headers,
-        });
-        return fetch(url, options).then(response => {
-          console.log('tRPC Client Response:', {
-            url: url.toString(),
-            status: response.status,
-            statusText: response.statusText,
-            ok: response.ok,
+          method: options?.method || 'GET',
+          timestamp: new Date().toISOString(),
+        };
+        
+        console.log('🚀 tRPC Request:', requestInfo);
+        
+        return fetch(url, options)
+          .then(response => {
+            const responseInfo = {
+              url: url.toString(),
+              status: response.status,
+              statusText: response.statusText,
+              ok: response.ok,
+              timestamp: new Date().toISOString(),
+            };
+            
+            console.log(response.ok ? '✅ tRPC Response:' : '❌ tRPC Response:', responseInfo);
+            
+            if (!response.ok) {
+              console.error('❌ tRPC HTTP Error:', {
+                status: response.status,
+                statusText: response.statusText,
+                url: url.toString()
+              });
+            }
+            
+            return response;
+          })
+          .catch(error => {
+            console.error('❌ tRPC Network Error:', {
+              url: url.toString(),
+              error: error.message,
+              stack: error.stack,
+              timestamp: new Date().toISOString(),
+            });
+            throw error;
           });
-          return response;
-        }).catch(error => {
-          console.error('tRPC Client Error:', {
-            url: url.toString(),
-            error: error.message,
-          });
-          throw error;
-        });
       },
     }),
   ],
 });
+
+console.log('📋 tRPC Client initialized successfully');
+console.log('🔗 Available tRPC methods will be logged when used');
