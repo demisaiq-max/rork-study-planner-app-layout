@@ -34,15 +34,6 @@ export default function StatsScreen() {
 
   // Calculate statistics from timer sessions
   const stats = useMemo(() => {
-    const getSubjectColor = (subject: string): string => {
-      const colors = ['#007AFF', '#34C759', '#FF9500', '#AF52DE', '#FF3B30', '#00C7BE'];
-      let hash = 0;
-      for (let i = 0; i < subject.length; i++) {
-        hash = subject.charCodeAt(i) + ((hash << 5) - hash);
-      }
-      return colors[Math.abs(hash) % colors.length];
-    };
-
     if (!timerSessionsQuery.data) {
       return {
         todayHours: 0,
@@ -50,9 +41,22 @@ export default function StatsScreen() {
         weeklyHours: 0,
         dayStreak: 0,
         weekData: [],
-        subjectDistribution: [],
+        timeDistribution: [],
       };
     }
+
+    const getActivityColor = (activity: string): string => {
+      const colors = {
+        'general-timer': '#007AFF',
+        'lunch-break': '#FF9500', 
+        'tea-break': '#34C759',
+        'focus-timer': '#AF52DE',
+        'pomodoro': '#FF3B30',
+        'short-break': '#00C7BE',
+        'long-break': '#8E8E93'
+      };
+      return colors[activity as keyof typeof colors] || '#007AFF';
+    };
 
     const sessions = timerSessionsQuery.data;
     const now = new Date();
@@ -67,7 +71,7 @@ export default function StatsScreen() {
     });
     
     const todayTotalMinutes = todaySessions.reduce((total, session) => {
-      return total + (session.duration_seconds || 0) / 60;
+      return total + (session.duration || 0) / 60;
     }, 0);
     
     const todayHours = Math.floor(todayTotalMinutes / 60);
@@ -80,7 +84,7 @@ export default function StatsScreen() {
     });
     
     const weeklyTotalMinutes = weeklySessions.reduce((total, session) => {
-      return total + (session.duration_seconds || 0) / 60;
+      return total + (session.duration || 0) / 60;
     }, 0);
     
     const weeklyHours = Math.floor(weeklyTotalMinutes / 60);
@@ -118,7 +122,7 @@ export default function StatsScreen() {
       });
       
       const dayMinutes = daySessions.reduce((total, session) => {
-        return total + (session.duration_seconds || 0) / 60;
+        return total + (session.duration || 0) / 60;
       }, 0);
       
       return {
@@ -127,23 +131,54 @@ export default function StatsScreen() {
       };
     });
 
-    // Calculate subject distribution
-    const subjectMap = new Map<string, number>();
+    // Calculate time distribution by activity type
+    const activityMap = new Map<string, number>();
     sessions.forEach(session => {
-      const subject = session.subject || t('generalTimer');
-      const minutes = (session.duration_seconds || 0) / 60;
-      subjectMap.set(subject, (subjectMap.get(subject) || 0) + minutes);
+      // Determine activity type based on subject or default to general-timer
+      let activity = 'general-timer';
+      if (session.subject) {
+        const subject = session.subject.toLowerCase();
+        if (subject.includes('lunch') || subject.includes('점심')) {
+          activity = 'lunch-break';
+        } else if (subject.includes('tea') || subject.includes('차') || subject.includes('휴식')) {
+          activity = 'tea-break';
+        } else if (subject.includes('focus') || subject.includes('집중')) {
+          activity = 'focus-timer';
+        } else if (subject.includes('pomodoro') || subject.includes('뽀모도로')) {
+          activity = 'pomodoro';
+        } else if (subject.includes('short') || subject.includes('짧은')) {
+          activity = 'short-break';
+        } else if (subject.includes('long') || subject.includes('긴')) {
+          activity = 'long-break';
+        }
+      }
+      
+      const minutes = (session.duration || 0) / 60;
+      activityMap.set(activity, (activityMap.get(activity) || 0) + minutes);
     });
     
-    const totalMinutes = Array.from(subjectMap.values()).reduce((sum, minutes) => sum + minutes, 0);
-    const subjectDistribution = Array.from(subjectMap.entries())
-      .map(([subject, minutes]) => ({
-        name: subject,
+    const totalMinutes = Array.from(activityMap.values()).reduce((sum, minutes) => sum + minutes, 0);
+    const timeDistribution = Array.from(activityMap.entries())
+      .map(([activity, minutes]) => ({
+        name: getActivityDisplayName(activity),
         percentage: totalMinutes > 0 ? Math.round((minutes / totalMinutes) * 100) : 0,
-        color: getSubjectColor(subject),
+        color: getActivityColor(activity),
       }))
       .sort((a, b) => b.percentage - a.percentage)
-      .slice(0, 4); // Top 4 subjects
+      .slice(0, 4); // Top 4 activities
+
+    function getActivityDisplayName(activity: string): string {
+      const activityNames = {
+        'general-timer': t('generalTimer'),
+        'lunch-break': t('lunchBreak'),
+        'tea-break': t('teaBreak'),
+        'focus-timer': t('focusTimer'),
+        'pomodoro': t('pomodoro'),
+        'short-break': t('shortBreak'),
+        'long-break': t('longBreak')
+      };
+      return activityNames[activity as keyof typeof activityNames] || activity;
+    }
 
     return {
       todayHours,
@@ -151,7 +186,7 @@ export default function StatsScreen() {
       weeklyHours,
       dayStreak,
       weekData,
-      subjectDistribution,
+      timeDistribution,
     };
   }, [timerSessionsQuery.data, t]);
 
@@ -231,21 +266,21 @@ export default function StatsScreen() {
         </View>
 
         <View style={styles.subjectsContainer}>
-          <Text style={styles.sectionTitle}>{t('subjectDistribution')}</Text>
+          <Text style={styles.sectionTitle}>{t('timeDistribution')}</Text>
           <View style={styles.subjectsList}>
-            {stats.subjectDistribution.length > 0 ? (
-              stats.subjectDistribution.map((subject, index) => (
-                <View key={`subject-${subject.name}-${index}`} style={styles.subjectItem}>
+            {stats.timeDistribution.length > 0 ? (
+              stats.timeDistribution.map((activity, index) => (
+                <View key={`activity-${activity.name}-${index}`} style={styles.subjectItem}>
                   <View style={styles.subjectInfo}>
-                    <View style={[styles.subjectDot, { backgroundColor: subject.color }]} />
-                    <Text style={styles.subjectName}>{subject.name}</Text>
-                    <Text style={styles.subjectPercentage}>{subject.percentage}%</Text>
+                    <View style={[styles.subjectDot, { backgroundColor: activity.color }]} />
+                    <Text style={styles.subjectName}>{activity.name}</Text>
+                    <Text style={styles.subjectPercentage}>{activity.percentage}%</Text>
                   </View>
                   <View style={styles.subjectBar}>
                     <View 
                       style={[
                         styles.subjectProgress, 
-                        { width: `${subject.percentage}%`, backgroundColor: subject.color }
+                        { width: `${activity.percentage}%`, backgroundColor: activity.color }
                       ]} 
                     />
                   </View>
