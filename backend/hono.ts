@@ -65,16 +65,16 @@ app.get("/debug", (c) => {
       const paths: string[] = [];
       
       if (obj && typeof obj === 'object') {
-        if (obj._def?.procedures) {
+        if ((obj as any)._def?.procedures) {
           // This is a router with procedures
-          Object.keys(obj._def.procedures).forEach(key => {
+          Object.keys((obj as any)._def.procedures).forEach(key => {
             paths.push(prefix + key);
           });
         }
-        if (obj._def?.record) {
+        if ((obj as any)._def?.record) {
           // This is a nested router
-          Object.keys(obj._def.record).forEach(key => {
-            const nestedPaths = getAllProcedurePaths(obj._def.record[key], prefix + key + '.');
+          Object.keys((obj as any)._def.record).forEach(key => {
+            const nestedPaths = getAllProcedurePaths((obj as any)._def.record[key], prefix + key + '.');
             paths.push(...nestedPaths);
           });
         }
@@ -97,8 +97,8 @@ app.get("/debug", (c) => {
       routerType: typeof appRouter,
       hasTests: 'tests' in record,
       hasCommunity: 'community' in record,
-      testsKeys: testsRouter?._def?.record ? Object.keys(testsRouter._def.record) : [],
-      communityKeys: communityRouter?._def?.record ? Object.keys(communityRouter._def.record) : [],
+      testsKeys: (testsRouter as any)?._def?.record ? Object.keys((testsRouter as any)._def.record) : [],
+      communityKeys: (communityRouter as any)?._def?.record ? Object.keys((communityRouter as any)._def.record) : [],
       allProcedurePaths: allPaths,
       testsRouterType: testsRouter ? typeof testsRouter : 'undefined',
       communityRouterType: communityRouter ? typeof communityRouter : 'undefined'
