@@ -938,15 +938,15 @@ const styles = StyleSheet.create({
   },
   timePickerModal: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    width: '80%',
-    maxWidth: 320,
-    padding: 20,
+    borderRadius: 16,
+    width: '85%',
+    maxWidth: 340,
+    padding: 24,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 15,
   },
   timePickerHeader: {
     flexDirection: 'row',
@@ -955,9 +955,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   timePickerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#000000',
   },
   timePickerContent: {
     flexDirection: 'row',
@@ -970,9 +970,9 @@ const styles = StyleSheet.create({
     maxHeight: 200,
   },
   timePickerSeparator: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#000',
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#000000',
     marginHorizontal: 10,
   },
   timePickerOption: {
@@ -980,14 +980,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   timePickerOptionText: {
-    fontSize: 18,
+    fontSize: 20,
     color: '#000000',
-    fontWeight: '500',
+    fontWeight: '600',
   },
   selectedTimeText: {
     color: '#007AFF',
-    fontWeight: '700',
-    fontSize: 20,
+    fontWeight: '800',
+    fontSize: 22,
   },
   timePickerDoneButton: {
     backgroundColor: '#007AFF',
@@ -1004,6 +1004,7 @@ const styles = StyleSheet.create({
   selectedTimeOption: {
     backgroundColor: '#E5F3FF',
     borderRadius: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
   },
 });
