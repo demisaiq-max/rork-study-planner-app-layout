@@ -772,3 +772,51 @@ CREATE POLICY "Public read access" ON timer_pause_logs FOR SELECT USING (true);
 CREATE POLICY "Public write access" ON timer_pause_logs FOR INSERT WITH CHECK (true);
 CREATE POLICY "Public update access" ON timer_pause_logs FOR UPDATE USING (true);
 CREATE POLICY "Public delete access" ON timer_pause_logs FOR DELETE USING (true);
+
+-- ============================================
+-- CALENDAR EVENTS DATABASE SCHEMA
+-- ============================================
+
+-- Calendar events table for storing user calendar events
+CREATE TABLE IF NOT EXISTS calendar_events (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    date DATE NOT NULL,
+    start_time VARCHAR(20) NOT NULL,
+    end_time VARCHAR(20) NOT NULL,
+    location VARCHAR(255),
+    description TEXT,
+    color VARCHAR(7) NOT NULL DEFAULT '#007AFF',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create indexes for calendar events
+CREATE INDEX IF NOT EXISTS idx_calendar_events_user_id ON calendar_events(user_id);
+CREATE INDEX IF NOT EXISTS idx_calendar_events_date ON calendar_events(date);
+CREATE INDEX IF NOT EXISTS idx_calendar_events_created_at ON calendar_events(created_at DESC);
+
+-- Create trigger for calendar events updated_at
+DROP TRIGGER IF EXISTS update_calendar_events_updated_at ON calendar_events;
+CREATE TRIGGER update_calendar_events_updated_at BEFORE UPDATE ON calendar_events FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Enable Row Level Security for calendar events
+ALTER TABLE calendar_events ENABLE ROW LEVEL SECURITY;
+
+-- Create RLS policies for calendar events
+DROP POLICY IF EXISTS "Public read access" ON calendar_events;
+DROP POLICY IF EXISTS "Public write access" ON calendar_events;
+DROP POLICY IF EXISTS "Public update access" ON calendar_events;
+DROP POLICY IF EXISTS "Public delete access" ON calendar_events;
+CREATE POLICY "Public read access" ON calendar_events FOR SELECT USING (true);
+CREATE POLICY "Public write access" ON calendar_events FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public update access" ON calendar_events FOR UPDATE USING (true);
+CREATE POLICY "Public delete access" ON calendar_events FOR DELETE USING (true);
+
+-- Sample calendar events for test user
+INSERT INTO calendar_events (user_id, title, date, start_time, end_time, location, description, color) VALUES
+('550e8400-e29b-41d4-a716-446655440000', 'Math Study Session', '2025-09-15', '2:00 PM', '4:00 PM', 'Library Room 203', 'Review chapters 5-7 for upcoming exam. Focus on calculus problems and practice exercises.', '#007AFF'),
+('550e8400-e29b-41d4-a716-446655440000', 'English Test', '2025-09-16', '10:00 AM', '12:00 PM', 'Classroom A', 'Midterm English examination', '#FF3B30'),
+('550e8400-e29b-41d4-a716-446655440000', 'Study Group Meeting', '2025-09-17', '3:00 PM', '5:00 PM', 'Study Hall', 'Weekly study group session', '#34C759')
+ON CONFLICT DO NOTHING;

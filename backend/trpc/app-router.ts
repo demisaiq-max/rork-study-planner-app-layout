@@ -73,6 +73,12 @@ import { getTimerSessionsProcedure } from "./routes/timers/get-timer-sessions/ro
 import { getActiveTimerProcedure } from "./routes/timers/get-active-timer/route";
 import { createPauseLogProcedure } from "./routes/timers/create-pause-log/route";
 
+// Calendar events routes
+import { getCalendarEventsProcedure } from "./routes/calendar-events/get-calendar-events/route";
+import { createCalendarEventProcedure } from "./routes/calendar-events/create-calendar-event/route";
+import { updateCalendarEventProcedure } from "./routes/calendar-events/update-calendar-event/route";
+import { deleteCalendarEventProcedure } from "./routes/calendar-events/delete-calendar-event/route";
+
 
 
 export const appRouter = createTRPCRouter({
@@ -154,6 +160,12 @@ export const appRouter = createTRPCRouter({
     getTimerSessions: getTimerSessionsProcedure,
     getActiveTimer: getActiveTimerProcedure,
     createPauseLog: createPauseLogProcedure,
+  }),
+  calendarEvents: createTRPCRouter({
+    getCalendarEvents: getCalendarEventsProcedure,
+    createCalendarEvent: createCalendarEventProcedure,
+    updateCalendarEvent: updateCalendarEventProcedure,
+    deleteCalendarEvent: deleteCalendarEventProcedure,
   }),
 });
 

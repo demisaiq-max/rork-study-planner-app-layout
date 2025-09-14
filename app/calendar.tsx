@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -15,14 +15,16 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { Stack, useRouter } from 'expo-router';
 import { ChevronLeft, ChevronRight, Plus, X, Edit2, Trash2, Clock, MapPin } from 'lucide-react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { trpc } from '@/lib/trpc';
+import { useUser } from '@/hooks/user-context';
+
 
 interface Event {
   id: string;
   title: string;
   date: string;
-  startTime: string;
-  endTime: string;
+  start_time: string;
+  end_time: string;
   location?: string;
   description?: string;
   color: string;
@@ -30,11 +32,14 @@ interface Event {
 
 const COLORS = ['#007AFF', '#34C759', '#FF3B30', '#FF9500', '#AF52DE', '#5856D6'];
 
+const extraPaddingStyle = { height: 20 };
+
 export default function CalendarScreen() {
   const router = useRouter();
+
+  const { user } = useUser();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [events, setEvents] = useState<Event[]>([]);
   const [showEventModal, setShowEventModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [eventForm, setEventForm] = useState({
@@ -50,29 +55,44 @@ export default function CalendarScreen() {
   const [selectedStartTime, setSelectedStartTime] = useState(new Date());
   const [selectedEndTime, setSelectedEndTime] = useState(new Date());
 
-  useEffect(() => {
-    loadEvents();
-  }, []);
+  const eventsQuery = trpc.calendarEvents.getCalendarEvents.useQuery(
+    { userId: user?.id || '' },
+    { enabled: !!user?.id }
+  );
 
-  const loadEvents = async () => {
-    try {
-      const stored = await AsyncStorage.getItem('calendar_events');
-      if (stored) {
-        setEvents(JSON.parse(stored));
-      }
-    } catch (error) {
-      console.error('Error loading events:', error);
-    }
-  };
+  const createEventMutation = trpc.calendarEvents.createCalendarEvent.useMutation({
+    onSuccess: () => {
+      eventsQuery.refetch();
+      setShowEventModal(false);
+    },
+    onError: (error) => {
+      console.error('Error creating event:', error);
+      Alert.alert('Error', 'Failed to create event');
+    },
+  });
 
-  const saveEvents = async (newEvents: Event[]) => {
-    try {
-      await AsyncStorage.setItem('calendar_events', JSON.stringify(newEvents));
-      setEvents(newEvents);
-    } catch (error) {
-      console.error('Error saving events:', error);
-    }
-  };
+  const updateEventMutation = trpc.calendarEvents.updateCalendarEvent.useMutation({
+    onSuccess: () => {
+      eventsQuery.refetch();
+      setShowEventModal(false);
+    },
+    onError: (error) => {
+      console.error('Error updating event:', error);
+      Alert.alert('Error', 'Failed to update event');
+    },
+  });
+
+  const deleteEventMutation = trpc.calendarEvents.deleteCalendarEvent.useMutation({
+    onSuccess: () => {
+      eventsQuery.refetch();
+    },
+    onError: (error) => {
+      console.error('Error deleting event:', error);
+      Alert.alert('Error', 'Failed to delete event');
+    },
+  });
+
+  const events = eventsQuery.data || [];
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
@@ -84,12 +104,10 @@ export default function CalendarScreen() {
 
     const days = [];
     
-    // Add empty cells for days before month starts
     for (let i = 0; i < startingDayOfWeek; i++) {
       days.push(null);
     }
     
-    // Add all days of the month
     for (let i = 1; i <= daysInMonth; i++) {
       days.push(new Date(year, month, i));
     }
@@ -98,7 +116,6 @@ export default function CalendarScreen() {
   };
 
   const formatDate = (date: Date) => {
-    // Use local date formatting to avoid timezone issues
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
@@ -137,7 +154,7 @@ export default function CalendarScreen() {
       color: COLORS[0],
     });
     const now = new Date();
-    const later = new Date(now.getTime() + 2 * 60 * 60 * 1000); // 2 hours later
+    const later = new Date(now.getTime() + 2 * 60 * 60 * 1000);
     setSelectedStartTime(now);
     setSelectedEndTime(later);
     setShowEventModal(true);
@@ -147,15 +164,15 @@ export default function CalendarScreen() {
     setEditingEvent(event);
     setEventForm({
       title: event.title,
-      startTime: event.startTime,
-      endTime: event.endTime,
+      startTime: event.start_time,
+      endTime: event.end_time,
       location: event.location || '',
       description: event.description || '',
       color: event.color,
     });
-    // Parse start time from string if it exists
-    if (event.startTime) {
-      const timeParts = event.startTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+    
+    if (event.start_time) {
+      const timeParts = event.start_time.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
       if (timeParts) {
         let hours = parseInt(timeParts[1]);
         const minutes = parseInt(timeParts[2]);
@@ -174,9 +191,9 @@ export default function CalendarScreen() {
         setSelectedStartTime(time);
       }
     }
-    // Parse end time from string if it exists
-    if (event.endTime) {
-      const timeParts = event.endTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+    
+    if (event.end_time) {
+      const timeParts = event.end_time.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
       if (timeParts) {
         let hours = parseInt(timeParts[1]);
         const minutes = parseInt(timeParts[2]);
@@ -199,6 +216,8 @@ export default function CalendarScreen() {
   };
 
   const handleDeleteEvent = (eventId: string) => {
+    if (!user?.id) return;
+    
     Alert.alert(
       'Delete Event',
       'Are you sure you want to delete this event?',
@@ -208,8 +227,7 @@ export default function CalendarScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            const newEvents = events.filter(e => e.id !== eventId);
-            saveEvents(newEvents);
+            deleteEventMutation.mutate({ id: eventId, userId: user.id });
           },
         },
       ]
@@ -222,10 +240,10 @@ export default function CalendarScreen() {
       return;
     }
 
-    if (!selectedDate) return;
+    if (!selectedDate || !user?.id) return;
 
-    const newEvent: Event = {
-      id: editingEvent?.id || Date.now().toString(),
+    const eventData = {
+      userId: user.id,
       title: eventForm.title,
       date: formatDate(selectedDate),
       startTime: eventForm.startTime,
@@ -235,15 +253,14 @@ export default function CalendarScreen() {
       color: eventForm.color,
     };
 
-    let newEvents;
     if (editingEvent) {
-      newEvents = events.map(e => e.id === editingEvent.id ? newEvent : e);
+      updateEventMutation.mutate({
+        id: editingEvent.id,
+        ...eventData,
+      });
     } else {
-      newEvents = [...events, newEvent];
+      createEventMutation.mutate(eventData);
     }
-
-    saveEvents(newEvents);
-    setShowEventModal(false);
   };
 
   const monthNames = [
@@ -282,7 +299,6 @@ export default function CalendarScreen() {
       />
       
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Month Navigation */}
         <View style={styles.monthHeader}>
           <TouchableOpacity onPress={handlePreviousMonth} style={styles.navButton}>
             <ChevronLeft size={24} color="#007AFF" />
@@ -297,22 +313,19 @@ export default function CalendarScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Calendar Grid */}
         <View style={styles.calendarContainer}>
-          {/* Week Days Header */}
           <View style={styles.weekDaysRow}>
-            {weekDays.map((day, index) => (
-              <View key={index} style={styles.weekDayCell}>
+            {weekDays.map((day) => (
+              <View key={day} style={styles.weekDayCell}>
                 <Text style={styles.weekDayText}>{day}</Text>
               </View>
             ))}
           </View>
 
-          {/* Calendar Days */}
           <View style={styles.daysGrid}>
             {getDaysInMonth(currentDate).map((date, index) => {
               if (!date) {
-                return <View key={index} style={styles.dayCell} />;
+                return <View key={`empty-${index}`} style={styles.dayCell} />;
               }
 
               const dayEvents = getEventsForDate(date);
@@ -320,7 +333,7 @@ export default function CalendarScreen() {
 
               return (
                 <TouchableOpacity
-                  key={index}
+                  key={`date-${date.getDate()}`}
                   style={[
                     styles.dayCell,
                     isToday(date) && styles.todayCell,
@@ -339,7 +352,7 @@ export default function CalendarScreen() {
                     <View style={styles.eventIndicators}>
                       {dayEvents.slice(0, 3).map((event, i) => (
                         <View
-                          key={i}
+                          key={`event-${event.id}-${i}`}
                           style={[styles.eventDot, { backgroundColor: event.color }]}
                         />
                       ))}
@@ -351,7 +364,6 @@ export default function CalendarScreen() {
           </View>
         </View>
 
-        {/* Selected Date Events */}
         {selectedDate && (
           <View style={styles.selectedDateContainer}>
             <View style={styles.selectedDateHeader}>
@@ -383,7 +395,7 @@ export default function CalendarScreen() {
                       <View style={styles.eventDetails}>
                         <View style={styles.eventDetailRow}>
                           <Clock size={14} color="#8E8E93" />
-                          <Text style={styles.eventDetailText}>{event.startTime} - {event.endTime}</Text>
+                          <Text style={styles.eventDetailText}>{event.start_time} - {event.end_time}</Text>
                         </View>
                         {event.location && (
                           <View style={styles.eventDetailRow}>
@@ -418,7 +430,6 @@ export default function CalendarScreen() {
         )}
       </ScrollView>
 
-      {/* Add/Edit Event Modal */}
       <Modal
         visible={showEventModal}
         animationType="slide"
@@ -546,270 +557,6 @@ export default function CalendarScreen() {
                 </View>
               )}
 
-              {showStartTimePicker && Platform.OS === 'web' && (
-                <Modal
-                  visible={showStartTimePicker}
-                  transparent={true}
-                  animationType="fade"
-                  onRequestClose={() => setShowStartTimePicker(false)}
-                >
-                  <TouchableOpacity 
-                    style={styles.timePickerOverlay}
-                    activeOpacity={1}
-                    onPress={() => setShowStartTimePicker(false)}
-                  >
-                    <View style={styles.timePickerModal}>
-                      <View style={styles.timePickerHeader}>
-                        <Text style={styles.timePickerTitle}>Select Start Time</Text>
-                        <TouchableOpacity onPress={() => setShowStartTimePicker(false)}>
-                          <X size={20} color="#000" />
-                        </TouchableOpacity>
-                      </View>
-                      <View style={styles.timePickerContent}>
-                        <ScrollView 
-                          style={styles.timePickerColumn} 
-                          showsVerticalScrollIndicator={false}
-                          contentContainerStyle={{ alignItems: 'center' }}
-                        >
-                          {[...Array(12)].map((_, i) => {
-                            const hour = i + 1;
-                            const isSelected = (selectedStartTime.getHours() % 12 || 12) === hour;
-                            return (
-                              <TouchableOpacity
-                                key={`hour-${hour}`}
-                                style={[styles.timePickerOption, isSelected && styles.selectedTimeOption]}
-                                onPress={() => {
-                                  const newTime = new Date(selectedStartTime);
-                                  const isPM = selectedStartTime.getHours() >= 12;
-                                  newTime.setHours(isPM && hour !== 12 ? hour + 12 : hour === 12 && !isPM ? 0 : hour);
-                                  setSelectedStartTime(newTime);
-                                }}
-                              >
-                                <Text style={[
-                                  styles.timePickerOptionText,
-                                  isSelected && styles.selectedTimeText
-                                ]}>
-                                  {hour.toString().padStart(2, '0')}
-                                </Text>
-                              </TouchableOpacity>
-                            );
-                          })}
-                        </ScrollView>
-                        <Text style={styles.timePickerSeparator}>:</Text>
-                        <ScrollView 
-                          style={styles.timePickerColumn} 
-                          showsVerticalScrollIndicator={false}
-                          contentContainerStyle={{ alignItems: 'center' }}
-                        >
-                          {[...Array(60)].map((_, i) => {
-                            if (i % 5 !== 0) return null;
-                            const isSelected = selectedStartTime.getMinutes() === i;
-                            return (
-                              <TouchableOpacity
-                                key={`minute-${i}`}
-                                style={[styles.timePickerOption, isSelected && styles.selectedTimeOption]}
-                                onPress={() => {
-                                  const newTime = new Date(selectedStartTime);
-                                  newTime.setMinutes(i);
-                                  setSelectedStartTime(newTime);
-                                }}
-                              >
-                                <Text style={[
-                                  styles.timePickerOptionText,
-                                  isSelected && styles.selectedTimeText
-                                ]}>
-                                  {i.toString().padStart(2, '0')}
-                                </Text>
-                              </TouchableOpacity>
-                            );
-                          })}
-                        </ScrollView>
-                        <View style={styles.timePickerColumn}>
-                          <TouchableOpacity
-                            style={[styles.timePickerOption, selectedStartTime.getHours() < 12 && styles.selectedTimeOption]}
-                            onPress={() => {
-                              const newTime = new Date(selectedStartTime);
-                              const hours = newTime.getHours();
-                              if (hours >= 12) {
-                                newTime.setHours(hours - 12);
-                              }
-                              setSelectedStartTime(newTime);
-                            }}
-                          >
-                            <Text style={[
-                              styles.timePickerOptionText,
-                              selectedStartTime.getHours() < 12 && styles.selectedTimeText
-                            ]}>AM</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            style={[styles.timePickerOption, selectedStartTime.getHours() >= 12 && styles.selectedTimeOption]}
-                            onPress={() => {
-                              const newTime = new Date(selectedStartTime);
-                              const hours = newTime.getHours();
-                              if (hours < 12) {
-                                newTime.setHours(hours + 12);
-                              }
-                              setSelectedStartTime(newTime);
-                            }}
-                          >
-                            <Text style={[
-                              styles.timePickerOptionText,
-                              selectedStartTime.getHours() >= 12 && styles.selectedTimeText
-                            ]}>PM</Text>
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                      <TouchableOpacity
-                        style={styles.timePickerDoneButton}
-                        onPress={() => {
-                          const hours = selectedStartTime.getHours();
-                          const minutes = selectedStartTime.getMinutes();
-                          const period = hours >= 12 ? 'PM' : 'AM';
-                          const displayHours = hours % 12 || 12;
-                          const timeString = `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
-                          setEventForm({...eventForm, startTime: timeString});
-                          setShowStartTimePicker(false);
-                        }}
-                      >
-                        <Text style={styles.timePickerDoneText}>Done</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </TouchableOpacity>
-                </Modal>
-              )}
-
-              {showEndTimePicker && Platform.OS === 'web' && (
-                <Modal
-                  visible={showEndTimePicker}
-                  transparent={true}
-                  animationType="fade"
-                  onRequestClose={() => setShowEndTimePicker(false)}
-                >
-                  <TouchableOpacity 
-                    style={styles.timePickerOverlay}
-                    activeOpacity={1}
-                    onPress={() => setShowEndTimePicker(false)}
-                  >
-                    <View style={styles.timePickerModal}>
-                      <View style={styles.timePickerHeader}>
-                        <Text style={styles.timePickerTitle}>Select End Time</Text>
-                        <TouchableOpacity onPress={() => setShowEndTimePicker(false)}>
-                          <X size={20} color="#000" />
-                        </TouchableOpacity>
-                      </View>
-                      <View style={styles.timePickerContent}>
-                        <ScrollView 
-                          style={styles.timePickerColumn} 
-                          showsVerticalScrollIndicator={false}
-                          contentContainerStyle={{ alignItems: 'center' }}
-                        >
-                          {[...Array(12)].map((_, i) => {
-                            const hour = i + 1;
-                            const isSelected = (selectedEndTime.getHours() % 12 || 12) === hour;
-                            return (
-                              <TouchableOpacity
-                                key={`hour-${hour}`}
-                                style={[styles.timePickerOption, isSelected && styles.selectedTimeOption]}
-                                onPress={() => {
-                                  const newTime = new Date(selectedEndTime);
-                                  const isPM = selectedEndTime.getHours() >= 12;
-                                  newTime.setHours(isPM && hour !== 12 ? hour + 12 : hour === 12 && !isPM ? 0 : hour);
-                                  setSelectedEndTime(newTime);
-                                }}
-                              >
-                                <Text style={[
-                                  styles.timePickerOptionText,
-                                  isSelected && styles.selectedTimeText
-                                ]}>
-                                  {hour.toString().padStart(2, '0')}
-                                </Text>
-                              </TouchableOpacity>
-                            );
-                          })}
-                        </ScrollView>
-                        <Text style={styles.timePickerSeparator}>:</Text>
-                        <ScrollView 
-                          style={styles.timePickerColumn} 
-                          showsVerticalScrollIndicator={false}
-                          contentContainerStyle={{ alignItems: 'center' }}
-                        >
-                          {[...Array(60)].map((_, i) => {
-                            if (i % 5 !== 0) return null;
-                            const isSelected = selectedEndTime.getMinutes() === i;
-                            return (
-                              <TouchableOpacity
-                                key={`minute-${i}`}
-                                style={[styles.timePickerOption, isSelected && styles.selectedTimeOption]}
-                                onPress={() => {
-                                  const newTime = new Date(selectedEndTime);
-                                  newTime.setMinutes(i);
-                                  setSelectedEndTime(newTime);
-                                }}
-                              >
-                                <Text style={[
-                                  styles.timePickerOptionText,
-                                  isSelected && styles.selectedTimeText
-                                ]}>
-                                  {i.toString().padStart(2, '0')}
-                                </Text>
-                              </TouchableOpacity>
-                            );
-                          })}
-                        </ScrollView>
-                        <View style={styles.timePickerColumn}>
-                          <TouchableOpacity
-                            style={[styles.timePickerOption, selectedEndTime.getHours() < 12 && styles.selectedTimeOption]}
-                            onPress={() => {
-                              const newTime = new Date(selectedEndTime);
-                              const hours = newTime.getHours();
-                              if (hours >= 12) {
-                                newTime.setHours(hours - 12);
-                              }
-                              setSelectedEndTime(newTime);
-                            }}
-                          >
-                            <Text style={[
-                              styles.timePickerOptionText,
-                              selectedEndTime.getHours() < 12 && styles.selectedTimeText
-                            ]}>AM</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            style={[styles.timePickerOption, selectedEndTime.getHours() >= 12 && styles.selectedTimeOption]}
-                            onPress={() => {
-                              const newTime = new Date(selectedEndTime);
-                              const hours = newTime.getHours();
-                              if (hours < 12) {
-                                newTime.setHours(hours + 12);
-                              }
-                              setSelectedEndTime(newTime);
-                            }}
-                          >
-                            <Text style={[
-                              styles.timePickerOptionText,
-                              selectedEndTime.getHours() >= 12 && styles.selectedTimeText
-                            ]}>PM</Text>
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                      <TouchableOpacity
-                        style={styles.timePickerDoneButton}
-                        onPress={() => {
-                          const hours = selectedEndTime.getHours();
-                          const minutes = selectedEndTime.getMinutes();
-                          const period = hours >= 12 ? 'PM' : 'AM';
-                          const displayHours = hours % 12 || 12;
-                          const timeString = `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
-                          setEventForm({...eventForm, endTime: timeString});
-                          setShowEndTimePicker(false);
-                        }}
-                      >
-                        <Text style={styles.timePickerDoneText}>Done</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </TouchableOpacity>
-                </Modal>
-              )}
-
               <Text style={styles.inputLabel}>Location</Text>
               <TextInput
                 style={styles.input}
@@ -845,8 +592,7 @@ export default function CalendarScreen() {
                 ))}
               </View>
               
-              {/* Extra padding for keyboard */}
-              <View style={{ height: 20 }} />
+              <View style={extraPaddingStyle} />
             </ScrollView>
 
             <View style={styles.modalFooter}>
@@ -1154,83 +900,6 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     color: '#C7C7CC',
-  },
-  timePickerOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  timePickerModal: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    width: '85%',
-    maxWidth: 340,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 15,
-  },
-  timePickerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  timePickerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#000000',
-  },
-  timePickerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 200,
-  },
-  timePickerColumn: {
-    flex: 1,
-    maxHeight: 200,
-  },
-  timePickerSeparator: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#000000',
-    marginHorizontal: 10,
-  },
-  timePickerOption: {
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  timePickerOptionText: {
-    fontSize: 20,
-    color: '#000000',
-    fontWeight: '600',
-  },
-  selectedTimeText: {
-    color: '#007AFF',
-    fontWeight: '800',
-    fontSize: 22,
-  },
-  timePickerDoneButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-    paddingVertical: 12,
-    marginTop: 20,
-    alignItems: 'center',
-  },
-  timePickerDoneText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  selectedTimeOption: {
-    backgroundColor: '#E5F3FF',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 4,
   },
   dateTimePickerContainer: {
     backgroundColor: '#F2F2F7',
