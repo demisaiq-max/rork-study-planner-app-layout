@@ -146,7 +146,10 @@ export default function HomeScreen() {
   useEffect(() => {
     const userId = user?.id || '550e8400-e29b-41d4-a716-446655440000';
     if (exams && exams.length === 0 && !isLoadingExams && user?.id) {
-      seedExamDataMutation.mutate({ userId });
+      // Use setTimeout to avoid state update during render
+      setTimeout(() => {
+        seedExamDataMutation.mutate({ userId });
+      }, 0);
     }
   }, [exams, isLoadingExams, user?.id]);
   

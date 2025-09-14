@@ -1,4 +1,6 @@
 // BACKEND DISABLED - Using mock data instead of network requests
+import React from 'react';
+
 console.log('🚫 Backend disabled - using mock data');
 
 // Mock tRPC client that returns mock data instead of making network requests
@@ -100,13 +102,109 @@ const createMockTrpcClient = () => {
   });
 
   const createMockProcedure = (mockFn: Function) => ({
-    useQuery: (input?: any) => {
+    useQuery: (input?: any, options?: any) => {
       console.log('🎭 Mock query called with:', input);
-      return createMockQuery(mockFn());
+      
+      // Use React hooks properly
+      const [data, setData] = React.useState<any>(null);
+      const [isLoading, setIsLoading] = React.useState<boolean>(false);
+      const [isError, setIsError] = React.useState<boolean>(false);
+      const [error, setError] = React.useState<any>(null);
+      
+      // Use useEffect to prevent state updates during render
+      React.useEffect(() => {
+        if (options?.enabled === false) {
+          return;
+        }
+        
+        setIsLoading(true);
+        setIsError(false);
+        setError(null);
+        
+        // Use setTimeout to simulate async behavior and prevent render-time state updates
+        const timer = setTimeout(async () => {
+          try {
+            const result = await mockFn();
+            setData(result);
+            setIsLoading(false);
+          } catch (err) {
+            setError(err);
+            setIsError(true);
+            setIsLoading(false);
+          }
+        }, 1);
+        
+        return () => clearTimeout(timer);
+      }, [input, options?.enabled]);
+      
+      const refetch = React.useCallback(async () => {
+        setIsLoading(true);
+        try {
+          const result = await mockFn();
+          setData(result);
+          setIsLoading(false);
+          return { data: result };
+        } catch (err) {
+          setError(err);
+          setIsError(true);
+          setIsLoading(false);
+          throw err;
+        }
+      }, []);
+      
+      return {
+        data,
+        isLoading,
+        isError,
+        error,
+        refetch,
+        isSuccess: !isLoading && !isError && data !== null,
+        status: isLoading ? 'loading' as const : isError ? 'error' as const : 'success' as const,
+      };
     },
-    useMutation: () => {
+    useMutation: (options?: any) => {
       console.log('🎭 Mock mutation created');
-      return createMockMutation(mockFn);
+      const [isLoading, setIsLoading] = React.useState<boolean>(false);
+      const [isError, setIsError] = React.useState<boolean>(false);
+      const [error, setError] = React.useState<any>(null);
+      const [isSuccess, setIsSuccess] = React.useState<boolean>(false);
+      
+      const mutate = React.useCallback(async (variables?: any) => {
+        setIsLoading(true);
+        setIsError(false);
+        setError(null);
+        setIsSuccess(false);
+        
+        try {
+          const result = await mockFn(variables);
+          setIsSuccess(true);
+          if (options?.onSuccess) {
+            // Use setTimeout to prevent state updates during render
+            setTimeout(() => options.onSuccess(result), 0);
+          }
+          return result;
+        } catch (err) {
+          setIsError(true);
+          setError(err);
+          if (options?.onError) {
+            setTimeout(() => options.onError(err), 0);
+          }
+          throw err;
+        } finally {
+          setIsLoading(false);
+        }
+      }, [options]);
+      
+      return {
+        mutate,
+        mutateAsync: mutate,
+        isLoading,
+        isError,
+        error,
+        isSuccess,
+        status: isLoading ? 'loading' as const : 'idle' as const,
+        isPending: isLoading,
+      };
     },
     query: mockFn,
     mutate: mockFn,
@@ -135,6 +233,7 @@ export const trpcClient = createMockTrpcClient();
 export const trpc = {
   ...trpcClient,
   createClient: () => trpcClient,
+  Provider: ({ children, client, queryClient }: any) => children,
   useContext: () => ({
     invalidate: () => Promise.resolve(),
     refetch: () => Promise.resolve(),
