@@ -10,6 +10,7 @@ export const updateTimerSessionProcedure = publicProcedure
     isPaused: z.boolean().optional(),
     pauseDuration: z.number().optional(),
     notes: z.string().optional(),
+    duration: z.number().optional(),
   }))
   .mutation(async ({ input }) => {
     try {
@@ -20,6 +21,7 @@ export const updateTimerSessionProcedure = publicProcedure
       if (input.isPaused !== undefined) updateData.is_paused = input.isPaused;
       if (input.pauseDuration !== undefined) updateData.pause_duration = input.pauseDuration;
       if (input.notes !== undefined) updateData.notes = input.notes;
+      if (input.duration !== undefined) updateData.duration = input.duration;
 
       const { data, error } = await supabase
         .from('timer_sessions')
