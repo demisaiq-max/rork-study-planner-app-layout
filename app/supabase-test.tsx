@@ -90,11 +90,28 @@ export default function SupabaseTestScreen() {
     try {
       const baseUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL || 'https://7twaok3a9gdls7o4bz61l.rork.com';
       
+      console.log('🔍 Testing direct API connection to:', `${baseUrl}/api/`);
+      
+      // Test main API endpoint
       const response = await fetch(`${baseUrl}/api/`);
       const data = await response.json();
       
-      Alert.alert('Direct API Test', JSON.stringify(data, null, 2));
+      console.log('✅ Direct API response:', data);
+      
+      // Test Supabase endpoint
+      const supabaseResponse = await fetch(`${baseUrl}/api/test-supabase`);
+      const supabaseData = await supabaseResponse.json();
+      
+      console.log('✅ Direct Supabase test response:', supabaseData);
+      
+      Alert.alert(
+        'Direct API Test', 
+        `API Status: ${data.status}\n` +
+        `Supabase: ${supabaseData.status}\n` +
+        `Message: ${supabaseData.message || data.message}`
+      );
     } catch (error) {
+      console.error('❌ Direct API test failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       Alert.alert('Direct API Test Failed', errorMessage);
     }

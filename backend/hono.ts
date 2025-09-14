@@ -75,7 +75,54 @@ app.use(
 
 // Simple health check endpoint
 app.get("/", (c) => {
-  return c.json({ status: "ok", message: "API is running" });
+  return c.json({ 
+    status: "ok", 
+    message: "API is running",
+    timestamp: new Date().toISOString(),
+    env: {
+      supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ? 'configured' : 'missing',
+      supabaseKey: process.env.EXPO_PUBLIC_SUPABASE_KEY ? 'configured' : 'missing',
+      apiBaseUrl: process.env.EXPO_PUBLIC_RORK_API_BASE_URL ? 'configured' : 'missing'
+    }
+  });
+});
+
+// Direct Supabase test endpoint
+app.get("/test-supabase", async (c) => {
+  try {
+    const { supabase } = await import('@/lib/supabase');
+    
+    // Test basic connection
+    const { data, error } = await supabase
+      .from('users')
+      .select('id')
+      .limit(1);
+    
+    if (error) {
+      return c.json({ 
+        status: "error", 
+        message: "Supabase connection failed",
+        error: error.message,
+        details: error,
+        timestamp: new Date().toISOString()
+      }, 500);
+    }
+    
+    return c.json({ 
+      status: "ok", 
+      message: "Supabase connection successful",
+      hasData: !!data,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('❌ Supabase test error:', error);
+    return c.json({ 
+      status: "error", 
+      message: "Supabase test failed",
+      error: error instanceof Error ? error.message : String(error),
+      timestamp: new Date().toISOString()
+    }, 500);
+  }
 });
 
 // Debug endpoint to check tRPC router
