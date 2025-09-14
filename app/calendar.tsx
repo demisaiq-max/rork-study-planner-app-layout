@@ -427,7 +427,7 @@ export default function CalendarScreen() {
                 style={styles.timePickerButton}
                 onPress={() => setShowTimePicker(true)}
               >
-                <Text style={[styles.timePickerText, !eventForm.time && styles.placeholderText]}>
+                <Text style={eventForm.time ? styles.timePickerText : styles.placeholderText}>
                   {eventForm.time || '2:00 PM'}
                 </Text>
               </TouchableOpacity>
@@ -924,8 +924,9 @@ const styles = StyleSheet.create({
   },
   timePickerText: {
     fontSize: 16,
-    color: '#000',
+    color: '#000000',
     textAlign: 'center',
+    fontWeight: '500',
   },
   placeholderText: {
     color: '#C7C7CC',
