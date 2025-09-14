@@ -42,14 +42,9 @@ const testBackendConnection = async () => {
     const healthUrl = `${baseUrl}/api`;
     
     console.log('🏥 Testing backend health at:', healthUrl);
-    console.log('🔍 Network environment:', {
-      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'Server',
-      online: typeof navigator !== 'undefined' ? navigator.onLine : 'Unknown',
-      platform: typeof process !== 'undefined' ? process.platform : 'Unknown'
-    });
     
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
     
     const response = await fetch(healthUrl, {
       method: 'GET',
@@ -65,29 +60,6 @@ const testBackendConnection = async () => {
     if (response.ok) {
       const data = await response.json();
       console.log('✅ Backend is healthy:', data);
-      
-      // Test tRPC endpoint specifically
-      const trpcTestUrl = `${baseUrl}/api/trpc/tests.supabaseTest`;
-      console.log('🔍 Testing tRPC endpoint:', trpcTestUrl);
-      
-      try {
-        const trpcResponse = await fetch(trpcTestUrl, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          },
-        });
-        
-        console.log('🔍 tRPC endpoint response:', {
-          status: trpcResponse.status,
-          statusText: trpcResponse.statusText,
-          ok: trpcResponse.ok
-        });
-      } catch (trpcError) {
-        console.warn('⚠️ tRPC endpoint test failed:', trpcError);
-      }
-      
       return true;
     } else {
       console.error('❌ Backend health check failed:', {
@@ -98,12 +70,8 @@ const testBackendConnection = async () => {
       return false;
     }
   } catch (error) {
-    console.error('❌ Cannot connect to backend:', {
-      error: error instanceof Error ? {
-        message: error.message,
-        name: error.name,
-        stack: error.stack
-      } : String(error),
+    console.error('❌ Server connection failed:', {
+      error: error instanceof Error ? error.message : String(error),
       url: `${getBaseUrl()}/api`
     });
     return false;
@@ -112,8 +80,10 @@ const testBackendConnection = async () => {
 
 // Run health check on initialization with delay to ensure environment is ready
 setTimeout(() => {
-  testBackendConnection();
-}, 1000);
+  testBackendConnection().catch(err => {
+    console.error('❌ Health check failed:', err);
+  });
+}, 2000);
 
 export const trpcClient = trpc.createClient({
   links: [
@@ -131,13 +101,6 @@ export const trpcClient = trpc.createClient({
         const urlString = url.toString();
         const parsedUrl = new URL(urlString);
         
-        // Log the parsed URL components
-        console.log('🔍 tRPC URL Analysis:', {
-          full: urlString,
-          pathname: parsedUrl.pathname,
-          search: parsedUrl.search,
-        });
-        
         // Check if the path has duplicate 'trpc' segments
         if (parsedUrl.pathname.includes('/trpc/trpc/')) {
           console.warn('⚠️ Duplicate trpc path detected, fixing...');
@@ -154,13 +117,13 @@ export const trpcClient = trpc.createClient({
         console.log('🚀 tRPC Request:', requestInfo);
         
         // Implement retry logic for network failures
-        const maxRetries = 3;
+        const maxRetries = 2;
         const baseDelay = 1000;
         
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
           try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 30000);
+            const timeoutId = setTimeout(() => controller.abort(), 15000); // Reduced timeout
             
             const response = await fetch(parsedUrl.toString(), {
               ...options,
@@ -178,15 +141,16 @@ export const trpcClient = trpc.createClient({
               console.log('✅ tRPC Response Success:', {
                 url: parsedUrl.toString(),
                 status: response.status,
-                statusText: response.statusText,
                 timestamp: new Date().toISOString(),
               });
               return response;
             } else {
+              const errorText = await response.text().catch(() => 'Unable to read response');
               const errorInfo = {
                 url: parsedUrl.toString(),
                 status: response.status,
                 statusText: response.statusText,
+                responseText: errorText.substring(0, 200), // Limit log size
                 attempt,
                 maxRetries,
                 timestamp: new Date().toISOString(),
@@ -210,7 +174,6 @@ export const trpcClient = trpc.createClient({
               error: error instanceof Error ? {
                 message: error.message,
                 name: error.name,
-                stack: error.stack,
               } : String(error),
               attempt,
               maxRetries,
@@ -220,18 +183,17 @@ export const trpcClient = trpc.createClient({
             console.error('❌ tRPC Network Error:', errorInfo);
             
             if (attempt === maxRetries) {
-              throw error;
+              // Create a more informative error
+              const networkError = new Error(`Network request failed after ${maxRetries} attempts: ${error instanceof Error ? error.message : String(error)}`);
+              networkError.name = 'NetworkError';
+              throw networkError;
             }
             
             // Exponential backoff
             const delay = baseDelay * Math.pow(2, attempt - 1);
             console.log(`⏳ Retrying in ${delay}ms...`);
             await new Promise((resolve) => {
-              if (delay > 0) {
-                setTimeout(resolve, delay);
-              } else {
-                resolve(undefined);
-              }
+              setTimeout(resolve, delay);
             });
           }
         }
@@ -242,6 +204,19 @@ export const trpcClient = trpc.createClient({
     }),
   ],
 });
+
+// Global error handler for unhandled tRPC errors
+if (typeof window !== 'undefined') {
+  window.addEventListener('unhandledrejection', (event) => {
+    if (event.reason?.name === 'TRPCClientError') {
+      console.error('❌ Unhandled tRPC Error:', {
+        message: event.reason.message,
+        data: event.reason.data,
+        shape: event.reason.shape,
+      });
+    }
+  });
+}
 
 console.log('📋 tRPC Client initialized successfully');
 console.log('🔗 Available tRPC methods will be logged when used');
