@@ -7,28 +7,28 @@ import {
   Dimensions,
   Animated,
   Alert,
+  Modal,
+  Platform,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Play, Pause, RotateCcw, Coffee } from "lucide-react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Play, Pause, RotateCcw, Clock, Plus, Minus } from "lucide-react-native";
 import CircularProgress from "@/components/CircularProgress";
 import { useStudyStore } from "@/hooks/study-store";
 import { useLanguage } from "@/hooks/language-context";
 import { useUser } from "@/hooks/user-context";
 import { trpc } from "@/lib/trpc";
 
-const { width } = Dimensions.get("window");
-
-const POMODORO_TIME = 25 * 60; // 25 minutes
-const SHORT_BREAK = 5 * 60; // 5 minutes
-const LONG_BREAK = 15 * 60; // 15 minutes
-
 export default function TimerScreen() {
-  const [timeLeft, setTimeLeft] = useState(POMODORO_TIME);
+  const { width } = Dimensions.get("window");
+  const insets = useSafeAreaInsets();
+  const [timeLeft, setTimeLeft] = useState(25 * 60); // Default 25 minutes
+  const [initialTime, setInitialTime] = useState(25 * 60);
   const [isRunning, setIsRunning] = useState(false);
-  const [timerMode, setTimerMode] = useState<"pomodoro" | "shortBreak" | "longBreak">("pomodoro");
-  const [pomodoroCount, setPomodoroCount] = useState(0);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
-  const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
+  const [showTimeModal, setShowTimeModal] = useState(false);
+  const [tempHours, setTempHours] = useState(0);
+  const [tempMinutes, setTempMinutes] = useState(25);
+  const [tempSeconds, setTempSeconds] = useState(0);
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const { updateStudyTime } = useStudyStore();
   const { t } = useLanguage();
@@ -68,70 +68,65 @@ export default function TimerScreen() {
       
       if (remainingTime > 0 && !activeTimer.is_completed) {
         setCurrentSessionId(activeTimer.id);
-        setSessionStartTime(startTime);
         setTimeLeft(remainingTime);
-        
-        // Determine timer mode based on subject
-        if (activeTimer.subject === 'break-short') {
-          setTimerMode('shortBreak');
-        } else if (activeTimer.subject === 'break-long') {
-          setTimerMode('longBreak');
-        } else {
-          setTimerMode('pomodoro');
-        }
+        setInitialTime(activeTimer.duration);
       }
     }
   }, [activeTimer, currentSessionId]);
   
   // Calculate today's total focus time from sessions
-  useEffect(() => {
-    if (timerSessions) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      const todaysSessions = timerSessions.filter(session => {
-        const sessionDate = new Date(session.start_time);
-        sessionDate.setHours(0, 0, 0, 0);
-        return sessionDate.getTime() === today.getTime() && 
-               session.is_completed && 
-               session.subject !== 'break-short' && 
-               session.subject !== 'break-long';
-      });
-      
-      const totalPomodoros = todaysSessions.filter(s => s.duration === POMODORO_TIME).length;
-      setPomodoroCount(totalPomodoros);
-    }
-  }, [timerSessions]);
+  const todaysTotalTime = timerSessions ? (() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const todaysSessions = timerSessions.filter(session => {
+      const sessionDate = new Date(session.start_time);
+      sessionDate.setHours(0, 0, 0, 0);
+      return sessionDate.getTime() === today.getTime() && session.is_completed;
+    });
+    
+    return todaysSessions.reduce((total, session) => total + session.duration, 0);
+  })() : 0;
+  
+  const todaysSessionCount = timerSessions ? (() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    return timerSessions.filter(session => {
+      const sessionDate = new Date(session.start_time);
+      sessionDate.setHours(0, 0, 0, 0);
+      return sessionDate.getTime() === today.getTime() && session.is_completed;
+    }).length;
+  })() : 0;
 
-  const switchMode = useCallback((mode: "pomodoro" | "shortBreak" | "longBreak") => {
-    setTimerMode(mode);
-    setIsRunning(false);
-    
-    switch (mode) {
-      case "pomodoro":
-        setTimeLeft(POMODORO_TIME);
-        break;
-      case "shortBreak":
-        setTimeLeft(SHORT_BREAK);
-        break;
-      case "longBreak":
-        setTimeLeft(LONG_BREAK);
-        break;
+  const setCustomTime = useCallback(() => {
+    const totalSeconds = tempHours * 3600 + tempMinutes * 60 + tempSeconds;
+    if (totalSeconds > 0) {
+      setTimeLeft(totalSeconds);
+      setInitialTime(totalSeconds);
+      setIsRunning(false);
+      setShowTimeModal(false);
+      
+      Animated.sequence([
+        Animated.timing(fadeAnim, {
+          toValue: 0.3,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      if (Platform.OS !== 'web') {
+        Alert.alert('Invalid Time', 'Please set a time greater than 0');
+      } else {
+        console.log('Invalid Time: Please set a time greater than 0');
+      }
     }
-    
-    Animated.sequence([
-      Animated.timing(fadeAnim, {
-        toValue: 0.3,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [fadeAnim]);
+  }, [tempHours, tempMinutes, tempSeconds, fadeAnim]);
 
   const handleTimerComplete = useCallback(async () => {
     // Mark current session as completed
@@ -145,30 +140,25 @@ export default function TimerScreen() {
         
         // Refetch sessions to update stats
         refetchSessions();
+        
+        // Show completion alert
+        if (Platform.OS !== 'web') {
+          Alert.alert(
+            'Timer Complete!',
+            `Your ${Math.floor(initialTime / 60)} minute session is finished.`,
+            [{ text: 'OK' }]
+          );
+        } else {
+          console.log(`Timer Complete! Your ${Math.floor(initialTime / 60)} minute session is finished.`);
+        }
       } catch (error) {
         console.error('Failed to complete timer session:', error);
       }
     }
     
     setCurrentSessionId(null);
-    setSessionStartTime(null);
-    
-    if (timerMode === "pomodoro") {
-      setPomodoroCount((prev) => {
-        const newCount = prev + 1;
-        // Auto switch to break
-        if (newCount % 4 === 0) {
-          switchMode("longBreak");
-        } else {
-          switchMode("shortBreak");
-        }
-        return newCount;
-      });
-      updateStudyTime(POMODORO_TIME / 60);
-    } else {
-      switchMode("pomodoro");
-    }
-  }, [timerMode, switchMode, updateStudyTime, currentSessionId, updateTimerSession, refetchSessions]);
+    updateStudyTime(initialTime / 60);
+  }, [initialTime, updateStudyTime, currentSessionId, updateTimerSession, refetchSessions]);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
@@ -195,23 +185,21 @@ export default function TimerScreen() {
       if (!currentSessionId) {
         // Create new session
         try {
-          const subject = timerMode === 'pomodoro' ? 'focus' : 
-                         timerMode === 'shortBreak' ? 'break-short' : 'break-long';
-          const duration = timerMode === 'pomodoro' ? POMODORO_TIME :
-                          timerMode === 'shortBreak' ? SHORT_BREAK : LONG_BREAK;
-          
           const result = await createTimerSession.mutateAsync({
             userId: user?.id || '550e8400-e29b-41d4-a716-446655440000',
-            subject,
-            duration,
+            subject: 'general-timer',
+            duration: initialTime,
             startTime: new Date().toISOString(),
           });
           
           setCurrentSessionId(result.id);
-          setSessionStartTime(new Date());
         } catch (error) {
           console.error('Failed to create timer session:', error);
-          Alert.alert('Error', 'Failed to start timer session');
+          if (Platform.OS !== 'web') {
+            Alert.alert('Error', 'Failed to start timer session');
+          } else {
+            console.log('Error: Failed to start timer session');
+          }
           return;
         }
       } else if (activeTimer?.is_paused) {
@@ -245,7 +233,7 @@ export default function TimerScreen() {
     }
     
     setIsRunning(!isRunning);
-  }, [isRunning, currentSessionId, timerMode, user?.id, createTimerSession, updateTimerSession, createPauseLog, activeTimer]);
+  }, [isRunning, currentSessionId, initialTime, user?.id, createTimerSession, updateTimerSession, createPauseLog, activeTimer]);
 
   const resetTimer = useCallback(async () => {
     // Cancel current session if running
@@ -262,10 +250,9 @@ export default function TimerScreen() {
     }
     
     setCurrentSessionId(null);
-    setSessionStartTime(null);
     setIsRunning(false);
-    switchMode(timerMode);
-  }, [timerMode, switchMode, currentSessionId, isRunning, updateTimerSession]);
+    setTimeLeft(initialTime);
+  }, [initialTime, currentSessionId, isRunning, updateTimerSession]);
 
   const formatTime = useCallback((seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -274,58 +261,38 @@ export default function TimerScreen() {
   }, []);
 
   const getProgress = useCallback(() => {
-    const total = timerMode === "pomodoro" 
-      ? POMODORO_TIME 
-      : timerMode === "shortBreak" 
-      ? SHORT_BREAK 
-      : LONG_BREAK;
-    return ((total - timeLeft) / total) * 100;
-  }, [timerMode, timeLeft]);
+    return ((initialTime - timeLeft) / initialTime) * 100;
+  }, [initialTime, timeLeft]);
 
-  const getModeColor = useCallback(() => {
-    switch (timerMode) {
-      case "pomodoro":
-        return "#007AFF";
-      case "shortBreak":
-        return "#34C759";
-      case "longBreak":
-        return "#AF52DE";
-    }
-  }, [timerMode]);
+  const getTimerColor = useCallback(() => {
+    return "#007AFF";
+  }, []);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: getModeColor() + "10" }]} edges={['top']}>
+    <View style={[styles.container, { backgroundColor: getTimerColor() + "10", paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <Text style={styles.title}>{t('focusTimer') || "FocusFlow Timer"}</Text>
-        <Text style={styles.subtitle}>{t('stayFocused') || "Stay focused, stay productive"}</Text>
+        <Text style={styles.title}>{t('generalTimer') || "집중 타이머"}</Text>
+        <Text style={styles.subtitle}>{t('stayFocused') || "집중하고, 생산적으로"}</Text>
       </View>
 
-      <View style={styles.modeSelector}>
-        <TouchableOpacity
-          style={[styles.modeButton, timerMode === "pomodoro" && styles.modeButtonActive]}
-          onPress={() => switchMode("pomodoro")}
-        >
-          <Text style={[styles.modeText, timerMode === "pomodoro" && styles.modeTextActive]}>
-            {t('pomodoro') || "Pomodoro"}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.modeButton, timerMode === "shortBreak" && styles.modeButtonActive]}
-          onPress={() => switchMode("shortBreak")}
-        >
-          <Text style={[styles.modeText, timerMode === "shortBreak" && styles.modeTextActive]}>
-            {t('shortBreak') || "Short Break"}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.modeButton, timerMode === "longBreak" && styles.modeButtonActive]}
-          onPress={() => switchMode("longBreak")}
-        >
-          <Text style={[styles.modeText, timerMode === "longBreak" && styles.modeTextActive]}>
-            {t('longBreak') || "Long Break"}
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity 
+        style={styles.timeSelector}
+        onPress={() => {
+          const hours = Math.floor(initialTime / 3600);
+          const minutes = Math.floor((initialTime % 3600) / 60);
+          const seconds = initialTime % 60;
+          setTempHours(hours);
+          setTempMinutes(minutes);
+          setTempSeconds(seconds);
+          setShowTimeModal(true);
+        }}
+        disabled={isRunning}
+      >
+        <Clock size={20} color={getTimerColor()} />
+        <Text style={[styles.timeSelectorText, { color: getTimerColor() }]}>
+          Set Timer Duration
+        </Text>
+      </TouchableOpacity>
 
       <Animated.View style={[styles.timerContainer, { opacity: fadeAnim }]}>
         <View style={styles.progressWrapper}>
@@ -333,14 +300,14 @@ export default function TimerScreen() {
             percentage={getProgress()}
             size={width * 0.7}
             strokeWidth={20}
-            color={getModeColor()}
+            color={getTimerColor()}
           />
           <View style={styles.timerDisplay}>
-            <Text style={[styles.timeText, { color: getModeColor() }]}>
+            <Text style={[styles.timeText, { color: getTimerColor() }]}>
               {formatTime(timeLeft)}
             </Text>
             <Text style={styles.sessionText}>
-              {timerMode === "pomodoro" ? (t('focusTime') || "Focus Time") : (t('breakTime') || "Break Time")}
+              {t('focusTime') || "집중 시간"}
             </Text>
           </View>
         </View>
@@ -355,7 +322,7 @@ export default function TimerScreen() {
         </TouchableOpacity>
         
         <TouchableOpacity
-          style={[styles.playButton, { backgroundColor: getModeColor() }]}
+          style={[styles.playButton, { backgroundColor: getTimerColor() }]}
           onPress={toggleTimer}
         >
           {isRunning ? (
@@ -367,20 +334,29 @@ export default function TimerScreen() {
         
         <TouchableOpacity
           style={styles.controlButton}
-          onPress={() => switchMode("shortBreak")}
+          onPress={() => {
+            const hours = Math.floor(initialTime / 3600);
+            const minutes = Math.floor((initialTime % 3600) / 60);
+            const seconds = initialTime % 60;
+            setTempHours(hours);
+            setTempMinutes(minutes);
+            setTempSeconds(seconds);
+            setShowTimeModal(true);
+          }}
+          disabled={isRunning}
         >
-          <Coffee size={24} color="#8E8E93" />
+          <Clock size={24} color="#8E8E93" />
         </TouchableOpacity>
       </View>
 
       <View style={styles.stats}>
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>{pomodoroCount}</Text>
-          <Text style={styles.statLabel}>{t('pomodoros') || "Pomodoros"}</Text>
+          <Text style={styles.statValue}>{todaysSessionCount}</Text>
+          <Text style={styles.statLabel}>{t('sessions') || "뽀모도로"}</Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>{Math.floor((pomodoroCount * 25) / 60)}{t('hours') || "h"} {(pomodoroCount * 25) % 60}{t('minutes') || "m"}</Text>
-          <Text style={styles.statLabel}>{t('totalFocus') || "Total Focus"}</Text>
+          <Text style={styles.statValue}>{Math.floor(todaysTotalTime / 3600)}{t('hours') || "시간"} {Math.floor((todaysTotalTime % 3600) / 60)}{t('minutes') || "분"}</Text>
+          <Text style={styles.statLabel}>{t('totalFocus') || "총 집중 시간"}</Text>
         </View>
       </View>
       
@@ -389,17 +365,19 @@ export default function TimerScreen() {
         <View style={styles.recentSessions}>
           <Text style={styles.recentTitle}>Recent Sessions</Text>
           {timerSessions.slice(0, 3).map((session) => {
-            const duration = Math.floor(session.duration / 60);
+            const hours = Math.floor(session.duration / 3600);
+            const minutes = Math.floor((session.duration % 3600) / 60);
             const sessionDate = new Date(session.start_time);
-            const isBreak = session.subject?.includes('break');
             
             return (
               <View key={session.id} style={styles.sessionItem}>
                 <View style={styles.sessionInfo}>
                   <Text style={styles.sessionType}>
-                    {isBreak ? '☕' : '🎯'} {isBreak ? 'Break' : 'Focus'}
+                    🎯 Timer Session
                   </Text>
-                  <Text style={styles.sessionDuration}>{duration} min</Text>
+                  <Text style={styles.sessionDuration}>
+                    {hours > 0 ? `${hours}h ` : ''}{minutes}m
+                  </Text>
                 </View>
                 <Text style={styles.sessionTime}>
                   {sessionDate.toLocaleTimeString('en-US', { 
@@ -412,7 +390,98 @@ export default function TimerScreen() {
           })}
         </View>
       )}
-    </SafeAreaView>
+      
+      {/* Time Picker Modal */}
+      <Modal
+        visible={showTimeModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowTimeModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Set Timer Duration</Text>
+            
+            <View style={styles.timePickerContainer}>
+              {/* Hours */}
+              <View style={styles.timePickerSection}>
+                <Text style={styles.timePickerLabel}>Hours</Text>
+                <View style={styles.timePickerControls}>
+                  <TouchableOpacity
+                    style={styles.timePickerButton}
+                    onPress={() => setTempHours(Math.max(0, tempHours - 1))}
+                  >
+                    <Minus size={20} color={getTimerColor()} />
+                  </TouchableOpacity>
+                  <Text style={styles.timePickerValue}>{tempHours.toString().padStart(2, '0')}</Text>
+                  <TouchableOpacity
+                    style={styles.timePickerButton}
+                    onPress={() => setTempHours(Math.min(23, tempHours + 1))}
+                  >
+                    <Plus size={20} color={getTimerColor()} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+              
+              {/* Minutes */}
+              <View style={styles.timePickerSection}>
+                <Text style={styles.timePickerLabel}>Minutes</Text>
+                <View style={styles.timePickerControls}>
+                  <TouchableOpacity
+                    style={styles.timePickerButton}
+                    onPress={() => setTempMinutes(Math.max(0, tempMinutes - 1))}
+                  >
+                    <Minus size={20} color={getTimerColor()} />
+                  </TouchableOpacity>
+                  <Text style={styles.timePickerValue}>{tempMinutes.toString().padStart(2, '0')}</Text>
+                  <TouchableOpacity
+                    style={styles.timePickerButton}
+                    onPress={() => setTempMinutes(Math.min(59, tempMinutes + 1))}
+                  >
+                    <Plus size={20} color={getTimerColor()} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+              
+              {/* Seconds */}
+              <View style={styles.timePickerSection}>
+                <Text style={styles.timePickerLabel}>Seconds</Text>
+                <View style={styles.timePickerControls}>
+                  <TouchableOpacity
+                    style={styles.timePickerButton}
+                    onPress={() => setTempSeconds(Math.max(0, tempSeconds - 1))}
+                  >
+                    <Minus size={20} color={getTimerColor()} />
+                  </TouchableOpacity>
+                  <Text style={styles.timePickerValue}>{tempSeconds.toString().padStart(2, '0')}</Text>
+                  <TouchableOpacity
+                    style={styles.timePickerButton}
+                    onPress={() => setTempSeconds(Math.min(59, tempSeconds + 1))}
+                  >
+                    <Plus size={20} color={getTimerColor()} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setShowTimeModal(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalSetButton, { backgroundColor: getTimerColor() }]}
+                onPress={setCustomTime}
+              >
+                <Text style={styles.modalSetText}>Set Timer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 }
 
@@ -435,31 +504,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#8E8E93",
   },
-  modeSelector: {
+  timeSelector: {
     flexDirection: "row",
     justifyContent: "center",
+    alignItems: "center",
     marginTop: 20,
     marginHorizontal: 20,
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
-    padding: 4,
+    padding: 16,
+    gap: 8,
   },
-  modeButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  modeButtonActive: {
-    backgroundColor: "#007AFF",
-  },
-  modeText: {
-    fontSize: 14,
+  timeSelectorText: {
+    fontSize: 16,
     fontWeight: "600",
-    color: "#8E8E93",
-  },
-  modeTextActive: {
-    color: "#FFFFFF",
   },
   timerContainer: {
     flex: 1,
@@ -571,5 +629,86 @@ const styles = StyleSheet.create({
   sessionTime: {
     fontSize: 12,
     color: "#8E8E93",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 24,
+    margin: 20,
+    minWidth: 300,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 24,
+    color: "#000000",
+  },
+  timePickerContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 24,
+  },
+  timePickerSection: {
+    alignItems: "center",
+    flex: 1,
+  },
+  timePickerLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#8E8E93",
+    marginBottom: 12,
+  },
+  timePickerControls: {
+    alignItems: "center",
+    gap: 12,
+  },
+  timePickerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#F2F2F7",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  timePickerValue: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#000000",
+    minWidth: 40,
+    textAlign: "center",
+  },
+  modalButtons: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  modalCancelButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: "#F2F2F7",
+    alignItems: "center",
+  },
+  modalCancelText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#8E8E93",
+  },
+  modalSetButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  modalSetText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
 });
