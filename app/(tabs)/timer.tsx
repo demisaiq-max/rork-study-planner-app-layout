@@ -7,14 +7,12 @@ import {
   Dimensions,
   Animated,
   Alert,
-  Modal,
   Platform,
   ScrollView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Play, Pause, RotateCcw, Clock, Plus, Minus, Coffee, UtensilsCrossed } from "lucide-react-native";
+import { Play, Pause, RotateCcw, Clock, Coffee, UtensilsCrossed } from "lucide-react-native";
 import CircularProgress from "@/components/CircularProgress";
-import { useStudyStore } from "@/hooks/study-store";
 import { useLanguage } from "@/hooks/language-context";
 import { useUser } from "@/hooks/user-context";
 import { trpc } from "@/lib/trpc";
@@ -25,17 +23,10 @@ export default function TimerScreen() {
   const { width } = Dimensions.get("window");
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<TimerType>('general');
-  const [timeElapsed, setTimeElapsed] = useState(0); // For general timer (stopwatch)
-  const [timeLeft, setTimeLeft] = useState(15 * 60); // For tea/lunch breaks
-  const [initialTime, setInitialTime] = useState(15 * 60);
+  const [timeElapsed, setTimeElapsed] = useState(0); // All timers now start from 0 and count up
   const [isRunning, setIsRunning] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
-  const [showTimeModal, setShowTimeModal] = useState(false);
-  const [tempHours, setTempHours] = useState(0);
-  const [tempMinutes, setTempMinutes] = useState(15);
-  const [tempSeconds, setTempSeconds] = useState(0);
   const fadeAnim = useRef(new Animated.Value(1)).current;
-  const { updateStudyTime } = useStudyStore();
   const { t } = useLanguage();
   const { user } = useUser();
   
@@ -71,21 +62,17 @@ export default function TimerScreen() {
       const now = new Date();
       const elapsedSeconds = Math.floor((now.getTime() - startTime.getTime()) / 1000);
       
-      if (activeTimer.subject === 'general-timer') {
-        // For general timer, show elapsed time
-        if (!activeTimer.is_completed) {
-          setCurrentSessionId(activeTimer.id);
-          setTimeElapsed(elapsedSeconds);
+      // All timers now show elapsed time
+      if (!activeTimer.is_completed) {
+        setCurrentSessionId(activeTimer.id);
+        setTimeElapsed(elapsedSeconds);
+        
+        if (activeTimer.subject === 'general-timer') {
           setActiveTab('general');
-        }
-      } else {
-        // For break timers, show remaining time
-        const remainingTime = activeTimer.duration - elapsedSeconds;
-        if (remainingTime > 0 && !activeTimer.is_completed) {
-          setCurrentSessionId(activeTimer.id);
-          setTimeLeft(remainingTime);
-          setInitialTime(activeTimer.duration);
-          setActiveTab(activeTimer.subject === 'tea-break' ? 'tea' : 'lunch');
+        } else if (activeTimer.subject === 'tea-break') {
+          setActiveTab('tea');
+        } else if (activeTimer.subject === 'lunch-break') {
+          setActiveTab('lunch');
         }
       }
     }
@@ -116,100 +103,22 @@ export default function TimerScreen() {
     }).length;
   })() : 0;
 
-  const setCustomTime = useCallback(() => {
-    const totalSeconds = tempHours * 3600 + tempMinutes * 60 + tempSeconds;
-    if (totalSeconds > 0 && activeTab !== 'general') {
-      setTimeLeft(totalSeconds);
-      setInitialTime(totalSeconds);
-      setIsRunning(false);
-      setShowTimeModal(false);
-      
-      Animated.sequence([
-        Animated.timing(fadeAnim, {
-          toValue: 0.3,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else if (activeTab === 'general') {
-      setShowTimeModal(false);
-    } else {
-      if (Platform.OS !== 'web') {
-        Alert.alert('Invalid Time', 'Please set a time greater than 0');
-      } else {
-        console.log('Invalid Time: Please set a time greater than 0');
-      }
-    }
-  }, [tempHours, tempMinutes, tempSeconds, fadeAnim, activeTab]);
+  // Remove setCustomTime since we don't need it for stopwatch timers
 
-  const handleTimerComplete = useCallback(async () => {
-    // Mark current session as completed
-    if (currentSessionId) {
-      try {
-        const sessionDuration = activeTab === 'general' ? timeElapsed : initialTime;
-        
-        await updateTimerSession.mutateAsync({
-          id: currentSessionId,
-          endTime: new Date().toISOString(),
-          isCompleted: true,
-          duration: sessionDuration, // Ensure duration reflects actual time
-        });
-        
-        // Refetch sessions to update stats
-        refetchSessions();
-        
-        // Show completion alert
-        const timerName = activeTab === 'general' ? (t('generalTimer') || '일반 타이머') : 
-                         activeTab === 'tea' ? (t('teaBreak') || '차 휴식') : 
-                         (t('lunchBreak') || '점심 휴식');
-        
-        if (Platform.OS !== 'web') {
-          Alert.alert(
-            t('timerComplete') || '타이머 완료!',
-            `${timerName} ${Math.floor(sessionDuration / 60)}${t('minutes') || '분'} ${t('sessionFinished') || '세션이 완료되었습니다.'}`,
-            [{ text: 'OK' }]
-          );
-        } else {
-          console.log(`${timerName} ${Math.floor(sessionDuration / 60)} minute session finished.`);
-        }
-      } catch (error) {
-        console.error('Failed to complete timer session:', error);
-      }
-    }
-    
-    setCurrentSessionId(null);
-    updateStudyTime((activeTab === 'general' ? timeElapsed : initialTime) / 60);
-  }, [initialTime, timeElapsed, activeTab, updateStudyTime, currentSessionId, updateTimerSession, refetchSessions, t]);
+  // Remove handleTimerComplete since we don't auto-complete timers anymore
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
     
     if (isRunning) {
       interval = setInterval(() => {
-        if (activeTab === 'general') {
-          // General timer counts up (stopwatch)
-          setTimeElapsed((prev) => prev + 1);
-        } else {
-          // Break timers count down
-          setTimeLeft((prev) => {
-            if (prev <= 1) {
-              setIsRunning(false);
-              handleTimerComplete();
-              return 0;
-            }
-            return prev - 1;
-          });
-        }
+        // All timers count up from 0 (stopwatch style)
+        setTimeElapsed((prev) => prev + 1);
       }, 1000);
     }
 
     return () => clearInterval(interval);
-  }, [isRunning, activeTab, handleTimerComplete]);
+  }, [isRunning]);
 
   const toggleTimer = useCallback(async () => {
     if (!isRunning) {
@@ -223,12 +132,10 @@ export default function TimerScreen() {
             lunch: 'lunch-break'
           };
           
-          const sessionDuration = activeTab === 'general' ? 0 : initialTime; // General timer has no preset duration
-          
           const result = await createTimerSession.mutateAsync({
             userId: user?.id || '550e8400-e29b-41d4-a716-446655440000',
             subject: subjectMap[activeTab],
-            duration: sessionDuration,
+            duration: 0, // Will be updated when session ends
             startTime: new Date().toISOString(),
           });
           
@@ -273,56 +180,52 @@ export default function TimerScreen() {
     }
     
     setIsRunning(!isRunning);
-  }, [isRunning, currentSessionId, initialTime, activeTab, user?.id, createTimerSession, updateTimerSession, createPauseLog, activeTimer]);
+  }, [isRunning, currentSessionId, activeTab, user?.id, createTimerSession, updateTimerSession, createPauseLog, activeTimer]);
 
   const resetTimer = useCallback(async () => {
     // Save the session when reset (only if there's actual time spent)
-    if (currentSessionId) {
+    if (currentSessionId && timeElapsed > 0) {
       try {
-        const actualTimeSpent = activeTab === 'general' ? timeElapsed : (initialTime - timeLeft);
+        // Save the session with actual time spent
+        await updateTimerSession.mutateAsync({
+          id: currentSessionId,
+          endTime: new Date().toISOString(),
+          isCompleted: true,
+          duration: timeElapsed, // Store actual elapsed time
+        });
         
-        if (actualTimeSpent > 0) {
-          // Save the session with actual time spent
-          await updateTimerSession.mutateAsync({
-            id: currentSessionId,
-            endTime: new Date().toISOString(),
-            isCompleted: true,
-            duration: actualTimeSpent, // Update duration to actual time spent
-          });
-          
-          // Refetch sessions to update stats
-          refetchSessions();
-          
-          // Show save confirmation
-          if (Platform.OS !== 'web') {
-            Alert.alert(
-              t('sessionSaved') || '세션 저장됨',
-              `${Math.floor(actualTimeSpent / 60)}${t('minutes') || '분'} ${Math.floor(actualTimeSpent % 60)}${t('seconds') || '초'} ${t('sessionSavedMessage') || '세션이 저장되었습니다.'}`,
-              [{ text: 'OK' }]
-            );
-          }
-        } else {
-          // Cancel session if no time was spent
-          await updateTimerSession.mutateAsync({
-            id: currentSessionId,
-            endTime: new Date().toISOString(),
-            isCompleted: false,
-          });
+        // Refetch sessions to update stats
+        refetchSessions();
+        
+        // Show save confirmation
+        if (Platform.OS !== 'web') {
+          Alert.alert(
+            t('sessionSaved') || '세션 저장됨',
+            `${Math.floor(timeElapsed / 60)}${t('minutes') || '분'} ${Math.floor(timeElapsed % 60)}${t('seconds') || '초'} ${t('sessionSavedMessage') || '세션이 저장되었습니다.'}`,
+            [{ text: 'OK' }]
+          );
         }
       } catch (error) {
-        console.error('Failed to handle timer session:', error);
+        console.error('Failed to save timer session:', error);
+      }
+    } else if (currentSessionId) {
+      // Cancel session if no time was spent
+      try {
+        await updateTimerSession.mutateAsync({
+          id: currentSessionId,
+          endTime: new Date().toISOString(),
+          isCompleted: false,
+        });
+      } catch (error) {
+        console.error('Failed to cancel timer session:', error);
       }
     }
     
+    // Reset everything
     setCurrentSessionId(null);
     setIsRunning(false);
-    
-    if (activeTab === 'general') {
-      setTimeElapsed(0);
-    } else {
-      setTimeLeft(initialTime);
-    }
-  }, [initialTime, timeElapsed, timeLeft, activeTab, currentSessionId, updateTimerSession, refetchSessions, t]);
+    setTimeElapsed(0);
+  }, [timeElapsed, currentSessionId, updateTimerSession, refetchSessions, t]);
 
   const formatTime = useCallback((seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -331,13 +234,9 @@ export default function TimerScreen() {
   }, []);
 
   const getProgress = useCallback(() => {
-    if (activeTab === 'general') {
-      // For general timer, show a pulsing animation or no progress
-      return (timeElapsed % 60) * (100 / 60); // Creates a cycling progress
-    } else {
-      return ((initialTime - timeLeft) / initialTime) * 100;
-    }
-  }, [initialTime, timeLeft, timeElapsed, activeTab]);
+    // Show a cycling progress for all timers (creates a nice visual effect)
+    return (timeElapsed % 60) * (100 / 60);
+  }, [timeElapsed]);
 
   const getTimerColor = useCallback(() => {
     switch (activeTab) {
@@ -378,13 +277,7 @@ export default function TimerScreen() {
     }
   }, [activeTab, t]);
   
-  const getCurrentTime = useCallback(() => {
-    if (activeTab === 'general') {
-      return timeElapsed;
-    } else {
-      return timeLeft;
-    }
-  }, [activeTab, timeElapsed, timeLeft]);
+  // Remove getCurrentTime since we directly use timeElapsed
   
   const handleTabChange = useCallback((tab: TimerType) => {
     if (isRunning) {
@@ -399,300 +292,167 @@ export default function TimerScreen() {
     }
     
     setActiveTab(tab);
-    
-    // Reset times when switching tabs
-    if (tab === 'general') {
-      setTimeElapsed(0);
-    } else {
-      const defaultTimes = {
-        tea: 15 * 60,   // 15 minutes for tea break
-        lunch: 30 * 60  // 30 minutes for lunch break
-      };
-      const defaultTime = defaultTimes[tab] || 15 * 60;
-      setTimeLeft(defaultTime);
-      setInitialTime(defaultTime);
-    }
+    // Reset timer to 0 for all tabs
+    setTimeElapsed(0);
   }, [isRunning, t]);
 
   return (
-    <View style={[styles.container, { backgroundColor: getTimerColor() + "10", paddingTop: insets.top }]}>
-      {/* Tab Navigation */}
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'general' && { backgroundColor: getTimerColor() }]}
-          onPress={() => handleTabChange('general')}
-        >
-          <Clock size={20} color={activeTab === 'general' ? '#FFFFFF' : '#8E8E93'} />
-          <Text style={[styles.tabText, { color: activeTab === 'general' ? '#FFFFFF' : '#8E8E93' }]}>
-            {t('generalTimer') || '일반'}
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'tea' && { backgroundColor: getTimerColor() }]}
-          onPress={() => handleTabChange('tea')}
-        >
-          <Coffee size={20} color={activeTab === 'tea' ? '#FFFFFF' : '#8E8E93'} />
-          <Text style={[styles.tabText, { color: activeTab === 'tea' ? '#FFFFFF' : '#8E8E93' }]}>
-            {t('teaBreak') || '차 휴식'}
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'lunch' && { backgroundColor: getTimerColor() }]}
-          onPress={() => handleTabChange('lunch')}
-        >
-          <UtensilsCrossed size={20} color={activeTab === 'lunch' ? '#FFFFFF' : '#8E8E93'} />
-          <Text style={[styles.tabText, { color: activeTab === 'lunch' ? '#FFFFFF' : '#8E8E93' }]}>
-            {t('lunchBreak') || '점심'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.header}>
-        <Text style={styles.title}>{getTimerTitle()}</Text>
-        <Text style={styles.subtitle}>{getTimerSubtitle()}</Text>
-      </View>
-
-      {activeTab !== 'general' && (
-        <TouchableOpacity 
-          style={styles.timeSelector}
-          onPress={() => {
-            const hours = Math.floor(initialTime / 3600);
-            const minutes = Math.floor((initialTime % 3600) / 60);
-            const seconds = initialTime % 60;
-            setTempHours(hours);
-            setTempMinutes(minutes);
-            setTempSeconds(seconds);
-            setShowTimeModal(true);
-          }}
-          disabled={isRunning}
-        >
-          <Clock size={20} color={getTimerColor()} />
-          <Text style={[styles.timeSelectorText, { color: getTimerColor() }]}>
-            {t('setTimerDuration') || '타이머 시간 설정'}
-          </Text>
-        </TouchableOpacity>
-      )}
-
-      <Animated.View style={[styles.timerContainer, { opacity: fadeAnim }]}>
-        <View style={styles.progressWrapper}>
-          <CircularProgress
-            percentage={getProgress()}
-            size={width * 0.7}
-            strokeWidth={20}
-            color={getTimerColor()}
-          />
-          <View style={styles.timerDisplay}>
-            <Text style={[styles.timeText, { color: getTimerColor() }]}>
-              {formatTime(getCurrentTime())}
+    <View style={[styles.container, { backgroundColor: getTimerColor() + "10" }]}>
+      <View style={[styles.safeArea, { paddingTop: insets.top }]}>
+        {/* Tab Navigation */}
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'general' && { backgroundColor: getTimerColor() }]}
+            onPress={() => handleTabChange('general')}
+          >
+            <Clock size={20} color={activeTab === 'general' ? '#FFFFFF' : '#8E8E93'} />
+            <Text style={[styles.tabText, { color: activeTab === 'general' ? '#FFFFFF' : '#8E8E93' }]}>
+              {t('generalTimer') || '일반'}
             </Text>
-            <Text style={styles.sessionText}>
-              {activeTab === 'general' ? (t('elapsedTime') || '경과 시간') : 
-               activeTab === 'tea' ? (t('teaTime') || '차 시간') : 
-               (t('lunchTime') || '점심 시간')}
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'tea' && { backgroundColor: getTimerColor() }]}
+            onPress={() => handleTabChange('tea')}
+          >
+            <Coffee size={20} color={activeTab === 'tea' ? '#FFFFFF' : '#8E8E93'} />
+            <Text style={[styles.tabText, { color: activeTab === 'tea' ? '#FFFFFF' : '#8E8E93' }]}>
+              {t('teaBreak') || '차 휴식'}
             </Text>
-          </View>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'lunch' && { backgroundColor: getTimerColor() }]}
+            onPress={() => handleTabChange('lunch')}
+          >
+            <UtensilsCrossed size={20} color={activeTab === 'lunch' ? '#FFFFFF' : '#8E8E93'} />
+            <Text style={[styles.tabText, { color: activeTab === 'lunch' ? '#FFFFFF' : '#8E8E93' }]}>
+              {t('lunchBreak') || '점심'}
+            </Text>
+          </TouchableOpacity>
         </View>
-      </Animated.View>
 
-      <View style={styles.controls}>
-        <TouchableOpacity
-          style={styles.controlButton}
-          onPress={resetTimer}
-        >
-          <RotateCcw size={24} color="#8E8E93" />
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.playButton, { backgroundColor: getTimerColor() }]}
-          onPress={toggleTimer}
-        >
-          {isRunning ? (
-            <Pause size={32} color="#FFFFFF" />
-          ) : (
-            <Play size={32} color="#FFFFFF" />
-          )}
-        </TouchableOpacity>
-        
-        {activeTab !== 'general' && (
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.title}>{getTimerTitle()}</Text>
+          <Text style={styles.subtitle}>{getTimerSubtitle()}</Text>
+        </View>
+
+        {/* Timer Display */}
+        <View style={styles.timerSection}>
+          <Animated.View style={[styles.timerContainer, { opacity: fadeAnim }]}>
+            <View style={styles.progressWrapper}>
+              <CircularProgress
+                percentage={getProgress()}
+                size={width * 0.65}
+                strokeWidth={16}
+                color={getTimerColor()}
+              />
+              <View style={styles.timerDisplay}>
+                <Text style={[styles.timeText, { color: getTimerColor() }]}>
+                  {formatTime(timeElapsed)}
+                </Text>
+                <Text style={styles.sessionText}>
+                  {t('elapsedTime') || '경과 시간'}
+                </Text>
+              </View>
+            </View>
+          </Animated.View>
+        </View>
+
+        {/* Controls */}
+        <View style={styles.controls}>
           <TouchableOpacity
             style={styles.controlButton}
-            onPress={() => {
-              const hours = Math.floor(initialTime / 3600);
-              const minutes = Math.floor((initialTime % 3600) / 60);
-              const seconds = initialTime % 60;
-              setTempHours(hours);
-              setTempMinutes(minutes);
-              setTempSeconds(seconds);
-              setShowTimeModal(true);
-            }}
-            disabled={isRunning}
+            onPress={resetTimer}
           >
-            <Clock size={24} color="#8E8E93" />
+            <RotateCcw size={24} color="#8E8E93" />
           </TouchableOpacity>
-        )}
-        
-        {activeTab === 'general' && (
+          
+          <TouchableOpacity
+            style={[styles.playButton, { backgroundColor: getTimerColor() }]}
+            onPress={toggleTimer}
+          >
+            {isRunning ? (
+              <Pause size={32} color="#FFFFFF" />
+            ) : (
+              <Play size={32} color="#FFFFFF" />
+            )}
+          </TouchableOpacity>
+          
           <View style={styles.controlButton}>
             {/* Empty space for symmetry */}
           </View>
-        )}
-      </View>
+        </View>
 
-      <View style={styles.stats}>
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>{todaysSessionCount}</Text>
-          <Text style={styles.statLabel}>{t('sessions') || "뽀모도로"}</Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>{Math.floor(todaysTotalTime / 3600)}{t('hours') || "시간"} {Math.floor((todaysTotalTime % 3600) / 60)}{t('minutes') || "분"}</Text>
-          <Text style={styles.statLabel}>{t('totalFocus') || "총 집중 시간"}</Text>
-        </View>
-      </View>
-      
-      {/* Recent Sessions */}
-      {timerSessions && timerSessions.length > 0 && (
-        <ScrollView style={styles.recentSessions} showsVerticalScrollIndicator={false}>
-          <Text style={styles.recentTitle}>{t('recentSessions') || '최근 세션'}</Text>
-          {timerSessions.slice(0, 5).map((session) => {
-            const hours = Math.floor(session.duration / 3600);
-            const minutes = Math.floor((session.duration % 3600) / 60);
-            const seconds = session.duration % 60;
-            const sessionDate = new Date(session.start_time);
-            
-            const getSessionIcon = (subject: string) => {
-              switch (subject) {
-                case 'general-timer': return '🎯';
-                case 'tea-break': return '☕';
-                case 'lunch-break': return '🍽️';
-                default: return '⏱️';
-              }
-            };
-            
-            const getSessionName = (subject: string) => {
-              switch (subject) {
-                case 'general-timer': return t('generalTimer') || '일반 타이머';
-                case 'tea-break': return t('teaBreak') || '차 휴식';
-                case 'lunch-break': return t('lunchBreak') || '점심 휴식';
-                default: return t('timerSession') || '타이머 세션';
-              }
-            };
-            
-            return (
-              <View key={session.id} style={styles.sessionItem}>
-                <View style={styles.sessionInfo}>
-                  <Text style={styles.sessionType}>
-                    {getSessionIcon(session.subject)} {getSessionName(session.subject)}
-                  </Text>
-                  <Text style={styles.sessionDuration}>
-                    {hours > 0 ? `${hours}${t('hours') || 'h'} ` : ''}
-                    {minutes > 0 ? `${minutes}${t('minutes') || 'm'} ` : ''}
-                    {hours === 0 && minutes === 0 ? `${seconds}${t('seconds') || 's'}` : ''}
-                  </Text>
-                </View>
-                <Text style={styles.sessionTime}>
-                  {sessionDate.toLocaleTimeString('ko-KR', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                  })}
-                </Text>
-              </View>
-            );
-          })}
-        </ScrollView>
-      )}
-      
-      {/* Time Picker Modal */}
-      <Modal
-        visible={showTimeModal}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowTimeModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>{t('setTimerDuration') || '타이머 시간 설정'}</Text>
-            
-            <View style={styles.timePickerContainer}>
-              {/* Hours */}
-              <View style={styles.timePickerSection}>
-                <Text style={styles.timePickerLabel}>{t('hours') || '시간'}</Text>
-                <View style={styles.timePickerControls}>
-                  <TouchableOpacity
-                    style={styles.timePickerButton}
-                    onPress={() => setTempHours(Math.max(0, tempHours - 1))}
-                  >
-                    <Minus size={20} color={getTimerColor()} />
-                  </TouchableOpacity>
-                  <Text style={styles.timePickerValue}>{tempHours.toString().padStart(2, '0')}</Text>
-                  <TouchableOpacity
-                    style={styles.timePickerButton}
-                    onPress={() => setTempHours(Math.min(23, tempHours + 1))}
-                  >
-                    <Plus size={20} color={getTimerColor()} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-              
-              {/* Minutes */}
-              <View style={styles.timePickerSection}>
-                <Text style={styles.timePickerLabel}>{t('minutes') || '분'}</Text>
-                <View style={styles.timePickerControls}>
-                  <TouchableOpacity
-                    style={styles.timePickerButton}
-                    onPress={() => setTempMinutes(Math.max(0, tempMinutes - 1))}
-                  >
-                    <Minus size={20} color={getTimerColor()} />
-                  </TouchableOpacity>
-                  <Text style={styles.timePickerValue}>{tempMinutes.toString().padStart(2, '0')}</Text>
-                  <TouchableOpacity
-                    style={styles.timePickerButton}
-                    onPress={() => setTempMinutes(Math.min(59, tempMinutes + 1))}
-                  >
-                    <Plus size={20} color={getTimerColor()} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-              
-              {/* Seconds */}
-              <View style={styles.timePickerSection}>
-                <Text style={styles.timePickerLabel}>{t('seconds') || '초'}</Text>
-                <View style={styles.timePickerControls}>
-                  <TouchableOpacity
-                    style={styles.timePickerButton}
-                    onPress={() => setTempSeconds(Math.max(0, tempSeconds - 1))}
-                  >
-                    <Minus size={20} color={getTimerColor()} />
-                  </TouchableOpacity>
-                  <Text style={styles.timePickerValue}>{tempSeconds.toString().padStart(2, '0')}</Text>
-                  <TouchableOpacity
-                    style={styles.timePickerButton}
-                    onPress={() => setTempSeconds(Math.min(59, tempSeconds + 1))}
-                  >
-                    <Plus size={20} color={getTimerColor()} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-            
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.modalCancelButton}
-                onPress={() => setShowTimeModal(false)}
-              >
-                <Text style={styles.modalCancelText}>{t('cancel') || '취소'}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalSetButton, { backgroundColor: getTimerColor() }]}
-                onPress={setCustomTime}
-              >
-                <Text style={styles.modalSetText}>{t('setTimer') || '설정'}</Text>
-              </TouchableOpacity>
-            </View>
+        {/* Stats */}
+        <View style={styles.stats}>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{todaysSessionCount}</Text>
+            <Text style={styles.statLabel}>{t('sessions') || "세션"}</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{Math.floor(todaysTotalTime / 3600)}{t('hours') || "h"} {Math.floor((todaysTotalTime % 3600) / 60)}{t('minutes') || "m"}</Text>
+            <Text style={styles.statLabel}>{t('totalFocus') || "총 집중 시간"}</Text>
           </View>
         </View>
-      </Modal>
+      </View>
+      
+      {/* Recent Sessions - Only show if there are sessions */}
+      {timerSessions && timerSessions.length > 0 && (
+        <View style={styles.recentSessionsContainer}>
+          <ScrollView style={styles.recentSessions} showsVerticalScrollIndicator={false}>
+            <Text style={styles.recentTitle}>{t('recentSessions') || '최근 세션'}</Text>
+            {timerSessions.slice(0, 5).map((session) => {
+              const hours = Math.floor(session.duration / 3600);
+              const minutes = Math.floor((session.duration % 3600) / 60);
+              const seconds = session.duration % 60;
+              const sessionDate = new Date(session.start_time);
+              
+              const getSessionIcon = (subject: string) => {
+                switch (subject) {
+                  case 'general-timer': return '🎯';
+                  case 'tea-break': return '☕';
+                  case 'lunch-break': return '🍽️';
+                  default: return '⏱️';
+                }
+              };
+              
+              const getSessionName = (subject: string) => {
+                switch (subject) {
+                  case 'general-timer': return t('generalTimer') || '일반 타이머';
+                  case 'tea-break': return t('teaBreak') || '차 휴식';
+                  case 'lunch-break': return t('lunchBreak') || '점심 휴식';
+                  default: return t('timerSession') || '타이머 세션';
+                }
+              };
+              
+              return (
+                <View key={session.id} style={styles.sessionItem}>
+                  <View style={styles.sessionInfo}>
+                    <Text style={styles.sessionType}>
+                      {getSessionIcon(session.subject)} {getSessionName(session.subject)}
+                    </Text>
+                    <Text style={styles.sessionDuration}>
+                      {hours > 0 ? `${hours}${t('hours') || 'h'} ` : ''}
+                      {minutes > 0 ? `${minutes}${t('minutes') || 'm'} ` : ''}
+                      {hours === 0 && minutes === 0 ? `${seconds}${t('seconds') || 's'}` : ''}
+                    </Text>
+                  </View>
+                  <Text style={styles.sessionTime}>
+                    {sessionDate.toLocaleTimeString('ko-KR', { 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    })}
+                  </Text>
+                </View>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
+      
+      {/* Remove time picker modal since all timers are now stopwatch style */}
     </View>
   );
 }
@@ -700,6 +460,22 @@ export default function TimerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  safeArea: {
+    flex: 1,
+  },
+  timerSection: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  recentSessionsContainer: {
+    maxHeight: 200,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    marginTop: 10,
   },
   tabContainer: {
     flexDirection: 'row',
@@ -737,21 +513,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#8E8E93",
   },
-  timeSelector: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 20,
-    marginHorizontal: 20,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 16,
-    gap: 8,
-  },
-  timeSelectorText: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
+
   timerContainer: {
     flex: 1,
     justifyContent: "center",
@@ -863,85 +625,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#8E8E93",
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContent: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 24,
-    margin: 20,
-    minWidth: 300,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 24,
-    color: "#000000",
-  },
-  timePickerContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 24,
-  },
-  timePickerSection: {
-    alignItems: "center",
-    flex: 1,
-  },
-  timePickerLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#8E8E93",
-    marginBottom: 12,
-  },
-  timePickerControls: {
-    alignItems: "center",
-    gap: 12,
-  },
-  timePickerButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#F2F2F7",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  timePickerValue: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#000000",
-    minWidth: 40,
-    textAlign: "center",
-  },
-  modalButtons: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  modalCancelButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: "#F2F2F7",
-    alignItems: "center",
-  },
-  modalCancelText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#8E8E93",
-  },
-  modalSetButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  modalSetText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#FFFFFF",
-  },
+
 });
