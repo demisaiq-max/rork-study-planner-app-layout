@@ -8,10 +8,9 @@ import {
   Animated,
   Alert,
   Platform,
-  ScrollView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Play, Pause, RotateCcw, Clock, Coffee, UtensilsCrossed, ChevronRight, History } from "lucide-react-native";
+import { Play, Pause, RotateCcw, Clock, Coffee, UtensilsCrossed, History } from "lucide-react-native";
 import CircularProgress from "@/components/CircularProgress";
 import { useLanguage } from "@/hooks/language-context";
 import { useUser } from "@/hooks/user-context";
@@ -304,7 +303,7 @@ export default function TimerScreen() {
         styles.mainContent, 
         { 
           paddingTop: insets.top,
-          paddingBottom: timerSessions && timerSessions.length > 0 ? 200 : insets.bottom + 20
+          paddingBottom: insets.bottom + 20
         }
       ]}>
         {/* Tab Navigation */}
@@ -409,68 +408,7 @@ export default function TimerScreen() {
         </View>
       </View>
       
-      {/* Recent Sessions - Fixed at bottom, doesn't affect main content */}
-      {timerSessions && timerSessions.length > 0 && (
-        <View style={[styles.recentSessionsContainer, { paddingBottom: insets.bottom }]}>
-          <ScrollView style={styles.recentSessions} showsVerticalScrollIndicator={false}>
-            <View style={styles.recentHeader}>
-              <Text style={styles.recentTitle}>{t('recentSessions') || '최근 세션'}</Text>
-              <TouchableOpacity 
-                style={styles.viewAllButton}
-                onPress={() => router.push('/timer-sessions')}
-              >
-                <Text style={styles.viewAllText}>{t('viewAll') || '모두 보기'}</Text>
-                <ChevronRight size={16} color="#007AFF" />
-              </TouchableOpacity>
-            </View>
-            {timerSessions.slice(0, 3).map((session) => {
-              const hours = Math.floor(session.duration / 3600);
-              const minutes = Math.floor((session.duration % 3600) / 60);
-              const seconds = session.duration % 60;
-              const sessionDate = new Date(session.start_time);
-              
-              const getSessionIcon = (subject: string) => {
-                switch (subject) {
-                  case 'general-timer': return '🎯';
-                  case 'tea-break': return '☕';
-                  case 'lunch-break': return '🍽️';
-                  default: return '⏱️';
-                }
-              };
-              
-              const getSessionName = (subject: string) => {
-                switch (subject) {
-                  case 'general-timer': return t('generalTimer') || '일반 타이머';
-                  case 'tea-break': return t('teaBreak') || '차 휴식';
-                  case 'lunch-break': return t('lunchBreak') || '점심 휴식';
-                  default: return t('timerSession') || '타이머 세션';
-                }
-              };
-              
-              return (
-                <View key={session.id} style={styles.sessionItem}>
-                  <View style={styles.sessionInfo}>
-                    <Text style={styles.sessionType}>
-                      {getSessionIcon(session.subject)} {getSessionName(session.subject)}
-                    </Text>
-                    <Text style={styles.sessionDuration}>
-                      {hours > 0 ? `${hours}${t('hours') || 'h'} ` : ''}
-                      {minutes > 0 ? `${minutes}${t('minutes') || 'm'} ` : ''}
-                      {hours === 0 && minutes === 0 ? `${seconds}${t('seconds') || 's'}` : ''}
-                    </Text>
-                  </View>
-                  <Text style={styles.sessionTime}>
-                    {sessionDate.toLocaleTimeString('ko-KR', { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
-                    })}
-                  </Text>
-                </View>
-              );
-            })}
-          </ScrollView>
-        </View>
-      )}
+
     </View>
   );
 }
@@ -490,21 +428,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     minHeight: 250,
   },
-  recentSessionsContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    maxHeight: 180,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-  },
+
   tabContainer: {
     flexDirection: 'row',
     paddingHorizontal: 20,
@@ -616,58 +540,6 @@ const styles = StyleSheet.create({
     color: "#8E8E93",
     marginTop: 4,
   },
-  recentSessions: {
-    paddingHorizontal: 20,
-    paddingTop: 15,
-    paddingBottom: 10,
-  },
-  recentHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  recentTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#000000",
-  },
-  viewAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  viewAllText: {
-    fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '500',
-  },
-  sessionItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#F8F9FA",
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 6,
-  },
-  sessionInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  sessionType: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#000000",
-  },
-  sessionDuration: {
-    fontSize: 14,
-    color: "#8E8E93",
-  },
-  sessionTime: {
-    fontSize: 12,
-    color: "#8E8E93",
-  },
+
 
 });
