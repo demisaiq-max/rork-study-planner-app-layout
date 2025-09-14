@@ -35,11 +35,14 @@ app.onError((err, c) => {
 
 // Add request logging middleware
 app.use('/trpc/*', async (c, next) => {
+  const fullPath = c.req.path;
+  const procedurePath = fullPath.replace('/api/trpc/', '');
+  
   console.log('tRPC request:', {
     method: c.req.method,
-    path: c.req.path,
+    fullPath,
+    procedurePath,
     url: c.req.url,
-    headers: Object.fromEntries(c.req.raw.headers.entries()),
   });
   await next();
 });
@@ -51,7 +54,12 @@ app.use(
     router: appRouter,
     createContext,
     onError: ({ error, path }) => {
-      console.error('tRPC error:', { path, error: error.message, stack: error.stack });
+      console.error('tRPC error:', { 
+        path, 
+        error: error.message, 
+        code: error.code,
+        cause: error.cause,
+      });
       // Return false to use tRPC's default error handling which returns proper JSON
       return false;
     },

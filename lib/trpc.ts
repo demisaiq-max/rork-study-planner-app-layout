@@ -26,6 +26,8 @@ const getBaseUrl = () => {
 
 let trpcUrl: string;
 try {
+  // IMPORTANT: The URL should point to /api/trpc without any additional path
+  // The tRPC client will append the procedure paths automatically
   trpcUrl = `${getBaseUrl()}/api/trpc`;
   console.log('✅ tRPC Client URL:', trpcUrl);
 } catch (error) {
@@ -38,46 +40,84 @@ export const trpcClient = trpc.createClient({
     httpBatchLink({
       url: trpcUrl,
       transformer: superjson,
-      fetch: (url, options) => {
+      headers: () => {
+        return {
+          'content-type': 'application/json',
+        };
+      },
+      fetch: async (url, options) => {
+        // Parse the URL to check for path issues
+        const urlString = url.toString();
+        const parsedUrl = new URL(urlString);
+        
+        // Log the parsed URL components
+        console.log('🔍 tRPC URL Analysis:', {
+          full: urlString,
+          pathname: parsedUrl.pathname,
+          search: parsedUrl.search,
+        });
+        
+        // Check if the path has duplicate 'trpc' segments
+        if (parsedUrl.pathname.includes('/trpc/trpc/')) {
+          console.warn('⚠️ Duplicate trpc path detected, fixing...');
+          parsedUrl.pathname = parsedUrl.pathname.replace('/trpc/trpc/', '/trpc/');
+        }
+        
         const requestInfo = {
-          url: url.toString(),
+          url: parsedUrl.toString(),
           method: options?.method || 'GET',
+          body: options?.body ? (() => {
+            try {
+              return JSON.parse(options.body as string);
+            } catch {
+              return options.body;
+            }
+          })() : undefined,
           timestamp: new Date().toISOString(),
         };
         
         console.log('🚀 tRPC Request:', requestInfo);
         
-        return fetch(url, options)
-          .then(response => {
-            const responseInfo = {
-              url: url.toString(),
-              status: response.status,
-              statusText: response.statusText,
-              ok: response.ok,
-              timestamp: new Date().toISOString(),
-            };
-            
-            console.log(response.ok ? '✅ tRPC Response:' : '❌ tRPC Response:', responseInfo);
-            
-            if (!response.ok) {
-              console.error('❌ tRPC HTTP Error:', {
-                status: response.status,
-                statusText: response.statusText,
-                url: url.toString()
-              });
-            }
-            
-            return response;
-          })
-          .catch(error => {
-            console.error('❌ tRPC Network Error:', {
-              url: url.toString(),
-              error: error.message,
-              stack: error.stack,
-              timestamp: new Date().toISOString(),
-            });
-            throw error;
+        try {
+          const response = await fetch(parsedUrl.toString(), {
+            ...options,
+            headers: {
+              ...options?.headers,
+              'content-type': 'application/json',
+            },
           });
+          
+          const responseInfo = {
+            url: parsedUrl.toString(),
+            status: response.status,
+            statusText: response.statusText,
+            ok: response.ok,
+            timestamp: new Date().toISOString(),
+          };
+          
+          if (response.ok) {
+            console.log('✅ tRPC Response:', responseInfo);
+          } else {
+            console.error('❌ tRPC Response Error:', responseInfo);
+            
+            // Try to get error details from response
+            try {
+              const errorText = await response.text();
+              console.error('❌ Error details:', errorText);
+            } catch {
+              console.error('❌ Could not read error response');
+            }
+          }
+          
+          return response;
+        } catch (error) {
+          console.error('❌ tRPC Network Error:', {
+            url: parsedUrl.toString(),
+            error: error instanceof Error ? error.message : String(error),
+            timestamp: new Date().toISOString(),
+          });
+          throw error;
+        }
       },
     }),
   ],
