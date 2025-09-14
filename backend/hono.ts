@@ -66,23 +66,16 @@ app.get("/debug", (c) => {
       
       if (obj && typeof obj === 'object') {
         if (obj._def?.procedures) {
-          // This is a procedure
+          // This is a router with procedures
           Object.keys(obj._def.procedures).forEach(key => {
             paths.push(prefix + key);
           });
-        } else if (obj._def?.record) {
+        }
+        if (obj._def?.record) {
           // This is a nested router
           Object.keys(obj._def.record).forEach(key => {
             const nestedPaths = getAllProcedurePaths(obj._def.record[key], prefix + key + '.');
             paths.push(...nestedPaths);
-          });
-        } else {
-          // Check if it's a direct object with procedures
-          Object.keys(obj).forEach(key => {
-            if (obj[key] && typeof obj[key] === 'object') {
-              const nestedPaths = getAllProcedurePaths(obj[key], prefix + key + '.');
-              paths.push(...nestedPaths);
-            }
           });
         }
       }
@@ -92,6 +85,10 @@ app.get("/debug", (c) => {
     
     const allPaths = getAllProcedurePaths(appRouter);
     
+    // Get specific router info
+    const testsRouter = record.tests;
+    const communityRouter = record.community;
+    
     return c.json({ 
       status: "ok", 
       message: "tRPC router loaded",
@@ -100,11 +97,14 @@ app.get("/debug", (c) => {
       routerType: typeof appRouter,
       hasTests: 'tests' in record,
       hasCommunity: 'community' in record,
-      testsKeys: record.tests ? Object.keys((record.tests as any)._def?.record || {}) : [],
-      communityKeys: record.community ? Object.keys((record.community as any)._def?.record || {}) : [],
-      allProcedurePaths: allPaths
+      testsKeys: testsRouter?._def?.record ? Object.keys(testsRouter._def.record) : [],
+      communityKeys: communityRouter?._def?.record ? Object.keys(communityRouter._def.record) : [],
+      allProcedurePaths: allPaths,
+      testsRouterType: testsRouter ? typeof testsRouter : 'undefined',
+      communityRouterType: communityRouter ? typeof communityRouter : 'undefined'
     });
   } catch (error) {
+    console.error('Debug endpoint error:', error);
     return c.json({ 
       status: "error", 
       message: "tRPC router error",

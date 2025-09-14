@@ -61,8 +61,7 @@ export default function HomeScreen() {
     user?.id || 'default-user',
     { 
       enabled: !!user?.id,
-      retry: 2,
-      retryDelay: 1000
+      retry: false
     }
   );
   
@@ -162,6 +161,10 @@ export default function HomeScreen() {
     }
     if (gradedExamsError) {
       console.error('Error loading graded exams:', gradedExamsError);
+      // Log more details about the error
+      if ((gradedExamsError as any)?.data?.code === 'PARSE_ERROR') {
+        console.error('Backend returned non-JSON response. The backend server may not be running or configured correctly.');
+      }
     }
   }, [user?.id, gradedExams, isLoadingGradedExams, gradedExamsError]);
   
@@ -438,8 +441,12 @@ export default function HomeScreen() {
               </View>
             ) : gradedExamsError ? (
               <View style={styles.noResultsCard}>
-                <Text style={styles.noResultsText}>Error Loading</Text>
-                <Text style={styles.noResultsSubtext}>{(gradedExamsError as any)?.message || 'Failed to load exams'}</Text>
+                <Text style={styles.noResultsText}>Connection Error</Text>
+                <Text style={styles.noResultsSubtext}>
+                  {(gradedExamsError as any)?.data?.code === 'PARSE_ERROR' 
+                    ? 'Backend not responding' 
+                    : (gradedExamsError as any)?.message || 'Failed to load exams'}
+                </Text>
               </View>
             ) : !gradedExams || gradedExams.length === 0 ? (
               <TouchableOpacity 
