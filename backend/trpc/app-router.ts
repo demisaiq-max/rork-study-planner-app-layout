@@ -1,5 +1,5 @@
 import { createTRPCRouter } from "./create-context";
-import hiRoute from "./routes/example/hi/route";
+import hiRoute, { debugProcedure } from "./routes/example/hi/route";
 
 // Exam routes
 import { getUserExams } from "./routes/exams/get-user-exams/route";
@@ -104,6 +104,7 @@ if (!getQuestionsProcedure) {
 export const appRouter = createTRPCRouter({
   example: createTRPCRouter({
     hi: hiRoute,
+    debug: debugProcedure,
   }),
 
   exams: createTRPCRouter({

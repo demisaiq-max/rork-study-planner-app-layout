@@ -23,6 +23,16 @@ export default function SupabaseTestScreen() {
     networkTest?: string;
   }>({});
   
+  // Debug tRPC availability
+  useEffect(() => {
+    console.log('🔍 Debugging tRPC availability:');
+    console.log('trpc object:', trpc);
+    console.log('trpc.tests:', trpc.tests);
+    console.log('trpc.tests.supabaseTest:', trpc.tests?.supabaseTest);
+    console.log('trpc.tests.supabaseTest.useQuery:', trpc.tests?.supabaseTest?.useQuery);
+    console.log('typeof trpc.tests.supabaseTest.useQuery:', typeof trpc.tests?.supabaseTest?.useQuery);
+  }, []);
+  
   // Test basic server connection
   useEffect(() => {
     const testServerConnection = async () => {
@@ -91,7 +101,30 @@ export default function SupabaseTestScreen() {
     testServerConnection();
   }, []);
   
-  const supabaseTest = trpc.tests.supabaseTest.useQuery();
+  // Safely call the query with error handling
+  let supabaseTest: any = { isLoading: true, data: null, error: null, refetch: () => {} };
+  
+  try {
+    if (trpc && trpc.tests && trpc.tests.supabaseTest && typeof trpc.tests.supabaseTest.useQuery === 'function') {
+      supabaseTest = trpc.tests.supabaseTest.useQuery();
+    } else {
+      console.error('❌ tRPC tests.supabaseTest.useQuery is not available');
+      supabaseTest = {
+        isLoading: false,
+        data: null,
+        error: new Error('tRPC tests.supabaseTest.useQuery is not a function'),
+        refetch: () => {}
+      };
+    }
+  } catch (error) {
+    console.error('❌ Error calling supabaseTest.useQuery:', error);
+    supabaseTest = {
+      isLoading: false,
+      data: null,
+      error,
+      refetch: () => {}
+    };
+  }
   
   // Handle supabase test results
   React.useEffect(() => {
@@ -235,7 +268,7 @@ export default function SupabaseTestScreen() {
                   <Text style={styles.tableTitle}>Table Counts:</Text>
                   {Object.entries(supabaseTest.data.tables).map(([table, count]) => (
                     <Text key={table} style={styles.tableRow}>
-                      {table}: {count} records
+                      {table}: {String(count)} records
                     </Text>
                   ))}
                 </View>

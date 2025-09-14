@@ -9,6 +9,13 @@ import { UserProvider } from "@/hooks/user-context";
 import { LanguageProvider } from "@/hooks/language-context";
 import { trpc, trpcClient } from "@/lib/trpc";
 
+// Debug tRPC initialization
+console.log('🔍 tRPC in _layout.tsx:');
+console.log('trpc:', trpc);
+console.log('trpcClient:', trpcClient);
+console.log('trpc.Provider:', trpc.Provider);
+console.log('typeof trpc.Provider:', typeof trpc.Provider);
+
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 

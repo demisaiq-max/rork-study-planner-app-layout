@@ -1,9 +1,16 @@
 import { createTRPCReact } from "@trpc/react-query";
-import { httpBatchLink } from "@trpc/client";
+import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import type { AppRouter } from "@/backend/trpc/app-router";
 import superjson from "superjson";
 
 export const trpc = createTRPCReact<AppRouter>();
+
+// Validate that trpc is properly initialized
+if (!trpc || typeof trpc.createClient !== 'function') {
+  console.error('❌ CRITICAL: tRPC not properly initialized!');
+  console.error('trpc object:', trpc);
+  console.error('trpc type:', typeof trpc);
+}
 
 const getBaseUrl = () => {
   const baseUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
