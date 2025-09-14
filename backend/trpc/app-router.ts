@@ -73,6 +73,25 @@ import { getTimerSessionsProcedure } from "./routes/timers/get-timer-sessions/ro
 import { getActiveTimerProcedure } from "./routes/timers/get-active-timer/route";
 import { createPauseLogProcedure } from "./routes/timers/create-pause-log/route";
 
+// Add debug logging
+console.log('Loading app router...');
+console.log('Available procedures:', {
+  tests: {
+    getLatestTestResults: typeof getLatestTestResults,
+  },
+  community: {
+    posts: {
+      getPosts: typeof getPostsProcedure,
+    },
+    groups: {
+      getGroups: typeof getGroupsProcedure,
+    },
+    questions: {
+      getQuestions: typeof getQuestionsProcedure,
+    },
+  },
+});
+
 export const appRouter = createTRPCRouter({
   example: createTRPCRouter({
     hi: hiRoute,

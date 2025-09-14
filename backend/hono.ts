@@ -4,6 +4,7 @@ import { cors } from "hono/cors";
 import { appRouter } from "./trpc/app-router";
 import { createContext } from "./trpc/create-context";
 
+
 // app will be mounted at /api
 const app = new Hono();
 
@@ -25,6 +26,16 @@ app.onError((err, c) => {
       code: 'INTERNAL_SERVER_ERROR'
     }
   }, 500);
+});
+
+// Add request logging middleware
+app.use('/trpc/*', async (c, next) => {
+  console.log('tRPC request:', {
+    method: c.req.method,
+    path: c.req.path,
+    url: c.req.url,
+  });
+  await next();
 });
 
 // Mount tRPC router at /trpc
@@ -56,52 +67,38 @@ app.get("/", (c) => {
 // Debug endpoint to check tRPC router
 app.get("/debug", (c) => {
   try {
-    const routerDef = (appRouter as any)._def;
-    const procedures = routerDef?.procedures || {};
-    const record = routerDef?.record || {};
+    // Simple debug info without accessing internal _def properties
+    const routerKeys = Object.keys(appRouter as any);
     
-    // Helper function to recursively get all procedure paths
-    const getAllProcedurePaths = (obj: any, prefix = ''): string[] => {
-      const paths: string[] = [];
+    // Helper function to get router structure
+    const getRouterStructure = (router: any): any => {
+      if (!router || typeof router !== 'object') return null;
       
-      if (obj && typeof obj === 'object') {
-        if ((obj as any)._def?.procedures) {
-          // This is a router with procedures
-          Object.keys((obj as any)._def.procedures).forEach(key => {
-            paths.push(prefix + key);
-          });
+      const structure: any = {};
+      Object.keys(router).forEach(key => {
+        const value = router[key];
+        if (value && typeof value === 'object') {
+          // Check if it's a nested router
+          if (typeof value.query === 'function' || typeof value.mutate === 'function') {
+            structure[key] = 'procedure';
+          } else {
+            structure[key] = getRouterStructure(value);
+          }
         }
-        if ((obj as any)._def?.record) {
-          // This is a nested router
-          Object.keys((obj as any)._def.record).forEach(key => {
-            const nestedPaths = getAllProcedurePaths((obj as any)._def.record[key], prefix + key + '.');
-            paths.push(...nestedPaths);
-          });
-        }
-      }
-      
-      return paths;
+      });
+      return structure;
     };
     
-    const allPaths = getAllProcedurePaths(appRouter);
-    
-    // Get specific router info
-    const testsRouter = record.tests;
-    const communityRouter = record.community;
+    const routerStructure = getRouterStructure(appRouter);
     
     return c.json({ 
       status: "ok", 
       message: "tRPC router loaded",
-      procedureKeys: Object.keys(procedures),
-      recordKeys: Object.keys(record),
+      routerKeys,
       routerType: typeof appRouter,
-      hasTests: 'tests' in record,
-      hasCommunity: 'community' in record,
-      testsKeys: (testsRouter as any)?._def?.record ? Object.keys((testsRouter as any)._def.record) : [],
-      communityKeys: (communityRouter as any)?._def?.record ? Object.keys((communityRouter as any)._def.record) : [],
-      allProcedurePaths: allPaths,
-      testsRouterType: testsRouter ? typeof testsRouter : 'undefined',
-      communityRouterType: communityRouter ? typeof communityRouter : 'undefined'
+      routerStructure,
+      hasTests: 'tests' in (appRouter as any),
+      hasCommunity: 'community' in (appRouter as any)
     });
   } catch (error) {
     console.error('Debug endpoint error:', error);
