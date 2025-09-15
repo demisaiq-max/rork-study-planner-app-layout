@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Play, Pause, RotateCcw, Clock, Coffee, UtensilsCrossed, History } from "lucide-react-native";
 import CircularProgress from "@/components/CircularProgress";
 import { useLanguage } from "@/hooks/language-context";
-import { useUser } from "@/hooks/user-context";
+import { useAuth } from "@/hooks/auth-context";
 import { trpc } from "@/lib/trpc";
 import { router } from "expo-router";
 
@@ -28,7 +28,7 @@ export default function TimerScreen() {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const { t } = useLanguage();
-  const { user } = useUser();
+  const { user } = useAuth();
   
   // tRPC mutations for timer operations
   const createTimerSession = trpc.timers.createTimerSession.useMutation();
@@ -37,7 +37,7 @@ export default function TimerScreen() {
   
   // Query for active timer
   const { data: activeTimer } = trpc.timers.getActiveTimer.useQuery(
-    { userId: user?.id || '550e8400-e29b-41d4-a716-446655440000' },
+    undefined,
     { 
       enabled: !!user?.id,
       refetchInterval: false,
@@ -47,7 +47,6 @@ export default function TimerScreen() {
   // Query for timer sessions history (only completed sessions)
   const { data: timerSessions, refetch: refetchSessions } = trpc.timers.getTimerSessions.useQuery(
     { 
-      userId: user?.id || '550e8400-e29b-41d4-a716-446655440000',
       limit: 10,
       completedOnly: true
     },
@@ -133,7 +132,6 @@ export default function TimerScreen() {
           };
           
           const result = await createTimerSession.mutateAsync({
-            userId: user?.id || '550e8400-e29b-41d4-a716-446655440000',
             subject: subjectMap[activeTab],
             duration: 0, // Will be updated when session ends
             startTime: new Date().toISOString(),
@@ -142,10 +140,11 @@ export default function TimerScreen() {
           setCurrentSessionId(result.id);
         } catch (error) {
           console.error('Failed to create timer session:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Failed to start timer session';
           if (Platform.OS !== 'web') {
-            Alert.alert('Error', 'Failed to start timer session');
+            Alert.alert('Error', errorMessage);
           } else {
-            console.log('Error: Failed to start timer session');
+            console.log('Error:', errorMessage);
           }
           return;
         }
@@ -180,7 +179,7 @@ export default function TimerScreen() {
     }
     
     setIsRunning(!isRunning);
-  }, [isRunning, currentSessionId, activeTab, user?.id, createTimerSession, updateTimerSession, createPauseLog, activeTimer]);
+  }, [isRunning, currentSessionId, activeTab, createTimerSession, updateTimerSession, createPauseLog, activeTimer]);
 
   const resetTimer = useCallback(async () => {
     // Save the session when reset (only if there's actual time spent)

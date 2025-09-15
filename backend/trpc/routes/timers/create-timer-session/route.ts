@@ -1,21 +1,21 @@
-import { publicProcedure } from '@/backend/trpc/create-context';
-import { supabase } from '@/lib/supabase';
+import { protectedProcedure } from '@/backend/trpc/create-context';
 import { z } from 'zod';
 
-export const createTimerSessionProcedure = publicProcedure
+export const createTimerSessionProcedure = protectedProcedure
   .input(z.object({
-    userId: z.string(),
     subject: z.string().optional(),
     duration: z.number(), // in seconds
     startTime: z.string(),
     notes: z.string().optional(),
   }))
-  .mutation(async ({ input }) => {
+  .mutation(async ({ input, ctx }) => {
     try {
-      const { data, error } = await supabase
+      console.log('Creating timer session for user:', ctx.userId);
+      
+      const { data, error } = await ctx.supabase
         .from('timer_sessions')
         .insert({
-          user_id: input.userId,
+          user_id: ctx.userId,
           subject: input.subject,
           duration: input.duration,
           start_time: input.startTime,
@@ -28,9 +28,10 @@ export const createTimerSessionProcedure = publicProcedure
 
       if (error) {
         console.error('Error creating timer session:', error);
-        throw new Error('Failed to create timer session');
+        throw new Error(`Failed to create timer session: ${error.message}`);
       }
 
+      console.log('Timer session created successfully:', data.id);
       return data;
     } catch (err) {
       console.error('Error in createTimerSession:', err);

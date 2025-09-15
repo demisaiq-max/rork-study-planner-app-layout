@@ -1,22 +1,20 @@
-import { publicProcedure } from '@/backend/trpc/create-context';
-import { supabase } from '@/lib/supabase';
+import { protectedProcedure } from '@/backend/trpc/create-context';
 import { z } from 'zod';
 
-export const getTimerSessionsProcedure = publicProcedure
+export const getTimerSessionsProcedure = protectedProcedure
   .input(z.object({
-    userId: z.string(),
     limit: z.number().optional().default(50),
     subject: z.string().optional(),
     startDate: z.string().optional(),
     endDate: z.string().optional(),
     completedOnly: z.boolean().optional().default(false),
   }))
-  .query(async ({ input }) => {
+  .query(async ({ input, ctx }) => {
     try {
-      let query = supabase
+      let query = ctx.supabase
         .from('timer_sessions')
         .select('*')
-        .eq('user_id', input.userId)
+        .eq('user_id', ctx.userId)
         .order('start_time', { ascending: false })
         .limit(input.limit);
 
@@ -40,7 +38,7 @@ export const getTimerSessionsProcedure = publicProcedure
 
       if (error) {
         console.error('Error fetching timer sessions:', error);
-        throw new Error('Failed to fetch timer sessions');
+        throw new Error(`Failed to fetch timer sessions: ${error.message}`);
       }
 
       return data || [];

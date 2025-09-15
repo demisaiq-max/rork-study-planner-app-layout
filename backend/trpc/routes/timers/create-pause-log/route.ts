@@ -1,16 +1,26 @@
-import { publicProcedure } from '@/backend/trpc/create-context';
-import { supabase } from '@/lib/supabase';
+import { protectedProcedure } from '@/backend/trpc/create-context';
 import { z } from 'zod';
 
-export const createPauseLogProcedure = publicProcedure
+export const createPauseLogProcedure = protectedProcedure
   .input(z.object({
     sessionId: z.string(),
     pauseTime: z.string(),
     resumeTime: z.string().optional(),
   }))
-  .mutation(async ({ input }) => {
+  .mutation(async ({ input, ctx }) => {
     try {
-      const { data, error } = await supabase
+      // First verify that the session belongs to the authenticated user
+      const { data: session, error: sessionError } = await ctx.supabase
+        .from('timer_sessions')
+        .select('user_id')
+        .eq('id', input.sessionId)
+        .single();
+
+      if (sessionError || !session || session.user_id !== ctx.userId) {
+        throw new Error('Session not found or unauthorized');
+      }
+
+      const { data, error } = await ctx.supabase
         .from('timer_pause_logs')
         .insert({
           session_id: input.sessionId,
@@ -22,7 +32,7 @@ export const createPauseLogProcedure = publicProcedure
 
       if (error) {
         console.error('Error creating pause log:', error);
-        throw new Error('Failed to create pause log');
+        throw new Error(`Failed to create pause log: ${error.message}`);
       }
 
       return data;

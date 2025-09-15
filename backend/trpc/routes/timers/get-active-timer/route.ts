@@ -1,18 +1,13 @@
-import { publicProcedure } from '@/backend/trpc/create-context';
-import { supabase } from '@/lib/supabase';
-import { z } from 'zod';
+import { protectedProcedure } from '@/backend/trpc/create-context';
 
-export const getActiveTimerProcedure = publicProcedure
-  .input(z.object({
-    userId: z.string(),
-  }))
-  .query(async ({ input }) => {
+export const getActiveTimerProcedure = protectedProcedure
+  .query(async ({ ctx }) => {
     try {
       // Get the most recent timer session that is not completed
-      const { data, error } = await supabase
+      const { data, error } = await ctx.supabase
         .from('timer_sessions')
         .select('*')
-        .eq('user_id', input.userId)
+        .eq('user_id', ctx.userId)
         .eq('is_completed', false)
         .order('start_time', { ascending: false })
         .limit(1)
@@ -20,7 +15,7 @@ export const getActiveTimerProcedure = publicProcedure
 
       if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
         console.error('Error fetching active timer:', error);
-        throw new Error('Failed to fetch active timer');
+        throw new Error(`Failed to fetch active timer: ${error.message}`);
       }
 
       return data;

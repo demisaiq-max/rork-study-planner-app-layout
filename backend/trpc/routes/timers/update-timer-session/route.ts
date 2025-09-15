@@ -1,8 +1,7 @@
-import { publicProcedure } from '@/backend/trpc/create-context';
-import { supabase } from '@/lib/supabase';
+import { protectedProcedure } from '@/backend/trpc/create-context';
 import { z } from 'zod';
 
-export const updateTimerSessionProcedure = publicProcedure
+export const updateTimerSessionProcedure = protectedProcedure
   .input(z.object({
     id: z.string(),
     endTime: z.string().optional(),
@@ -12,7 +11,7 @@ export const updateTimerSessionProcedure = publicProcedure
     notes: z.string().optional(),
     duration: z.number().optional(),
   }))
-  .mutation(async ({ input }) => {
+  .mutation(async ({ input, ctx }) => {
     try {
       const updateData: any = {};
       
@@ -23,16 +22,17 @@ export const updateTimerSessionProcedure = publicProcedure
       if (input.notes !== undefined) updateData.notes = input.notes;
       if (input.duration !== undefined) updateData.duration = input.duration;
 
-      const { data, error } = await supabase
+      const { data, error } = await ctx.supabase
         .from('timer_sessions')
         .update(updateData)
         .eq('id', input.id)
+        .eq('user_id', ctx.userId) // Ensure user can only update their own sessions
         .select()
         .single();
 
       if (error) {
         console.error('Error updating timer session:', error);
-        throw new Error('Failed to update timer session');
+        throw new Error(`Failed to update timer session: ${error.message}`);
       }
 
       return data;

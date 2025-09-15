@@ -11,7 +11,7 @@ import { Stack, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Clock, Coffee, UtensilsCrossed, Calendar } from 'lucide-react-native';
 import { useLanguage } from '@/hooks/language-context';
-import { useUser } from '@/hooks/user-context';
+import { useAuth } from '@/hooks/auth-context';
 import { trpc } from '@/lib/trpc';
 
 type TimerType = 'all' | 'general' | 'tea' | 'lunch';
@@ -19,14 +19,13 @@ type TimerType = 'all' | 'general' | 'tea' | 'lunch';
 export default function TimerSessionsScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
-  const { user } = useUser();
+  const { user } = useAuth();
   const [selectedFilter, setSelectedFilter] = useState<TimerType>('all');
   const [refreshing, setRefreshing] = useState(false);
 
   // Query for all timer sessions
   const { data: timerSessions, refetch } = trpc.timers.getTimerSessions.useQuery(
     { 
-      userId: user?.id || '550e8400-e29b-41d4-a716-446655440000',
       limit: 100, // Get more sessions for the full view
       completedOnly: true
     },
