@@ -1,6 +1,6 @@
 import createContextHook from '@nkzw/create-context-hook';
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from './auth-context';
 
 export interface User {
   id: string;
@@ -10,35 +10,27 @@ export interface User {
 }
 
 export const [UserProvider, useUser] = createContextHook(() => {
+  const { user: authUser, isLoading: authLoading } = useAuth();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadUser();
-  }, []);
-
-  const loadUser = async () => {
-    try {
-      const userData = await AsyncStorage.getItem('user');
-      if (userData) {
-        setUser(JSON.parse(userData));
-      } else {
-        // Create a default user for demo purposes
-        const defaultUser: User = {
-          id: '550e8400-e29b-41d4-a716-446655440000',
-          email: 'test@example.com',
-          name: 'Test User',
-          profilePictureUrl: undefined
+    if (!authLoading) {
+      if (authUser) {
+        // Convert Supabase user to our User interface
+        const userData: User = {
+          id: authUser.id,
+          email: authUser.email || '',
+          name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User',
+          profilePictureUrl: authUser.user_metadata?.avatar_url
         };
-        setUser(defaultUser);
-        await AsyncStorage.setItem('user', JSON.stringify(defaultUser));
+        setUser(userData);
+      } else {
+        setUser(null);
       }
-    } catch (error) {
-      console.error('Failed to load user:', error);
-    } finally {
       setIsLoading(false);
     }
-  };
+  }, [authUser, authLoading]);
 
   const updateUser = useCallback(async (userData: User) => {
     try {

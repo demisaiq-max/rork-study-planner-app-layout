@@ -1,18 +1,11 @@
-import { publicProcedure } from '@/backend/trpc/create-context';
-import { supabase } from '@/lib/supabase';
-import { z } from 'zod';
+import { protectedProcedure } from '@/backend/trpc/create-context';
 
-const getLatestTestResults = publicProcedure
-  .input(z.string().optional())
-  .query(async ({ input }) => {
+const getLatestTestResults = protectedProcedure
+  .query(async ({ ctx }) => {
     try {
-      // Use the test user UUID from the database if 'test-user' is passed or no input
-      const userId = !input || input === 'test-user' 
-        ? '550e8400-e29b-41d4-a716-446655440000' 
-        : input;
       
       // Get the latest test result for each subject
-      const { data, error } = await supabase
+      const { data, error } = await ctx.supabase
         .from('test_results')
         .select(`
           *,
@@ -23,7 +16,7 @@ const getLatestTestResults = publicProcedure
             test_date
           )
         `)
-        .eq('user_id', userId)
+        .eq('user_id', ctx.userId)
         .order('created_at', { ascending: false });
 
       if (error) {

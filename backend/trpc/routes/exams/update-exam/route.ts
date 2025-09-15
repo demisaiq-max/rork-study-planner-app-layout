@@ -1,29 +1,22 @@
-import { publicProcedure } from '../../../create-context';
-import { supabase } from '@/lib/supabase';
+import { protectedProcedure } from '@/backend/trpc/create-context';
 import { z } from 'zod';
 
-export const updateExam = publicProcedure
+export const updateExam = protectedProcedure
   .input(z.object({
     id: z.string(),
-    userId: z.string(),
     title: z.string().optional(),
     date: z.string().optional(),
     subject: z.string().optional(),
     priority: z.boolean().optional(),
   }))
-  .mutation(async ({ input }) => {
-    const { id, userId: inputUserId, ...updateData } = input;
+  .mutation(async ({ input, ctx }) => {
+    const { id, ...updateData } = input;
     
-    // Use the test user UUID from the database if 'test-user' is passed
-    const userId = inputUserId === 'test-user' 
-      ? '550e8400-e29b-41d4-a716-446655440000' 
-      : inputUserId;
-    
-    const { data, error } = await supabase
+    const { data, error } = await ctx.supabase
       .from('exams')
       .update(updateData)
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('user_id', ctx.userId)
       .select()
       .single();
 

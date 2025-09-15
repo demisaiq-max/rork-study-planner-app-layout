@@ -1,14 +1,11 @@
-import { publicProcedure } from '../../../create-context';
-import { supabase } from '@/lib/supabase';
-import { z } from 'zod';
+import { protectedProcedure } from '@/backend/trpc/create-context';
 
-export const getSubjectGrades = publicProcedure
-  .input(z.object({ userId: z.string() }))
-  .query(async ({ input }) => {
-    const { data, error } = await supabase
+export const getSubjectGrades = protectedProcedure
+  .query(async ({ ctx }) => {
+    const { data, error } = await ctx.supabase
       .from('subject_grades')
       .select('*')
-      .eq('user_id', input.userId);
+      .eq('user_id', ctx.userId);
 
     if (error) {
       throw new Error(`Failed to fetch subject grades: ${error.message}`);

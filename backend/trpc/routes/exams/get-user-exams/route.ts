@@ -1,19 +1,11 @@
-import { publicProcedure } from '@/backend/trpc/create-context';
-import { supabase } from '@/lib/supabase';
-import { z } from 'zod';
+import { protectedProcedure } from '@/backend/trpc/create-context';
 
-export const getUserExams = publicProcedure
-  .input(z.object({ userId: z.string() }))
-  .query(async ({ input }) => {
-    // Use the test user UUID from the database if 'test-user' is passed
-    const userId = input.userId === 'test-user' 
-      ? '550e8400-e29b-41d4-a716-446655440000' 
-      : input.userId;
-    
-    const { data, error } = await supabase
+export const getUserExams = protectedProcedure
+  .query(async ({ ctx }) => {
+    const { data, error } = await ctx.supabase
       .from('exams')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id', ctx.userId)
       .order('date', { ascending: true });
 
     if (error) {
