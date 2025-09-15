@@ -71,13 +71,15 @@ export type Database = {
           id: string;
           email: string;
           name: string;
+          profile_picture_url?: string;
           created_at: string;
           updated_at: string;
         };
         Insert: {
-          id?: string;
+          id: string; // Required for Clerk ID
           email: string;
           name: string;
+          profile_picture_url?: string;
           created_at?: string;
           updated_at?: string;
         };
@@ -85,6 +87,7 @@ export type Database = {
           id?: string;
           email?: string;
           name?: string;
+          profile_picture_url?: string;
           created_at?: string;
           updated_at?: string;
         };
