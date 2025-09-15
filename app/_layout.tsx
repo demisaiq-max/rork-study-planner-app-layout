@@ -11,15 +11,16 @@ import { UserProvider } from "@/hooks/user-context";
 import { LanguageProvider } from "@/hooks/language-context";
 import { trpc, trpcClient } from "@/lib/trpc";
 
-const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
+// Fallback publishable key - replace with your actual key
+const FALLBACK_PUBLISHABLE_KEY = "pk_test_aW5jbHVkZWQtbWFuYXRlZS02MC5jbGVyay5hY2NvdW50cy5kZXYk";
+
+const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY || FALLBACK_PUBLISHABLE_KEY;
 
 console.log('🔑 Clerk publishable key:', publishableKey ? 'Found' : 'Missing');
 console.log('🔑 Environment variables:', Object.keys(process.env).filter(key => key.startsWith('EXPO_PUBLIC')));
 
 if (!publishableKey) {
-  throw new Error(
-    'Missing Publishable Key. Please set EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY in your .env'
-  );
+  console.error('❌ Missing Publishable Key. Using fallback key.');
 }
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -76,6 +77,7 @@ export default function RootLayout() {
       },
     },
   }));
+
   useEffect(() => {
     const initializeApp = async () => {
       try {
