@@ -58,16 +58,16 @@ export default function HomeScreen() {
   const { data: exams, isLoading: isLoadingExams, refetch: refetchExams } = trpc.exams.getUserExams.useQuery(
     { userId: user?.id || '550e8400-e29b-41d4-a716-446655440000' },
     { 
-      enabled: !!user?.id
+      enabled: true // Always enabled for testing
     }
   );
   
   // Fetch graded exams
   const { data: gradedExams, isLoading: isLoadingGradedExams, error: gradedExamsError, refetch: refetchGradedExams } = trpc.tests.getLatestTestResults.useQuery(
-    user?.id || 'default-user',
+    user?.id || '550e8400-e29b-41d4-a716-446655440000',
     { 
-      enabled: !!user?.id,
-      retry: false
+      enabled: true, // Always enabled for testing
+      retry: 1
     }
   );
   
@@ -75,19 +75,28 @@ export default function HomeScreen() {
   const { data: brainDumps, isLoading: isLoadingBrainDumps, error: brainDumpsError, refetch: refetchBrainDumps } = trpc.brainDumps.getBrainDumps.useQuery(
     { limit: 10 },
     { 
-      enabled: !!user?.id,
+      enabled: true, // Always enabled for testing
       retry: 1
     }
   );
   
   // Fetch priority tasks from database
   const { data: dbPriorityTasks, isLoading: isLoadingPriorityTasks, refetch: refetchPriorityTasks } = trpc.priorityTasks.getPriorityTasks.useQuery(
-    { userId: user?.id || '' },
+    { userId: user?.id || '550e8400-e29b-41d4-a716-446655440000' },
     { 
-      enabled: !!user?.id,
+      enabled: true, // Always enabled for testing
       retry: 1
     }
   );
+  
+  // Log data status after all queries are defined
+  console.log('🏠 Home Screen - Data Status:', { 
+    exams: exams?.length || 0, 
+    gradedExams: gradedExams?.length || 0, 
+    brainDumps: brainDumps?.length || 0, 
+    priorityTasks: dbPriorityTasks?.length || 0,
+    errors: { gradedExamsError: !!gradedExamsError, brainDumpsError: !!brainDumpsError }
+  });
   
   // Create brain dump mutation
   const createBrainDumpMutation = trpc.brainDumps.createBrainDump.useMutation({
