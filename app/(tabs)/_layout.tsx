@@ -2,16 +2,14 @@ import { Tabs, Redirect } from "expo-router";
 import { Home, Clock, BookOpen, BarChart3, Users } from "lucide-react-native";
 import React from "react";
 import { useLanguage } from "@/hooks/language-context";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useAuth } from "@clerk/clerk-expo";
+import { useIsSignedIn } from "@/hooks/auth-context";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
 
 export default function TabLayout() {
   const { t } = useLanguage();
-  const insets = useSafeAreaInsets();
-  const { isSignedIn, isLoaded } = useAuth();
+  const { isSignedIn, isLoading } = useIsSignedIn();
 
-  if (!isLoaded) {
+  if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#007AFF" />
@@ -33,9 +31,6 @@ export default function TabLayout() {
           backgroundColor: "#FFFFFF",
           borderTopColor: "#E5E5EA",
           borderTopWidth: 1,
-          paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
-          paddingTop: 8,
-          height: 60 + (insets.bottom > 0 ? insets.bottom : 0),
         },
         tabBarLabelStyle: {
           fontSize: 10,
