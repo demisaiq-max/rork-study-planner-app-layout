@@ -6,7 +6,10 @@ const getLatestTestResults = publicProcedure
   .input(z.string().optional())
   .query(async ({ input }) => {
     try {
-      const userId = input || 'default-user';
+      // Use the test user UUID from the database if 'test-user' is passed or no input
+      const userId = !input || input === 'test-user' 
+        ? '550e8400-e29b-41d4-a716-446655440000' 
+        : input;
       
       // Get the latest test result for each subject
       const { data, error } = await supabase

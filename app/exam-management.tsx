@@ -53,6 +53,24 @@ export default function ExamManagementScreen() {
     { enabled: !!authUser?.id }
   );
   
+  // Fetch graded exams to show in this page as well
+  const gradedExamsQuery = trpc.tests.getLatestTestResults.useQuery(
+    authUser?.id || '',
+    { 
+      enabled: !!authUser?.id,
+      retry: 1
+    }
+  );
+  
+  const gradedExams = gradedExamsQuery.data;
+  const gradedExamsError = gradedExamsQuery.error;
+  
+  console.log('📊 Exam Management - Graded Exams:', { 
+    gradedExams: gradedExams?.length || 0, 
+    authUserId: authUser?.id,
+    error: !!gradedExamsError 
+  });
+  
   // Mutations
   const createExamMutation = trpc.exams.createExam.useMutation({
     onSuccess: () => {
@@ -306,6 +324,39 @@ export default function ExamManagementScreen() {
               </View>
             )}
           </View>
+          
+          {/* Graded Exams Section */}
+          {gradedExams && gradedExams.length > 0 && (
+            <View style={styles.gradedExamsSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Graded Exam Results</Text>
+                <Text style={styles.sectionSubtitle}>Your latest test scores</Text>
+              </View>
+              
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.gradedExamsScroll}>
+                {gradedExams.map((exam: any) => {
+                  const percentile = exam.percentile || 0;
+                  const testType = exam.tests?.test_type || 'test';
+                  const testName = exam.tests?.test_name || 'Unknown Test';
+                  const subject = exam.tests?.subject || 'Unknown Subject';
+                  
+                  const formatTestType = (type: string) => {
+                    return type.split('_').map(word => 
+                      word.charAt(0).toUpperCase() + word.slice(1)
+                    ).join(' ');
+                  };
+                  
+                  return (
+                    <View key={exam.id} style={styles.gradedExamCard}>
+                      <Text style={styles.gradedExamSubject}>{subject}</Text>
+                      <Text style={styles.gradedExamScore}>{percentile}%</Text>
+                      <Text style={styles.gradedExamType}>{formatTestType(testType)}</Text>
+                    </View>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
 
           <TouchableOpacity 
             style={styles.addButton}
@@ -732,5 +783,61 @@ const styles = StyleSheet.create({
   centerContent: {
     justifyContent: "center",
     alignItems: "center",
+  },
+  gradedExamsSection: {
+    marginHorizontal: 20,
+    marginTop: 20,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  sectionHeader: {
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#000000",
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: "#8E8E93",
+  },
+  gradedExamsScroll: {
+    flexDirection: "row",
+  },
+  gradedExamCard: {
+    backgroundColor: "#F8F9FA",
+    borderRadius: 8,
+    padding: 12,
+    marginRight: 12,
+    minWidth: 80,
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#E5E5EA",
+  },
+  gradedExamSubject: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#333333",
+    marginBottom: 4,
+    textAlign: "center",
+  },
+  gradedExamScore: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#007AFF",
+    marginBottom: 2,
+  },
+  gradedExamType: {
+    fontSize: 10,
+    color: "#8E8E93",
+    textAlign: "center",
   },
 });
