@@ -4,10 +4,20 @@ import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useState } from "react";
 import { StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { ClerkProvider } from "@clerk/clerk-expo";
+import { tokenCache } from "@clerk/clerk-expo/token-cache";
 import { StudyProvider } from "@/hooks/study-store";
 import { UserProvider } from "@/hooks/user-context";
 import { LanguageProvider } from "@/hooks/language-context";
 import { trpc, trpcClient } from "@/lib/trpc";
+
+const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
+
+if (!publishableKey) {
+  throw new Error(
+    'Missing Publishable Key. Please set EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY in your .env'
+  );
+}
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -16,6 +26,7 @@ function RootLayoutNav() {
   return (
     <Stack screenOptions={{ headerBackTitle: "Back" }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="settings" options={{ headerShown: false }} />
       <Stack.Screen name="calendar" options={{ title: "Calendar" }} />
       <Stack.Screen name="brain-manager" options={{ title: "Brain Manager" }} />
@@ -91,19 +102,21 @@ export default function RootLayout() {
   }, [queryClient]);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <trpc.Provider client={trpcClient} queryClient={queryClient}>
-        <UserProvider>
-          <LanguageProvider>
-            <StudyProvider>
-              <GestureHandlerRootView style={styles.container}>
-                <RootLayoutNav />
-              </GestureHandlerRootView>
-            </StudyProvider>
-          </LanguageProvider>
-        </UserProvider>
-      </trpc.Provider>
-    </QueryClientProvider>
+    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+      <QueryClientProvider client={queryClient}>
+        <trpc.Provider client={trpcClient} queryClient={queryClient}>
+          <UserProvider>
+            <LanguageProvider>
+              <StudyProvider>
+                <GestureHandlerRootView style={styles.container}>
+                  <RootLayoutNav />
+                </GestureHandlerRootView>
+              </StudyProvider>
+            </LanguageProvider>
+          </UserProvider>
+        </trpc.Provider>
+      </QueryClientProvider>
+    </ClerkProvider>
   );
 }
 

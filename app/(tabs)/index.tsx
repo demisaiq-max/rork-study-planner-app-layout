@@ -14,6 +14,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Plus, User, X, Check, Edit2, Trash2, ArrowUpRight, Database } from "lucide-react-native";
 import { router } from "expo-router";
+import { SignedIn, SignedOut, useUser as useClerkUser } from "@clerk/clerk-expo";
+import { SignOutButton } from "@/components/SignOutButton";
 import CircularProgress from "@/components/CircularProgress";
 import DayCard from "@/components/DayCard";
 import CalendarWidget from "@/components/CalendarWidget";
@@ -46,6 +48,7 @@ export default function HomeScreen() {
     isLoading
   } = useStudyStore();
   const { user } = useUser();
+  const { user: clerkUser } = useClerkUser();
   const { t, language } = useLanguage();
   
   // Fetch exams from database
@@ -312,12 +315,35 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <ScrollView 
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+    <>
+      <SignedOut>
+        <View style={styles.authContainer}>
+          <View style={styles.authContent}>
+            <Text style={styles.authTitle}>Welcome to Study Buddy</Text>
+            <Text style={styles.authSubtitle}>Sign in to access your study dashboard</Text>
+            <TouchableOpacity 
+              style={styles.authButton}
+              onPress={() => router.push('/(auth)/sign-in')}
+            >
+              <Text style={styles.authButtonText}>Sign In</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.authButton, styles.authButtonSecondary]}
+              onPress={() => router.push('/(auth)/sign-up')}
+            >
+              <Text style={[styles.authButtonText, styles.authButtonTextSecondary]}>Create Account</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SignedOut>
+      
+      <SignedIn>
+        <SafeAreaView style={styles.container} edges={["top"]}>
+          <ScrollView 
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity 
@@ -329,11 +355,13 @@ export default function HomeScreen() {
             </View>
             <View style={styles.profileInfo}>
               <Text style={styles.examType}>{t('examType')}</Text>
-              <Text style={styles.userName}>{user?.name || t('userName')}</Text>
+              <Text style={styles.userName}>{clerkUser?.emailAddresses?.[0]?.emailAddress || user?.name || t('userName')}</Text>
             </View>
           </TouchableOpacity>
           
-
+          <SignedIn>
+            <SignOutButton />
+          </SignedIn>
         </View>
 
         {/* Study Progress Card */}
@@ -673,7 +701,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
           )}
         </TouchableOpacity>
-      </ScrollView>
+          </ScrollView>
 
       {/* Add Exam Modal */}
       <Modal
@@ -884,7 +912,9 @@ export default function HomeScreen() {
           </ScrollView>
         </SafeAreaView>
       </Modal>
-    </SafeAreaView>
+        </SafeAreaView>
+      </SignedIn>
+    </>
   );
 }
 
@@ -1662,5 +1692,51 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#FFFFFF",
     textAlign: "center",
+  },
+  authContainer: {
+    flex: 1,
+    backgroundColor: "#f8f9fa",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  authContent: {
+    padding: 24,
+    alignItems: "center",
+    maxWidth: 400,
+    width: "100%",
+  },
+  authTitle: {
+    fontSize: 32,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 8,
+    color: "#1a1a1a",
+  },
+  authSubtitle: {
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 32,
+    color: "#666",
+  },
+  authButton: {
+    backgroundColor: "#007AFF",
+    borderRadius: 12,
+    padding: 16,
+    alignItems: "center",
+    marginBottom: 12,
+    width: "100%",
+  },
+  authButtonSecondary: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: "#007AFF",
+  },
+  authButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  authButtonTextSecondary: {
+    color: "#007AFF",
   },
 });
