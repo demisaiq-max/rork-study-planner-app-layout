@@ -22,6 +22,15 @@ if (!publishableKey) {
   );
 }
 
+function RootLayoutNav() {
+  return (
+    <ClerkProvider>
+      <Slot />
+    </ClerkProvider>
+  )
+}
+
+
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
