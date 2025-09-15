@@ -14,7 +14,9 @@ export const SignOutButton = () => {
       console.log('🔐 Sign out successful, redirecting to auth...');
       router.replace('/(auth)/sign-in');
     } catch (err) {
-      console.error('Sign out error:', err);
+      console.error('❌ Sign out error:', err);
+      // Still redirect even if there's an error, as the local state should be cleared
+      router.replace('/(auth)/sign-in');
     }
   };
   
