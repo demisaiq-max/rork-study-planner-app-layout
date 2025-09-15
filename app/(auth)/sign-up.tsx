@@ -1,11 +1,15 @@
 import * as React from 'react';
 import { Text, TextInput, TouchableOpacity, View, StyleSheet } from 'react-native';
-import { useSignUp } from '@clerk/clerk-expo';
+import { useSignUp, useOAuth } from '@clerk/clerk-expo';
 import { Link, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import * as Linking from 'expo-linking';
 
 export default function SignUpScreen() {
   const { isLoaded, signUp, setActive } = useSignUp();
+  const { startOAuthFlow: startGoogleOAuth } = useOAuth({ strategy: 'oauth_google' });
+  const { startOAuthFlow: startGitHubOAuth } = useOAuth({ strategy: 'oauth_github' });
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -52,6 +56,36 @@ export default function SignUpScreen() {
       console.error('Verification failed:', err?.errors?.[0]?.message || 'Failed to verify email');
     }
   };
+
+  const onGoogleSignUp = React.useCallback(async () => {
+    try {
+      const { createdSessionId, setActive } = await startGoogleOAuth({
+        redirectUrl: Linking.createURL('/', { scheme: 'myapp' }),
+      });
+
+      if (createdSessionId) {
+        setActive!({ session: createdSessionId });
+        router.replace('/');
+      }
+    } catch (err: any) {
+      console.error('Google OAuth error:', JSON.stringify(err, null, 2));
+    }
+  }, [startGoogleOAuth, router]);
+
+  const onGitHubSignUp = React.useCallback(async () => {
+    try {
+      const { createdSessionId, setActive } = await startGitHubOAuth({
+        redirectUrl: Linking.createURL('/', { scheme: 'myapp' }),
+      });
+
+      if (createdSessionId) {
+        setActive!({ session: createdSessionId });
+        router.replace('/');
+      }
+    } catch (err: any) {
+      console.error('GitHub OAuth error:', JSON.stringify(err, null, 2));
+    }
+  }, [startGitHubOAuth, router]);
 
   if (pendingVerification) {
     return (
@@ -102,6 +136,22 @@ export default function SignUpScreen() {
         />
         <TouchableOpacity style={styles.button} onPress={onSignUpPress}>
           <Text style={styles.buttonText}>Create Account</Text>
+        </TouchableOpacity>
+        
+        <View style={styles.divider}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>or</Text>
+          <View style={styles.dividerLine} />
+        </View>
+        
+        <TouchableOpacity style={styles.oauthButton} onPress={onGoogleSignUp}>
+          <Ionicons name="logo-google" size={20} color="#4285F4" />
+          <Text style={styles.oauthButtonText}>Continue with Google</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.oauthButton} onPress={onGitHubSignUp}>
+          <Ionicons name="logo-github" size={20} color="#333" />
+          <Text style={styles.oauthButtonText}>Continue with GitHub</Text>
         </TouchableOpacity>
         
         <View style={styles.linkContainer}>
@@ -174,5 +224,37 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#007AFF',
     fontWeight: '600',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 24,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#e1e5e9',
+  },
+  dividerText: {
+    marginHorizontal: 16,
+    fontSize: 14,
+    color: '#666',
+  },
+  oauthButton: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e1e5e9',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  oauthButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    marginLeft: 12,
   },
 });

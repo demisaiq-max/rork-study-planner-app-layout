@@ -1,11 +1,15 @@
-import { useSignIn } from '@clerk/clerk-expo';
+import { useSignIn, useOAuth } from '@clerk/clerk-expo';
 import { Link, useRouter } from 'expo-router';
 import { Text, TextInput, TouchableOpacity, View, StyleSheet } from 'react-native';
 import React from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import * as Linking from 'expo-linking';
 
 export default function SignInScreen() {
   const { signIn, setActive, isLoaded } = useSignIn();
+  const { startOAuthFlow: startGoogleOAuth } = useOAuth({ strategy: 'oauth_google' });
+  const { startOAuthFlow: startGitHubOAuth } = useOAuth({ strategy: 'oauth_github' });
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -33,6 +37,36 @@ export default function SignInScreen() {
     }
   };
 
+  const onGoogleSignIn = React.useCallback(async () => {
+    try {
+      const { createdSessionId, setActive } = await startGoogleOAuth({
+        redirectUrl: Linking.createURL('/', { scheme: 'myapp' }),
+      });
+
+      if (createdSessionId) {
+        setActive!({ session: createdSessionId });
+        router.replace('/');
+      }
+    } catch (err: any) {
+      console.error('Google OAuth error:', JSON.stringify(err, null, 2));
+    }
+  }, [startGoogleOAuth, router]);
+
+  const onGitHubSignIn = React.useCallback(async () => {
+    try {
+      const { createdSessionId, setActive } = await startGitHubOAuth({
+        redirectUrl: Linking.createURL('/', { scheme: 'myapp' }),
+      });
+
+      if (createdSessionId) {
+        setActive!({ session: createdSessionId });
+        router.replace('/');
+      }
+    } catch (err: any) {
+      console.error('GitHub OAuth error:', JSON.stringify(err, null, 2));
+    }
+  }, [startGitHubOAuth, router]);
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.content}>
@@ -58,6 +92,22 @@ export default function SignInScreen() {
         />
         <TouchableOpacity style={styles.button} onPress={onSignInPress}>
           <Text style={styles.buttonText}>Sign In</Text>
+        </TouchableOpacity>
+        
+        <View style={styles.divider}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>or</Text>
+          <View style={styles.dividerLine} />
+        </View>
+        
+        <TouchableOpacity style={styles.oauthButton} onPress={onGoogleSignIn}>
+          <Ionicons name="logo-google" size={20} color="#4285F4" />
+          <Text style={styles.oauthButtonText}>Continue with Google</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.oauthButton} onPress={onGitHubSignIn}>
+          <Ionicons name="logo-github" size={20} color="#333" />
+          <Text style={styles.oauthButtonText}>Continue with GitHub</Text>
         </TouchableOpacity>
         
         <View style={styles.linkContainer}>
@@ -130,5 +180,37 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#007AFF',
     fontWeight: '600',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 24,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#e1e5e9',
+  },
+  dividerText: {
+    marginHorizontal: 16,
+    fontSize: 14,
+    color: '#666',
+  },
+  oauthButton: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e1e5e9',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  oauthButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    marginLeft: 12,
   },
 });
