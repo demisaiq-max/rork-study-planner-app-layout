@@ -30,12 +30,12 @@ const styles = StyleSheet.create({
   button: {
     backgroundColor: '#ff3b30',
     borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    minWidth: 100,
+    gap: 6,
+    maxWidth: 90,
     justifyContent: 'center',
   },
   buttonText: {

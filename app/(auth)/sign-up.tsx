@@ -92,12 +92,20 @@ export default function SignUpScreen() {
       
       // Cool down the browser (only on native)
       if (Platform.OS !== 'web') {
-        await WebBrowser.coolDownAsync();
+        try {
+          await WebBrowser.coolDownAsync();
+        } catch (error) {
+          console.log('WebBrowser coolDown not available:', error);
+        }
       }
     } catch (err: any) {
       console.error('Google OAuth error:', JSON.stringify(err, null, 2));
       if (Platform.OS !== 'web') {
-        await WebBrowser.coolDownAsync();
+        try {
+          await WebBrowser.coolDownAsync();
+        } catch (error) {
+          console.log('WebBrowser coolDown not available:', error);
+        }
       }
     }
   }, [startGoogleOAuth, router]);
@@ -136,12 +144,20 @@ export default function SignUpScreen() {
       
       // Cool down the browser (only on native)
       if (Platform.OS !== 'web') {
-        await WebBrowser.coolDownAsync();
+        try {
+          await WebBrowser.coolDownAsync();
+        } catch (error) {
+          console.log('WebBrowser coolDown not available:', error);
+        }
       }
     } catch (err: any) {
       console.error('GitHub OAuth error:', JSON.stringify(err, null, 2));
       if (Platform.OS !== 'web') {
-        await WebBrowser.coolDownAsync();
+        try {
+          await WebBrowser.coolDownAsync();
+        } catch (error) {
+          console.log('WebBrowser coolDown not available:', error);
+        }
       }
     }
   }, [startGitHubOAuth, router]);
