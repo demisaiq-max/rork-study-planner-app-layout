@@ -29,16 +29,18 @@ export const SignOutButton = () => {
 const styles = StyleSheet.create({
   button: {
     backgroundColor: '#ff3b30',
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 8,
+    minWidth: 100,
+    justifyContent: 'center',
   },
   buttonText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
   },
 });

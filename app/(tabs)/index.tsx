@@ -943,12 +943,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
     borderBottomColor: "#E5E5EA",
+    minHeight: 70,
   },
   profileSection: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
-    marginRight: 12,
+    marginRight: 16,
+    minWidth: 0,
   },
   avatar: {
     width: 36,

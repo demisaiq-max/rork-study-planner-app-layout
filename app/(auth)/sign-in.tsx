@@ -1,6 +1,6 @@
 import { useSignIn, useOAuth } from '@clerk/clerk-expo';
 import { Link, useRouter } from 'expo-router';
-import { Text, TextInput, TouchableOpacity, View, StyleSheet } from 'react-native';
+import { Text, TextInput, TouchableOpacity, View, StyleSheet, Platform } from 'react-native';
 import React from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -42,8 +42,10 @@ export default function SignInScreen() {
     try {
       console.log('🔐 Starting Google OAuth...');
       
-      // Warm up the browser for better performance
-      await WebBrowser.warmUpAsync();
+      // Warm up the browser for better performance (only on native)
+      if (Platform.OS !== 'web') {
+        await WebBrowser.warmUpAsync();
+      }
       
       const { createdSessionId, setActive, signIn, signUp } = await startGoogleOAuth();
 
@@ -68,11 +70,15 @@ export default function SignInScreen() {
         }
       }
       
-      // Cool down the browser
-      await WebBrowser.coolDownAsync();
+      // Cool down the browser (only on native)
+      if (Platform.OS !== 'web') {
+        await WebBrowser.coolDownAsync();
+      }
     } catch (err: any) {
       console.error('Google OAuth error:', JSON.stringify(err, null, 2));
-      await WebBrowser.coolDownAsync();
+      if (Platform.OS !== 'web') {
+        await WebBrowser.coolDownAsync();
+      }
     }
   }, [startGoogleOAuth, router]);
 
@@ -80,8 +86,10 @@ export default function SignInScreen() {
     try {
       console.log('🔐 Starting GitHub OAuth...');
       
-      // Warm up the browser for better performance
-      await WebBrowser.warmUpAsync();
+      // Warm up the browser for better performance (only on native)
+      if (Platform.OS !== 'web') {
+        await WebBrowser.warmUpAsync();
+      }
       
       const { createdSessionId, setActive, signIn, signUp } = await startGitHubOAuth();
 
@@ -102,15 +110,18 @@ export default function SignInScreen() {
           router.replace('/(tabs)');
         } else if (signUp?.createdSessionId) {
           await setActive!({ session: signUp.createdSessionId });
-          router.replace('/(tabs)');
         }
       }
       
-      // Cool down the browser
-      await WebBrowser.coolDownAsync();
+      // Cool down the browser (only on native)
+      if (Platform.OS !== 'web') {
+        await WebBrowser.coolDownAsync();
+      }
     } catch (err: any) {
       console.error('GitHub OAuth error:', JSON.stringify(err, null, 2));
-      await WebBrowser.coolDownAsync();
+      if (Platform.OS !== 'web') {
+        await WebBrowser.coolDownAsync();
+      }
     }
   }, [startGitHubOAuth, router]);
 
