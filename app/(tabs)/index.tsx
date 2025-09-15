@@ -56,17 +56,17 @@ export default function HomeScreen() {
   
   // Fetch exams from database
   const { data: exams, isLoading: isLoadingExams, refetch: refetchExams } = trpc.exams.getUserExams.useQuery(
-    { userId: user?.id || '550e8400-e29b-41d4-a716-446655440000' },
+    { userId: authUser?.id || '' },
     { 
-      enabled: true // Always enabled for testing
+      enabled: !!authUser?.id // Only enabled when user is authenticated
     }
   );
   
   // Fetch graded exams
   const { data: gradedExams, isLoading: isLoadingGradedExams, error: gradedExamsError, refetch: refetchGradedExams } = trpc.tests.getLatestTestResults.useQuery(
-    user?.id || '550e8400-e29b-41d4-a716-446655440000',
+    authUser?.id || '',
     { 
-      enabled: true, // Always enabled for testing
+      enabled: !!authUser?.id, // Only enabled when user is authenticated
       retry: 1
     }
   );
@@ -75,16 +75,16 @@ export default function HomeScreen() {
   const { data: brainDumps, isLoading: isLoadingBrainDumps, error: brainDumpsError, refetch: refetchBrainDumps } = trpc.brainDumps.getBrainDumps.useQuery(
     { limit: 10 },
     { 
-      enabled: true, // Always enabled for testing
+      enabled: !!authUser?.id, // Only enabled when user is authenticated
       retry: 1
     }
   );
   
   // Fetch priority tasks from database
   const { data: dbPriorityTasks, isLoading: isLoadingPriorityTasks, refetch: refetchPriorityTasks } = trpc.priorityTasks.getPriorityTasks.useQuery(
-    { userId: user?.id || '550e8400-e29b-41d4-a716-446655440000' },
+    { userId: authUser?.id || '' },
     { 
-      enabled: true, // Always enabled for testing
+      enabled: !!authUser?.id, // Only enabled when user is authenticated
       retry: 1
     }
   );
@@ -139,13 +139,15 @@ export default function HomeScreen() {
     }
   });
   
-  // Seed exam data for test user on mount
+  // Log authentication status
   useEffect(() => {
-    const userId = user?.id || '550e8400-e29b-41d4-a716-446655440000';
-    if (exams && exams.length === 0 && !isLoadingExams && user?.id) {
-
-    }
-  }, [exams, isLoadingExams, user?.id]);
+    console.log('🏠 Home Screen - Auth Status Update:', { 
+      authUserId: authUser?.id, 
+      authUserEmail: authUser?.email,
+      isSignedIn,
+      authLoading 
+    });
+  }, [authUser?.id, authUser?.email, isSignedIn, authLoading]);
   
 
   
@@ -287,8 +289,13 @@ export default function HomeScreen() {
       return;
     }
 
+    if (!authUser?.id) {
+      Alert.alert(t('error'), 'Please sign in to add exams');
+      return;
+    }
+
     createExamMutation.mutate({
-      userId: user?.id || '550e8400-e29b-41d4-a716-446655440000',
+      userId: authUser.id,
       title: newExamTitle,
       date: newExamDate,
       subject: 'General',
@@ -599,7 +606,7 @@ export default function HomeScreen() {
                   key={taskData.id} 
                   style={styles.priorityTaskItem}
                   onPress={() => {
-                    if (dbPriorityTasks && user?.id) {
+                    if (dbPriorityTasks && authUser?.id) {
                       updatePriorityTaskMutation.mutate({
                         id: taskData.id,
                         completed: !taskData.completed

@@ -1,14 +1,14 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { StudyProvider } from "@/hooks/study-store";
 import { UserProvider } from "@/hooks/user-context";
 import { LanguageProvider } from "@/hooks/language-context";
-import { AuthProvider } from "@/hooks/auth-context";
-import { trpc, trpcClient } from "@/lib/trpc";
+import { AuthProvider, useAuth } from "@/hooks/auth-context";
+import { trpc, createAuthenticatedTRPCClient } from "@/lib/trpc";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -38,6 +38,23 @@ function RootLayoutNav() {
       <Stack.Screen name="trpc-debug" options={{ title: "tRPC Debug" }} />
       <Stack.Screen name="supabase-test" options={{ title: "Supabase Test" }} />
     </Stack>
+  );
+}
+
+// Component that provides authenticated tRPC client
+function AuthenticatedTRPCProvider({ children, queryClient }: { children: React.ReactNode; queryClient: QueryClient }) {
+  const { session } = useAuth();
+  
+  // Create a new tRPC client whenever the session changes
+  const trpcClient = useMemo(() => {
+    console.log('🔄 Creating new tRPC client for session:', session ? 'authenticated' : 'unauthenticated');
+    return createAuthenticatedTRPCClient();
+  }, [session]); // Recreate when session changes
+
+  return (
+    <trpc.Provider client={trpcClient} queryClient={queryClient}>
+      {children}
+    </trpc.Provider>
   );
 }
 
@@ -81,13 +98,15 @@ export default function RootLayout() {
     // Set up global error handler for React Query
     queryClient.setMutationDefaults(['trpc'], {
       onError: (error) => {
-        console.error('❌ tRPC Mutation Error:', {
-          error: error instanceof Error ? {
-            message: error.message,
-            name: error.name,
-          } : String(error),
-          timestamp: new Date().toISOString(),
-        });
+        if (error && typeof error === 'object') {
+          console.error('❌ tRPC Mutation Error:', {
+            error: error instanceof Error ? {
+              message: error.message,
+              name: error.name,
+            } : String(error),
+            timestamp: new Date().toISOString(),
+          });
+        }
       },
     });
 
@@ -100,8 +119,8 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <trpc.Provider client={trpcClient} queryClient={queryClient}>
-        <AuthProvider>
+      <AuthProvider>
+        <AuthenticatedTRPCProvider queryClient={queryClient}>
           <UserProvider>
             <LanguageProvider>
               <StudyProvider>
@@ -111,8 +130,8 @@ export default function RootLayout() {
               </StudyProvider>
             </LanguageProvider>
           </UserProvider>
-        </AuthProvider>
-      </trpc.Provider>
+        </AuthenticatedTRPCProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
