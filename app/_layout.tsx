@@ -11,6 +11,7 @@ import { StudyProvider } from "@/hooks/study-store";
 import { UserProvider } from "@/hooks/user-context";
 import { LanguageProvider } from "@/hooks/language-context";
 import { trpc, trpcClient } from "@/lib/trpc";
+import { useClerkSupabaseSync } from "@/hooks/use-clerk-supabase-sync";
 
 // Fallback publishable key - replace with your actual key
 const FALLBACK_PUBLISHABLE_KEY = "pk_test_aW5jbHVkZWQtbWFuYXRlZS02MC5jbGVyay5hY2NvdW50cy5kZXYk";
@@ -33,6 +34,9 @@ if (Platform.OS !== 'web') {
 }
 
 function RootLayoutNav() {
+  // Sync Clerk user with Supabase
+  useClerkSupabaseSync();
+  
   return (
     <Stack screenOptions={{ headerBackTitle: "Back" }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -57,6 +61,7 @@ function RootLayoutNav() {
       <Stack.Screen name="exam-score-edit" options={{ title: "Edit Exam Score" }} />
       <Stack.Screen name="trpc-debug" options={{ title: "tRPC Debug" }} />
       <Stack.Screen name="supabase-test" options={{ title: "Supabase Test" }} />
+      <Stack.Screen name="clerk-sync-test" options={{ title: "Clerk Sync Test" }} />
     </Stack>
   );
 }
