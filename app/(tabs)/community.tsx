@@ -23,6 +23,7 @@ import { useLanguage } from "@/hooks/language-context";
 import { useUser } from "@/hooks/user-context";
 import { trpc } from "@/lib/trpc";
 import { supabase } from "@/lib/supabase";
+import { useRouter } from "expo-router";
 
 const { width } = Dimensions.get('window');
 
@@ -103,6 +104,7 @@ export default function CommunityScreen() {
   const { user, isLoading: userLoading } = useUser();
   const userId = user?.id;
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState(0);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
@@ -710,12 +712,8 @@ export default function CommunityScreen() {
         key={group.id} 
         style={styles.groupCard}
         onPress={() => {
-          if (group.isMember) {
-            setSelectedGroup(group.id);
-            setShowGroupModal(false);
-          } else {
-            handleJoinGroup(group.id);
-          }
+          // Navigate to group detail page
+          router.push(`/group-detail?groupId=${group.id}`);
         }}
       >
         <View style={styles.groupHeader}>
