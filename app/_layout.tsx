@@ -62,6 +62,7 @@ function RootLayoutNav() {
       <Stack.Screen name="trpc-debug" options={{ title: "tRPC Debug" }} />
       <Stack.Screen name="supabase-test" options={{ title: "Supabase Test" }} />
       <Stack.Screen name="clerk-sync-test" options={{ title: "Clerk Sync Test" }} />
+      <Stack.Screen name="test-sync" options={{ title: "Test Sync" }} />
     </Stack>
   );
 }

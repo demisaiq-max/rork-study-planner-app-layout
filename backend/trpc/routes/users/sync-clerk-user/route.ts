@@ -13,6 +13,22 @@ export const syncClerkUserProcedure = publicProcedure
     console.log('🔄 Syncing Clerk user to Supabase:', input);
     
     try {
+      // First, test the connection
+      const { error: testError } = await supabase
+        .from('users')
+        .select('count')
+        .limit(1);
+      
+      if (testError) {
+        console.error('❌ Supabase connection test failed:', {
+          message: testError.message,
+          code: testError.code,
+          details: testError.details,
+          hint: testError.hint
+        });
+        throw new Error(`Database connection failed: ${testError.message}`);
+      }
+
       // Check if user already exists
       const { data: existingUser, error: checkError } = await supabase
         .from('users')
@@ -22,8 +38,14 @@ export const syncClerkUserProcedure = publicProcedure
 
       if (checkError && checkError.code !== 'PGRST116') {
         // PGRST116 means no rows returned, which is expected for new users
-        console.error('Error checking existing user:', checkError);
-        throw new Error('Failed to check existing user');
+        console.error('❌ Error checking existing user:', {
+          message: checkError.message,
+          code: checkError.code,
+          details: checkError.details,
+          hint: checkError.hint,
+          clerkUserId: input.clerkUserId
+        });
+        throw new Error(`Failed to check existing user: ${checkError.message}`);
       }
 
       if (existingUser) {
@@ -43,8 +65,13 @@ export const syncClerkUserProcedure = publicProcedure
           .single();
 
         if (updateError) {
-          console.error('Error updating user:', updateError);
-          throw new Error('Failed to update user');
+          console.error('❌ Error updating user:', {
+            message: updateError.message,
+            code: updateError.code,
+            details: updateError.details,
+            hint: updateError.hint
+          });
+          throw new Error(`Failed to update user: ${updateError.message}`);
         }
 
         console.log('✅ User updated in Supabase:', updatedUser);
@@ -52,6 +79,7 @@ export const syncClerkUserProcedure = publicProcedure
       }
 
       // Create new user
+      console.log('📝 Creating new user in Supabase...');
       const { data: newUser, error: insertError } = await supabase
         .from('users')
         .insert({
@@ -66,10 +94,21 @@ export const syncClerkUserProcedure = publicProcedure
         .single();
 
       if (insertError) {
-        console.error('Error creating user:', insertError);
+        console.error('❌ Error creating user:', {
+          message: insertError.message,
+          code: insertError.code,
+          details: insertError.details,
+          hint: insertError.hint,
+          userData: {
+            id: input.clerkUserId,
+            email: input.email,
+            name: input.name || input.email.split('@')[0]
+          }
+        });
         
         // If the error is due to missing columns, try without profile_picture_url
         if (insertError.message?.includes('profile_picture_url')) {
+          console.log('🔄 Retrying without profile_picture_url...');
           const { data: retryUser, error: retryError } = await supabase
             .from('users')
             .insert({
@@ -83,21 +122,34 @@ export const syncClerkUserProcedure = publicProcedure
             .single();
 
           if (retryError) {
-            console.error('Retry error:', retryError);
-            throw new Error('Failed to create user');
+            console.error('❌ Retry error:', {
+              message: retryError.message,
+              code: retryError.code,
+              details: retryError.details,
+              hint: retryError.hint
+            });
+            throw new Error(`Failed to create user: ${retryError.message}`);
           }
 
           console.log('✅ User created in Supabase (without profile picture):', retryUser);
           return { user: retryUser, created: true };
         }
         
-        throw new Error('Failed to create user');
+        throw new Error(`Failed to create user: ${insertError.message}`);
       }
 
       console.log('✅ User created in Supabase:', newUser);
       return { user: newUser, created: true };
     } catch (error: any) {
-      console.error('❌ Error in syncClerkUser:', error);
+      console.error('❌ Error in syncClerkUser:', {
+        message: error.message,
+        stack: error.stack,
+        input: {
+          clerkUserId: input.clerkUserId,
+          email: input.email,
+          name: input.name
+        }
+      });
       throw new Error(error.message || 'Failed to sync user');
     }
   });
