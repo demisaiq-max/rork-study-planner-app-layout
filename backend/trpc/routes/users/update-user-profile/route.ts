@@ -33,17 +33,48 @@ export const updateUserProfileProcedure = protectedProcedure
 
       if (error) {
         console.error('Error updating user profile:', error);
-        throw new Error('Failed to update user profile');
+        
+        // Check if the error is due to missing column
+        if (error.message?.includes('profile_picture_url') || error.code === '42703') {
+          console.error('Profile picture column not found. Please run the migration script.');
+          
+          // If profile_picture_url column doesn't exist, try updating without it
+          if (input.profilePictureUrl !== undefined) {
+            delete updateData.profile_picture_url;
+            
+            // Try again without profile_picture_url
+            const { data: retryData, error: retryError } = await supabase
+              .from('users')
+              .update(updateData)
+              .eq('id', input.userId)
+              .select('id, name, email')
+              .single();
+              
+            if (retryError) {
+              console.error('Retry error:', retryError);
+              throw new Error('Failed to update user profile');
+            }
+            
+            return {
+              id: retryData.id,
+              name: retryData.name,
+              email: retryData.email,
+              profilePictureUrl: null,
+            };
+          }
+        }
+        
+        throw new Error(`Failed to update user profile: ${error.message}`);
       }
 
       return {
         id: data.id,
         name: data.name,
         email: data.email,
-        profilePictureUrl: data.profile_picture_url,
+        profilePictureUrl: data.profile_picture_url || null,
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error in updateUserProfile:', error);
-      throw new Error('Failed to update user profile');
+      throw new Error(error.message || 'Failed to update user profile');
     }
   });
