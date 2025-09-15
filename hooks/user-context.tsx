@@ -35,7 +35,6 @@ export const [UserProvider, useUser] = createContextHook(() => {
   const updateUser = useCallback(async (userData: User) => {
     try {
       setUser(userData);
-      await AsyncStorage.setItem('user', JSON.stringify(userData));
     } catch (error) {
       console.error('Failed to update user:', error);
     }
@@ -44,7 +43,6 @@ export const [UserProvider, useUser] = createContextHook(() => {
   const logout = useCallback(async () => {
     try {
       setUser(null);
-      await AsyncStorage.removeItem('user');
     } catch (error) {
       console.error('Failed to logout:', error);
     }
