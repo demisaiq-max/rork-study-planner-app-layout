@@ -20,7 +20,7 @@ export const SignOutButton = () => {
   
   return (
     <TouchableOpacity style={styles.button} onPress={handleSignOut}>
-      <LogOut size={16} color="#fff" />
+      <LogOut size={14} color="#fff" />
       <Text style={styles.buttonText}>Sign Out</Text>
     </TouchableOpacity>
   );
@@ -29,16 +29,16 @@ export const SignOutButton = () => {
 const styles = StyleSheet.create({
   button: {
     backgroundColor: '#ff3b30',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 4,
   },
   buttonText: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
   },
 });

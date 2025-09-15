@@ -354,11 +354,13 @@ export default function HomeScreen() {
             onPress={() => router.push('/settings')}
           >
             <View style={styles.avatar}>
-              <User size={24} color="#8E8E93" />
+              <User size={20} color="#8E8E93" />
             </View>
             <View style={styles.profileInfo}>
               <Text style={styles.examType}>{t('examType')}</Text>
-              <Text style={styles.userName}>{clerkUser?.emailAddresses?.[0]?.emailAddress || user?.name || t('userName')}</Text>
+              <Text style={styles.userName} numberOfLines={1} ellipsizeMode="tail">
+                {clerkUser?.emailAddresses?.[0]?.emailAddress || user?.name || t('userName')}
+              </Text>
             </View>
           </TouchableOpacity>
           
@@ -945,26 +947,29 @@ const styles = StyleSheet.create({
   profileSection: {
     flexDirection: "row",
     alignItems: "center",
+    flex: 1,
+    marginRight: 12,
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: "#F2F2F7",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
+    marginRight: 10,
   },
   profileInfo: {
     justifyContent: "center",
+    flex: 1,
   },
   examType: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#8E8E93",
-    marginBottom: 2,
+    marginBottom: 1,
   },
   userName: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
     color: "#000000",
   },
