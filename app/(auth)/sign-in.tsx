@@ -4,7 +4,8 @@ import { Text, TextInput, TouchableOpacity, View, StyleSheet } from 'react-nativ
 import React from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as Linking from 'expo-linking';
+
+import * as WebBrowser from 'expo-web-browser';
 
 export default function SignInScreen() {
   const { signIn, setActive, isLoaded } = useSignIn();
@@ -40,38 +41,76 @@ export default function SignInScreen() {
   const onGoogleSignIn = React.useCallback(async () => {
     try {
       console.log('🔐 Starting Google OAuth...');
-      const { createdSessionId, setActive } = await startGoogleOAuth({
-        redirectUrl: Linking.createURL('/(tabs)', { scheme: 'myapp' }),
-      });
+      
+      // Warm up the browser for better performance
+      await WebBrowser.warmUpAsync();
+      
+      const { createdSessionId, setActive, signIn, signUp } = await startGoogleOAuth();
 
-      console.log('🔐 Google OAuth result:', { createdSessionId: !!createdSessionId });
+      console.log('🔐 Google OAuth result:', { 
+        createdSessionId: !!createdSessionId,
+        signIn: !!signIn,
+        signUp: !!signUp
+      });
       
       if (createdSessionId) {
         await setActive!({ session: createdSessionId });
         console.log('🔐 Session set, redirecting to home...');
         router.replace('/(tabs)');
+      } else {
+        console.log('🔐 No session created, checking sign in/up status');
+        if (signIn?.createdSessionId) {
+          await setActive!({ session: signIn.createdSessionId });
+          router.replace('/(tabs)');
+        } else if (signUp?.createdSessionId) {
+          await setActive!({ session: signUp.createdSessionId });
+          router.replace('/(tabs)');
+        }
       }
+      
+      // Cool down the browser
+      await WebBrowser.coolDownAsync();
     } catch (err: any) {
       console.error('Google OAuth error:', JSON.stringify(err, null, 2));
+      await WebBrowser.coolDownAsync();
     }
   }, [startGoogleOAuth, router]);
 
   const onGitHubSignIn = React.useCallback(async () => {
     try {
       console.log('🔐 Starting GitHub OAuth...');
-      const { createdSessionId, setActive } = await startGitHubOAuth({
-        redirectUrl: Linking.createURL('/(tabs)', { scheme: 'myapp' }),
-      });
+      
+      // Warm up the browser for better performance
+      await WebBrowser.warmUpAsync();
+      
+      const { createdSessionId, setActive, signIn, signUp } = await startGitHubOAuth();
 
-      console.log('🔐 GitHub OAuth result:', { createdSessionId: !!createdSessionId });
+      console.log('🔐 GitHub OAuth result:', { 
+        createdSessionId: !!createdSessionId,
+        signIn: !!signIn,
+        signUp: !!signUp
+      });
       
       if (createdSessionId) {
         await setActive!({ session: createdSessionId });
         console.log('🔐 Session set, redirecting to home...');
         router.replace('/(tabs)');
+      } else {
+        console.log('🔐 No session created, checking sign in/up status');
+        if (signIn?.createdSessionId) {
+          await setActive!({ session: signIn.createdSessionId });
+          router.replace('/(tabs)');
+        } else if (signUp?.createdSessionId) {
+          await setActive!({ session: signUp.createdSessionId });
+          router.replace('/(tabs)');
+        }
       }
+      
+      // Cool down the browser
+      await WebBrowser.coolDownAsync();
     } catch (err: any) {
       console.error('GitHub OAuth error:', JSON.stringify(err, null, 2));
+      await WebBrowser.coolDownAsync();
     }
   }, [startGitHubOAuth, router]);
 
