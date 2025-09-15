@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -15,7 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack } from "expo-router";
 import { Edit2, Trash2, Plus, X, Calendar } from "lucide-react-native";
 import { useLanguage } from "@/hooks/language-context";
-import { useUser } from "@/hooks/user-context";
+import { useAuth } from "@/hooks/auth-context";
 import FormattedDateInput from "@/components/FormattedDateInput";
 import { trpc } from "@/lib/trpc";
 
@@ -32,7 +32,7 @@ interface Exam {
 
 export default function ExamManagementScreen() {
   const { t } = useLanguage();
-  const { user } = useUser();
+  const { user: authUser } = useAuth();
   
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -49,8 +49,8 @@ export default function ExamManagementScreen() {
   
   // Fetch exams from database
   const examsQuery = trpc.exams.getUserExams.useQuery(
-    { userId: user?.id || 'test-user' },
-    { enabled: !!user?.id || true }
+    { userId: authUser?.id || '' },
+    { enabled: !!authUser?.id }
   );
   
   // Mutations
@@ -134,8 +134,13 @@ export default function ExamManagementScreen() {
       return;
     }
 
+    if (!authUser?.id) {
+      Alert.alert(t('error'), 'Please sign in to add exams');
+      return;
+    }
+
     createExamMutation.mutate({
-      userId: user?.id || 'test-user',
+      userId: authUser.id,
       title: newExamTitle,
       date: newExamDate,
       subject: newExamSubject,
@@ -162,9 +167,14 @@ export default function ExamManagementScreen() {
       return;
     }
 
+    if (!authUser?.id) {
+      Alert.alert(t('error'), 'Please sign in to edit exams');
+      return;
+    }
+
     updateExamMutation.mutate({
       id: editingExam.id,
-      userId: user?.id || 'test-user',
+      userId: authUser.id,
       title: editExamTitle,
       date: editExamDate,
       subject: editExamSubject,
@@ -182,9 +192,14 @@ export default function ExamManagementScreen() {
           text: t('delete'), 
           style: "destructive",
           onPress: () => {
+            if (!authUser?.id) {
+              Alert.alert(t('error'), 'Please sign in to delete exams');
+              return;
+            }
+            
             deleteExamMutation.mutate({
               id: examId,
-              userId: user?.id || 'test-user'
+              userId: authUser.id
             });
           }
         }
