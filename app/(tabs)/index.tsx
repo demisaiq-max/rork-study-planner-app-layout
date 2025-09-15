@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Plus, User, X, Check, Edit2, Trash2, ArrowUpRight, Database } from "lucide-react-native";
 import { router } from "expo-router";
-import { SignedIn, SignedOut, useUser as useClerkUser } from "@clerk/clerk-expo";
+import { SignedIn, SignedOut, useUser as useClerkUser, useAuth } from "@clerk/clerk-expo";
 import { SignOutButton } from "@/components/SignOutButton";
 import CircularProgress from "@/components/CircularProgress";
 import DayCard from "@/components/DayCard";
@@ -48,8 +48,11 @@ export default function HomeScreen() {
     isLoading
   } = useStudyStore();
   const { user } = useUser();
+  const { isSignedIn, isLoaded } = useAuth();
   const { user: clerkUser } = useClerkUser();
   const { t, language } = useLanguage();
+
+  console.log('🏠 Home Screen - Auth Status:', { isLoaded, isSignedIn, hasClerkUser: !!clerkUser });
   
   // Fetch exams from database
   const { data: exams, isLoading: isLoadingExams, refetch: refetchExams } = trpc.exams.getUserExams.useQuery(

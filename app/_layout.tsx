@@ -22,15 +22,6 @@ if (!publishableKey) {
   );
 }
 
-function RootLayoutNav() {
-  return (
-    <ClerkProvider>
-      <Slot />
-    </ClerkProvider>
-  )
-}
-
-
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
@@ -53,6 +44,11 @@ function RootLayoutNav() {
       <Stack.Screen name="test-list" options={{ title: "Tests" }} />
       <Stack.Screen name="test-detail" options={{ title: "Test Detail" }} />
       <Stack.Screen name="all-subjects" options={{ title: "All Subjects" }} />
+      <Stack.Screen name="timer-sessions" options={{ title: "Timer Sessions" }} />
+      <Stack.Screen name="test-results" options={{ title: "Test Results" }} />
+      <Stack.Screen name="exam-score-edit" options={{ title: "Edit Exam Score" }} />
+      <Stack.Screen name="trpc-debug" options={{ title: "tRPC Debug" }} />
+      <Stack.Screen name="supabase-test" options={{ title: "Supabase Test" }} />
     </Stack>
   );
 }
