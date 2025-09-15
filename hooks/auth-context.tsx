@@ -106,30 +106,30 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     try {
       console.log('🔐 Signing out...');
       
-      // Check if there's an active session before attempting to sign out
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      // Always clear local state first
+      setSession(null);
+      setUser(null);
       
-      if (!currentSession) {
-        console.log('ℹ️ No active session to sign out from');
-        // Clear local state even if no session exists
-        setSession(null);
-        setUser(null);
-        return;
-      }
-      
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        console.error('❌ Sign out error:', error);
-        // Even if there's an error, clear local state
-        setSession(null);
-        setUser(null);
-      } else {
-        console.log('✅ Sign out successful');
+      // Try to sign out from Supabase, but don't fail if there's no session
+      try {
+        const { error } = await supabase.auth.signOut();
+        
+        if (error && error.message !== 'Auth session missing!') {
+          console.error('❌ Sign out error:', error);
+        } else {
+          console.log('✅ Sign out successful');
+        }
+      } catch (sessionError: any) {
+        // Handle AuthSessionMissingError gracefully
+        if (sessionError.message?.includes('Auth session missing')) {
+          console.log('ℹ️ No active session to sign out from');
+        } else {
+          console.error('❌ Sign out session error:', sessionError);
+        }
       }
     } catch (error) {
       console.error('❌ Sign out exception:', error);
-      // Clear local state even on exception
+      // Ensure local state is cleared even on exception
       setSession(null);
       setUser(null);
     }
