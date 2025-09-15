@@ -23,8 +23,8 @@ if (!supabaseAnonKey || !supabaseAnonKey.startsWith('eyJ')) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    persistSession: false,
-    autoRefreshToken: false,
+    persistSession: true,
+    autoRefreshToken: true,
     detectSessionInUrl: false
   },
   global: {

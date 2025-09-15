@@ -1,16 +1,16 @@
 import { Redirect, Stack } from 'expo-router';
-import { useAuth } from '@clerk/clerk-expo';
+import { useIsSignedIn } from '@/hooks/auth-context';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { useEffect } from 'react';
 
 export default function AuthRoutesLayout() {
-  const { isSignedIn, isLoaded } = useAuth();
+  const { isSignedIn, isLoading } = useIsSignedIn();
 
   useEffect(() => {
-    console.log('🔐 Auth Layout - isLoaded:', isLoaded, 'isSignedIn:', isSignedIn);
-  }, [isLoaded, isSignedIn]);
+    console.log('🔐 Auth Layout - isLoading:', isLoading, 'isSignedIn:', isSignedIn);
+  }, [isLoading, isSignedIn]);
 
-  if (!isLoaded) {
+  if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#007AFF" />

@@ -2,42 +2,22 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useState } from "react";
-import { StyleSheet, Platform } from "react-native";
+import { StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { ClerkProvider, ClerkLoaded } from "@clerk/clerk-expo";
-import { tokenCache } from "@clerk/clerk-expo/token-cache";
-import * as WebBrowser from 'expo-web-browser';
 import { StudyProvider } from "@/hooks/study-store";
 import { UserProvider } from "@/hooks/user-context";
 import { LanguageProvider } from "@/hooks/language-context";
+import { AuthProvider } from "@/hooks/auth-context";
 import { trpc, trpcClient } from "@/lib/trpc";
-
-// Fallback publishable key - replace with your actual key
-const FALLBACK_PUBLISHABLE_KEY = "pk_test_aW5jbHVkZWQtbWFuYXRlZS02MC5jbGVyay5hY2NvdW50cy5kZXYk";
-
-const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY || FALLBACK_PUBLISHABLE_KEY;
-
-console.log('🔑 Clerk publishable key:', publishableKey ? 'Found' : 'Missing');
-console.log('🔑 Environment variables:', Object.keys(process.env).filter(key => key.startsWith('EXPO_PUBLIC')));
-
-if (!publishableKey) {
-  console.error('❌ Missing Publishable Key. Using fallback key.');
-}
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
-
-// Configure WebBrowser for OAuth (only on native platforms)
-if (Platform.OS !== 'web') {
-  WebBrowser.maybeCompleteAuthSession();
-}
 
 function RootLayoutNav() {
   return (
     <Stack screenOptions={{ headerBackTitle: "Back" }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-      <Stack.Screen name="oauth-native-callback" options={{ headerShown: false }} />
       <Stack.Screen name="settings" options={{ headerShown: false }} />
       <Stack.Screen name="calendar" options={{ title: "Calendar" }} />
       <Stack.Screen name="brain-manager" options={{ title: "Brain Manager" }} />
@@ -119,26 +99,21 @@ export default function RootLayout() {
   }, [queryClient]);
 
   return (
-    <ClerkProvider 
-      publishableKey={publishableKey} 
-      tokenCache={tokenCache}
-    >
-      <ClerkLoaded>
-        <QueryClientProvider client={queryClient}>
-          <trpc.Provider client={trpcClient} queryClient={queryClient}>
-            <UserProvider>
-              <LanguageProvider>
-                <StudyProvider>
-                  <GestureHandlerRootView style={styles.container}>
-                    <RootLayoutNav />
-                  </GestureHandlerRootView>
-                </StudyProvider>
-              </LanguageProvider>
-            </UserProvider>
-          </trpc.Provider>
-        </QueryClientProvider>
-      </ClerkLoaded>
-    </ClerkProvider>
+    <QueryClientProvider client={queryClient}>
+      <trpc.Provider client={trpcClient} queryClient={queryClient}>
+        <AuthProvider>
+          <UserProvider>
+            <LanguageProvider>
+              <StudyProvider>
+                <GestureHandlerRootView style={styles.container}>
+                  <RootLayoutNav />
+                </GestureHandlerRootView>
+              </StudyProvider>
+            </LanguageProvider>
+          </UserProvider>
+        </AuthProvider>
+      </trpc.Provider>
+    </QueryClientProvider>
   );
 }
 

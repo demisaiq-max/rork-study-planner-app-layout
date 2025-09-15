@@ -1,145 +1,58 @@
-import { useSignIn, useOAuth } from '@clerk/clerk-expo';
+import { useAuth } from '@/hooks/auth-context';
 import { Link, useRouter } from 'expo-router';
-import { Text, TextInput, TouchableOpacity, View, StyleSheet, Platform } from 'react-native';
-import React from 'react';
+import { Text, TextInput, TouchableOpacity, View, StyleSheet, Alert } from 'react-native';
+import React, { useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-import * as WebBrowser from 'expo-web-browser';
-
 export default function SignInScreen() {
-  const { signIn, setActive, isLoaded } = useSignIn();
-  const { startOAuthFlow: startGoogleOAuth } = useOAuth({ strategy: 'oauth_google' });
-  const { startOAuthFlow: startGitHubOAuth } = useOAuth({ strategy: 'oauth_github' });
+  const { signIn, signInWithGoogle, isLoading } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [emailAddress, setEmailAddress] = React.useState<string>('');
-  const [password, setPassword] = React.useState<string>('');
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [loading, setLoading] = useState(false);
 
-  const onSignInPress = async () => {
-    if (!isLoaded) return;
+  const handleSignIn = async () => {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('Error', 'Please enter both email and password');
+      return;
+    }
 
+    setLoading(true);
     try {
-      const signInAttempt = await signIn.create({
-        identifier: emailAddress,
-        password,
-      });
-
-      if (signInAttempt.status === 'complete') {
-        await setActive({ session: signInAttempt.createdSessionId });
-        router.replace('/(tabs)');
+      const result = await signIn(email, password);
+      
+      if (result.error) {
+        Alert.alert('Sign In Failed', result.error);
       } else {
-        console.error('Sign in incomplete:', JSON.stringify(signInAttempt, null, 2));
+        console.log('✅ Sign in successful, navigating to home');
+        router.replace('/(tabs)');
       }
-    } catch (err: any) {
-      console.error('Sign in error:', JSON.stringify(err, null, 2));
-      console.error('Sign in failed:', err?.errors?.[0]?.message || 'Failed to sign in');
+    } catch (error) {
+      console.error('❌ Sign in error:', error);
+      Alert.alert('Error', 'An unexpected error occurred');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const onGoogleSignIn = React.useCallback(async () => {
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
     try {
-      console.log('🔐 Starting Google OAuth...');
+      const result = await signInWithGoogle();
       
-      // Warm up the browser for better performance (only on native)
-      if (Platform.OS !== 'web') {
-        await WebBrowser.warmUpAsync();
+      if (result.error) {
+        Alert.alert('Google Sign In Failed', result.error);
       }
-      
-      const { createdSessionId, setActive, signIn, signUp } = await startGoogleOAuth();
-
-      console.log('🔐 Google OAuth result:', { 
-        createdSessionId: !!createdSessionId,
-        signIn: !!signIn,
-        signUp: !!signUp
-      });
-      
-      if (createdSessionId) {
-        await setActive!({ session: createdSessionId });
-        console.log('🔐 Session set, redirecting to home...');
-        router.replace('/(tabs)');
-      } else {
-        console.log('🔐 No session created, checking sign in/up status');
-        if (signIn?.createdSessionId) {
-          await setActive!({ session: signIn.createdSessionId });
-          router.replace('/(tabs)');
-        } else if (signUp?.createdSessionId) {
-          await setActive!({ session: signUp.createdSessionId });
-          router.replace('/(tabs)');
-        }
-      }
-      
-      // Cool down the browser (only on native)
-      if (Platform.OS !== 'web') {
-        try {
-          await WebBrowser.coolDownAsync();
-        } catch (error) {
-          console.log('WebBrowser coolDown not available:', error);
-        }
-      }
-    } catch (err: any) {
-      console.error('Google OAuth error:', JSON.stringify(err, null, 2));
-      if (Platform.OS !== 'web') {
-        try {
-          await WebBrowser.coolDownAsync();
-        } catch (error) {
-          console.log('WebBrowser coolDown not available:', error);
-        }
-      }
+    } catch (error) {
+      console.error('❌ Google sign in error:', error);
+      Alert.alert('Error', 'An unexpected error occurred');
+    } finally {
+      setLoading(false);
     }
-  }, [startGoogleOAuth, router]);
-
-  const onGitHubSignIn = React.useCallback(async () => {
-    try {
-      console.log('🔐 Starting GitHub OAuth...');
-      
-      // Warm up the browser for better performance (only on native)
-      if (Platform.OS !== 'web') {
-        await WebBrowser.warmUpAsync();
-      }
-      
-      const { createdSessionId, setActive, signIn, signUp } = await startGitHubOAuth();
-
-      console.log('🔐 GitHub OAuth result:', { 
-        createdSessionId: !!createdSessionId,
-        signIn: !!signIn,
-        signUp: !!signUp
-      });
-      
-      if (createdSessionId) {
-        await setActive!({ session: createdSessionId });
-        console.log('🔐 Session set, redirecting to home...');
-        router.replace('/(tabs)');
-      } else {
-        console.log('🔐 No session created, checking sign in/up status');
-        if (signIn?.createdSessionId) {
-          await setActive!({ session: signIn.createdSessionId });
-          router.replace('/(tabs)');
-        } else if (signUp?.createdSessionId) {
-          await setActive!({ session: signUp.createdSessionId });
-        }
-      }
-      
-      // Cool down the browser (only on native)
-      if (Platform.OS !== 'web') {
-        try {
-          await WebBrowser.coolDownAsync();
-        } catch (error) {
-          console.log('WebBrowser coolDown not available:', error);
-        }
-      }
-    } catch (err: any) {
-      console.error('GitHub OAuth error:', JSON.stringify(err, null, 2));
-      if (Platform.OS !== 'web') {
-        try {
-          await WebBrowser.coolDownAsync();
-        } catch (error) {
-          console.log('WebBrowser coolDown not available:', error);
-        }
-      }
-    }
-  }, [startGitHubOAuth, router]);
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -150,11 +63,12 @@ export default function SignInScreen() {
         <TextInput
           style={styles.input}
           autoCapitalize="none"
-          value={emailAddress}
+          value={email}
           placeholder="Enter email"
-          onChangeText={setEmailAddress}
+          onChangeText={setEmail}
           keyboardType="email-address"
           autoComplete="email"
+          editable={!loading && !isLoading}
         />
         <TextInput
           style={styles.input}
@@ -163,9 +77,16 @@ export default function SignInScreen() {
           secureTextEntry={true}
           onChangeText={setPassword}
           autoComplete="current-password"
+          editable={!loading && !isLoading}
         />
-        <TouchableOpacity style={styles.button} onPress={onSignInPress}>
-          <Text style={styles.buttonText}>Sign In</Text>
+        <TouchableOpacity 
+          style={[styles.button, (loading || isLoading) && styles.buttonDisabled]} 
+          onPress={handleSignIn}
+          disabled={loading || isLoading}
+        >
+          <Text style={styles.buttonText}>
+            {loading ? 'Signing In...' : 'Sign In'}
+          </Text>
         </TouchableOpacity>
         
         <View style={styles.divider}>
@@ -174,14 +95,13 @@ export default function SignInScreen() {
           <View style={styles.dividerLine} />
         </View>
         
-        <TouchableOpacity style={styles.oauthButton} onPress={onGoogleSignIn}>
+        <TouchableOpacity 
+          style={[styles.oauthButton, (loading || isLoading) && styles.buttonDisabled]} 
+          onPress={handleGoogleSignIn}
+          disabled={loading || isLoading}
+        >
           <Ionicons name="logo-google" size={20} color="#4285F4" />
           <Text style={styles.oauthButtonText}>Continue with Google</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.oauthButton} onPress={onGitHubSignIn}>
-          <Ionicons name="logo-github" size={20} color="#333" />
-          <Text style={styles.oauthButtonText}>Continue with GitHub</Text>
         </TouchableOpacity>
         
         <View style={styles.linkContainer}>
@@ -286,5 +206,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1a1a1a',
     marginLeft: 12,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
 });

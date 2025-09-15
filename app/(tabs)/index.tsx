@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Plus, User, X, Check, Edit2, Trash2, ArrowUpRight, Database } from "lucide-react-native";
 import { router } from "expo-router";
-import { SignedIn, SignedOut, useUser as useClerkUser, useAuth } from "@clerk/clerk-expo";
+import { useAuth, useIsSignedIn } from "@/hooks/auth-context";
 import { SignOutButton } from "@/components/SignOutButton";
 import CircularProgress from "@/components/CircularProgress";
 import DayCard from "@/components/DayCard";
@@ -48,11 +48,11 @@ export default function HomeScreen() {
     isLoading
   } = useStudyStore();
   const { user } = useUser();
-  const { isSignedIn, isLoaded } = useAuth();
-  const { user: clerkUser } = useClerkUser();
+  const { user: authUser } = useAuth();
+  const { isSignedIn, isLoading: authLoading } = useIsSignedIn();
   const { t, language } = useLanguage();
 
-  console.log('🏠 Home Screen - Auth Status:', { isLoaded, isSignedIn, hasClerkUser: !!clerkUser });
+  console.log('🏠 Home Screen - Auth Status:', { authLoading, isSignedIn, hasAuthUser: !!authUser });
   
   // Fetch exams from database
   const { data: exams, isLoading: isLoadingExams, refetch: refetchExams } = trpc.exams.getUserExams.useQuery(
@@ -319,7 +319,7 @@ export default function HomeScreen() {
 
   return (
     <>
-      <SignedOut>
+      {!isSignedIn ? (
         <View style={styles.authContainer}>
           <View style={styles.authContent}>
             <Text style={styles.authTitle}>Welcome to Study Buddy</Text>
@@ -338,9 +338,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </SignedOut>
-      
-      <SignedIn>
+      ) : (
         <SafeAreaView style={styles.container} edges={["top"]}>
           <ScrollView 
             style={styles.scrollView}
@@ -359,14 +357,12 @@ export default function HomeScreen() {
             <View style={styles.profileInfo}>
               <Text style={styles.examType}>{t('examType')}</Text>
               <Text style={styles.userName} numberOfLines={1} ellipsizeMode="tail">
-                {clerkUser?.emailAddresses?.[0]?.emailAddress || user?.name || t('userName')}
+                {authUser?.email || user?.name || t('userName')}
               </Text>
             </View>
           </TouchableOpacity>
           
-          <SignedIn>
-            <SignOutButton />
-          </SignedIn>
+          <SignOutButton />
         </View>
 
         {/* Study Progress Card */}
@@ -918,7 +914,7 @@ export default function HomeScreen() {
         </SafeAreaView>
       </Modal>
         </SafeAreaView>
-      </SignedIn>
+      )}
     </>
   );
 }

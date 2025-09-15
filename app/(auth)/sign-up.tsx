@@ -1,190 +1,67 @@
-import * as React from 'react';
-import { Text, TextInput, TouchableOpacity, View, StyleSheet, Platform } from 'react-native';
-import { useSignUp, useOAuth } from '@clerk/clerk-expo';
+import React, { useState } from 'react';
+import { Text, TextInput, TouchableOpacity, View, StyleSheet, Alert } from 'react-native';
+import { useAuth } from '@/hooks/auth-context';
 import { Link, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-import * as WebBrowser from 'expo-web-browser';
-
 export default function SignUpScreen() {
-  const { isLoaded, signUp, setActive } = useSignUp();
-  const { startOAuthFlow: startGoogleOAuth } = useOAuth({ strategy: 'oauth_google' });
-  const { startOAuthFlow: startGitHubOAuth } = useOAuth({ strategy: 'oauth_github' });
+  const { signUp, signInWithGoogle, isLoading } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [emailAddress, setEmailAddress] = React.useState<string>('');
-  const [password, setPassword] = React.useState<string>('');
-  const [pendingVerification, setPendingVerification] = React.useState<boolean>(false);
-  const [code, setCode] = React.useState<string>('');
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [name, setName] = useState<string>('');
+  const [loading, setLoading] = useState(false);
 
-  const onSignUpPress = async () => {
-    if (!isLoaded) return;
+  const handleSignUp = async () => {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('Error', 'Please enter both email and password');
+      return;
+    }
 
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters long');
+      return;
+    }
+
+    setLoading(true);
     try {
-      await signUp.create({
-        emailAddress,
-        password,
-      });
-
-      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
-
-      setPendingVerification(true);
-    } catch (err: any) {
-      console.error('Sign up error:', JSON.stringify(err, null, 2));
-      console.error('Sign up failed:', err?.errors?.[0]?.message || 'Failed to sign up');
+      const result = await signUp(email, password, name);
+      
+      if (result.error) {
+        Alert.alert('Sign Up Failed', result.error);
+      } else {
+        console.log('✅ Sign up successful, navigating to home');
+        Alert.alert('Success', 'Account created successfully! Please check your email for verification.');
+        router.replace('/(tabs)');
+      }
+    } catch (error) {
+      console.error('❌ Sign up error:', error);
+      Alert.alert('Error', 'An unexpected error occurred');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const onVerifyPress = async () => {
-    if (!isLoaded) return;
-
+  const handleGoogleSignUp = async () => {
+    setLoading(true);
     try {
-      const signUpAttempt = await signUp.attemptEmailAddressVerification({
-        code,
-      });
-
-      if (signUpAttempt.status === 'complete') {
-        await setActive({ session: signUpAttempt.createdSessionId });
-        router.replace('/(tabs)');
-      } else {
-        console.error('Verification incomplete:', JSON.stringify(signUpAttempt, null, 2));
-        console.error('Verification failed. Please try again.');
+      const result = await signInWithGoogle();
+      
+      if (result.error) {
+        Alert.alert('Google Sign Up Failed', result.error);
       }
-    } catch (err: any) {
-      console.error('Verification error:', JSON.stringify(err, null, 2));
-      console.error('Verification failed:', err?.errors?.[0]?.message || 'Failed to verify email');
+    } catch (error) {
+      console.error('❌ Google sign up error:', error);
+      Alert.alert('Error', 'An unexpected error occurred');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const onGoogleSignUp = React.useCallback(async () => {
-    try {
-      console.log('🔐 Starting Google OAuth...');
-      
-      // Warm up the browser for better performance (only on native)
-      if (Platform.OS !== 'web') {
-        await WebBrowser.warmUpAsync();
-      }
-      
-      const { createdSessionId, setActive, signIn, signUp } = await startGoogleOAuth();
 
-      console.log('🔐 Google OAuth result:', { 
-        createdSessionId: !!createdSessionId,
-        signIn: !!signIn,
-        signUp: !!signUp
-      });
-      
-      if (createdSessionId) {
-        await setActive!({ session: createdSessionId });
-        console.log('🔐 Session set, redirecting to home...');
-        router.replace('/(tabs)');
-      } else {
-        console.log('🔐 No session created, checking sign in/up status');
-        if (signIn?.createdSessionId) {
-          await setActive!({ session: signIn.createdSessionId });
-          router.replace('/(tabs)');
-        } else if (signUp?.createdSessionId) {
-          await setActive!({ session: signUp.createdSessionId });
-          router.replace('/(tabs)');
-        }
-      }
-      
-      // Cool down the browser (only on native)
-      if (Platform.OS !== 'web') {
-        try {
-          await WebBrowser.coolDownAsync();
-        } catch (error) {
-          console.log('WebBrowser coolDown not available:', error);
-        }
-      }
-    } catch (err: any) {
-      console.error('Google OAuth error:', JSON.stringify(err, null, 2));
-      if (Platform.OS !== 'web') {
-        try {
-          await WebBrowser.coolDownAsync();
-        } catch (error) {
-          console.log('WebBrowser coolDown not available:', error);
-        }
-      }
-    }
-  }, [startGoogleOAuth, router]);
-
-  const onGitHubSignUp = React.useCallback(async () => {
-    try {
-      console.log('🔐 Starting GitHub OAuth...');
-      
-      // Warm up the browser for better performance (only on native)
-      if (Platform.OS !== 'web') {
-        await WebBrowser.warmUpAsync();
-      }
-      
-      const { createdSessionId, setActive, signIn, signUp } = await startGitHubOAuth();
-
-      console.log('🔐 GitHub OAuth result:', { 
-        createdSessionId: !!createdSessionId,
-        signIn: !!signIn,
-        signUp: !!signUp
-      });
-      
-      if (createdSessionId) {
-        await setActive!({ session: createdSessionId });
-        console.log('🔐 Session set, redirecting to home...');
-        router.replace('/(tabs)');
-      } else {
-        console.log('🔐 No session created, checking sign in/up status');
-        if (signIn?.createdSessionId) {
-          await setActive!({ session: signIn.createdSessionId });
-          router.replace('/(tabs)');
-        } else if (signUp?.createdSessionId) {
-          await setActive!({ session: signUp.createdSessionId });
-          router.replace('/(tabs)');
-        }
-      }
-      
-      // Cool down the browser (only on native)
-      if (Platform.OS !== 'web') {
-        try {
-          await WebBrowser.coolDownAsync();
-        } catch (error) {
-          console.log('WebBrowser coolDown not available:', error);
-        }
-      }
-    } catch (err: any) {
-      console.error('GitHub OAuth error:', JSON.stringify(err, null, 2));
-      if (Platform.OS !== 'web') {
-        try {
-          await WebBrowser.coolDownAsync();
-        } catch (error) {
-          console.log('WebBrowser coolDown not available:', error);
-        }
-      }
-    }
-  }, [startGitHubOAuth, router]);
-
-  if (pendingVerification) {
-    return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <View style={styles.content}>
-          <Text style={styles.title}>Verify your email</Text>
-          <Text style={styles.subtitle}>
-            We sent a verification code to {emailAddress}
-          </Text>
-          <TextInput
-            style={styles.input}
-            value={code}
-            placeholder="Enter verification code"
-            onChangeText={setCode}
-            keyboardType="number-pad"
-            autoComplete="one-time-code"
-          />
-          <TouchableOpacity style={styles.button} onPress={onVerifyPress}>
-            <Text style={styles.buttonText}>Verify Email</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -194,23 +71,39 @@ export default function SignUpScreen() {
         
         <TextInput
           style={styles.input}
+          value={name}
+          placeholder="Enter your name (optional)"
+          onChangeText={setName}
+          autoComplete="name"
+          editable={!loading && !isLoading}
+        />
+        <TextInput
+          style={styles.input}
           autoCapitalize="none"
-          value={emailAddress}
+          value={email}
           placeholder="Enter email"
-          onChangeText={setEmailAddress}
+          onChangeText={setEmail}
           keyboardType="email-address"
           autoComplete="email"
+          editable={!loading && !isLoading}
         />
         <TextInput
           style={styles.input}
           value={password}
-          placeholder="Enter password"
+          placeholder="Enter password (min 6 characters)"
           secureTextEntry={true}
           onChangeText={setPassword}
           autoComplete="new-password"
+          editable={!loading && !isLoading}
         />
-        <TouchableOpacity style={styles.button} onPress={onSignUpPress}>
-          <Text style={styles.buttonText}>Create Account</Text>
+        <TouchableOpacity 
+          style={[styles.button, (loading || isLoading) && styles.buttonDisabled]} 
+          onPress={handleSignUp}
+          disabled={loading || isLoading}
+        >
+          <Text style={styles.buttonText}>
+            {loading ? 'Creating Account...' : 'Create Account'}
+          </Text>
         </TouchableOpacity>
         
         <View style={styles.divider}>
@@ -219,14 +112,13 @@ export default function SignUpScreen() {
           <View style={styles.dividerLine} />
         </View>
         
-        <TouchableOpacity style={styles.oauthButton} onPress={onGoogleSignUp}>
+        <TouchableOpacity 
+          style={[styles.oauthButton, (loading || isLoading) && styles.buttonDisabled]} 
+          onPress={handleGoogleSignUp}
+          disabled={loading || isLoading}
+        >
           <Ionicons name="logo-google" size={20} color="#4285F4" />
           <Text style={styles.oauthButtonText}>Continue with Google</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.oauthButton} onPress={onGitHubSignUp}>
-          <Ionicons name="logo-github" size={20} color="#333" />
-          <Text style={styles.oauthButtonText}>Continue with GitHub</Text>
         </TouchableOpacity>
         
         <View style={styles.linkContainer}>
@@ -331,5 +223,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1a1a1a',
     marginLeft: 12,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
 });

@@ -1,10 +1,10 @@
-import { useClerk } from '@clerk/clerk-expo';
+import { useAuth } from '@/hooks/auth-context';
 import { useRouter } from 'expo-router';
 import { Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { LogOut } from 'lucide-react-native';
 
 export const SignOutButton = () => {
-  const { signOut } = useClerk();
+  const { signOut } = useAuth();
   const router = useRouter();
   
   const handleSignOut = async () => {
@@ -14,7 +14,7 @@ export const SignOutButton = () => {
       console.log('🔐 Sign out successful, redirecting to auth...');
       router.replace('/(auth)/sign-in');
     } catch (err) {
-      console.error('Sign out error:', JSON.stringify(err, null, 2));
+      console.error('Sign out error:', err);
     }
   };
   
