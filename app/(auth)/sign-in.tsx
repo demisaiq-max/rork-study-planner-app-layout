@@ -27,7 +27,7 @@ export default function SignInScreen() {
 
       if (signInAttempt.status === 'complete') {
         await setActive({ session: signInAttempt.createdSessionId });
-        router.replace('/');
+        router.replace('/(tabs)');
       } else {
         console.error('Sign in incomplete:', JSON.stringify(signInAttempt, null, 2));
       }
@@ -39,13 +39,17 @@ export default function SignInScreen() {
 
   const onGoogleSignIn = React.useCallback(async () => {
     try {
+      console.log('🔐 Starting Google OAuth...');
       const { createdSessionId, setActive } = await startGoogleOAuth({
-        redirectUrl: Linking.createURL('/', { scheme: 'myapp' }),
+        redirectUrl: Linking.createURL('/(tabs)', { scheme: 'myapp' }),
       });
 
+      console.log('🔐 Google OAuth result:', { createdSessionId: !!createdSessionId });
+      
       if (createdSessionId) {
-        setActive!({ session: createdSessionId });
-        router.replace('/');
+        await setActive!({ session: createdSessionId });
+        console.log('🔐 Session set, redirecting to home...');
+        router.replace('/(tabs)');
       }
     } catch (err: any) {
       console.error('Google OAuth error:', JSON.stringify(err, null, 2));
@@ -54,13 +58,17 @@ export default function SignInScreen() {
 
   const onGitHubSignIn = React.useCallback(async () => {
     try {
+      console.log('🔐 Starting GitHub OAuth...');
       const { createdSessionId, setActive } = await startGitHubOAuth({
-        redirectUrl: Linking.createURL('/', { scheme: 'myapp' }),
+        redirectUrl: Linking.createURL('/(tabs)', { scheme: 'myapp' }),
       });
 
+      console.log('🔐 GitHub OAuth result:', { createdSessionId: !!createdSessionId });
+      
       if (createdSessionId) {
-        setActive!({ session: createdSessionId });
-        router.replace('/');
+        await setActive!({ session: createdSessionId });
+        console.log('🔐 Session set, redirecting to home...');
+        router.replace('/(tabs)');
       }
     } catch (err: any) {
       console.error('GitHub OAuth error:', JSON.stringify(err, null, 2));
