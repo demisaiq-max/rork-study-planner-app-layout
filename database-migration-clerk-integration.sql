@@ -108,6 +108,8 @@ CREATE POLICY "Public update access" ON users FOR UPDATE USING (true);
 CREATE POLICY "Public delete access" ON users FOR DELETE USING (true);
 
 -- Insert a test user with a Clerk-like ID (optional, for testing)
+-- Also keep the old UUID test user for backward compatibility with existing data
 INSERT INTO users (id, email, name, profile_picture_url) VALUES
-('user_test_clerk_id_example', 'test@example.com', 'Test User', NULL)
+('user_test_clerk_id_example', 'test@example.com', 'Test User', NULL),
+('550e8400-e29b-41d4-a716-446655440000', 'test-legacy@example.com', 'Legacy Test User', NULL)
 ON CONFLICT (id) DO NOTHING;
