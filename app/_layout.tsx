@@ -4,7 +4,7 @@ import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useState } from "react";
 import { StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { ClerkProvider } from "@clerk/clerk-expo";
+import { ClerkProvider, ClerkLoaded } from "@clerk/clerk-expo";
 import { tokenCache } from "@clerk/clerk-expo/token-cache";
 import { StudyProvider } from "@/hooks/study-store";
 import { UserProvider } from "@/hooks/user-context";
@@ -112,20 +112,25 @@ export default function RootLayout() {
   }, [queryClient]);
 
   return (
-    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-      <QueryClientProvider client={queryClient}>
-        <trpc.Provider client={trpcClient} queryClient={queryClient}>
-          <UserProvider>
-            <LanguageProvider>
-              <StudyProvider>
-                <GestureHandlerRootView style={styles.container}>
-                  <RootLayoutNav />
-                </GestureHandlerRootView>
-              </StudyProvider>
-            </LanguageProvider>
-          </UserProvider>
-        </trpc.Provider>
-      </QueryClientProvider>
+    <ClerkProvider 
+      publishableKey={publishableKey} 
+      tokenCache={tokenCache}
+    >
+      <ClerkLoaded>
+        <QueryClientProvider client={queryClient}>
+          <trpc.Provider client={trpcClient} queryClient={queryClient}>
+            <UserProvider>
+              <LanguageProvider>
+                <StudyProvider>
+                  <GestureHandlerRootView style={styles.container}>
+                    <RootLayoutNav />
+                  </GestureHandlerRootView>
+                </StudyProvider>
+              </LanguageProvider>
+            </UserProvider>
+          </trpc.Provider>
+        </QueryClientProvider>
+      </ClerkLoaded>
     </ClerkProvider>
   );
 }
