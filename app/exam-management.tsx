@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -16,6 +16,7 @@ import { Stack } from "expo-router";
 import { Edit2, Trash2, Plus, X, Calendar } from "lucide-react-native";
 import { useLanguage } from "@/hooks/language-context";
 import { useUser } from "@/hooks/user-context";
+import { useClerkSupabaseSync } from "@/hooks/use-clerk-supabase-sync";
 import FormattedDateInput from "@/components/FormattedDateInput";
 import { trpc } from "@/lib/trpc";
 
@@ -33,6 +34,7 @@ interface Exam {
 export default function ExamManagementScreen() {
   const { t } = useLanguage();
   const { user } = useUser();
+  const { isUserReady, isSyncing } = useClerkSupabaseSync();
   
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -50,7 +52,7 @@ export default function ExamManagementScreen() {
   // Fetch exams from database
   const examsQuery = trpc.exams.getUserExams.useQuery(
     { userId: user?.id || 'test-user' },
-    { enabled: !!user?.id || true }
+    { enabled: !!user?.id && isUserReady }
   );
   
   // Mutations
@@ -116,6 +118,11 @@ export default function ExamManagementScreen() {
   };
 
   const handleAddExam = () => {
+    if (!isUserReady) {
+      Alert.alert(t('error'), 'Please wait for user sync to complete');
+      return;
+    }
+    
     if (!newExamTitle.trim() || !newExamDate.trim() || !newExamSubject.trim()) {
       Alert.alert(t('error'), t('examFormError'));
       return;
@@ -205,10 +212,13 @@ export default function ExamManagementScreen() {
     return priority ? "#FF3B30" : "#FF9500";
   };
   
-  if (examsQuery.isLoading) {
+  if (examsQuery.isLoading || isSyncing || !isUserReady) {
     return (
       <View style={[styles.container, styles.centerContent]}>
         <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={{ marginTop: 16, color: '#8E8E93' }}>
+          {isSyncing ? 'Syncing user data...' : 'Loading...'}
+        </Text>
       </View>
     );
   }
