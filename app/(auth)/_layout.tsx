@@ -1,17 +1,9 @@
 import { Redirect, Stack } from 'expo-router';
 import { useAuth } from '@clerk/clerk-expo';
-import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
 export default function AuthRoutesLayout() {
   const { isSignedIn, isLoaded } = useAuth();
-  const [shouldRedirect, setShouldRedirect] = useState(false);
-
-  useEffect(() => {
-    if (isLoaded && isSignedIn) {
-      setShouldRedirect(true);
-    }
-  }, [isLoaded, isSignedIn]);
 
   if (!isLoaded) {
     return (
@@ -21,7 +13,7 @@ export default function AuthRoutesLayout() {
     );
   }
 
-  if (shouldRedirect) {
+  if (isSignedIn) {
     return <Redirect href={'/'} />;
   }
 

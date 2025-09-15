@@ -11,7 +11,7 @@ import { UserProvider } from "@/hooks/user-context";
 import { LanguageProvider } from "@/hooks/language-context";
 import { trpc, trpcClient } from "@/lib/trpc";
 
-const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
+const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
 
 console.log('🔑 Clerk publishable key:', publishableKey ? 'Found' : 'Missing');
 console.log('🔑 Environment variables:', Object.keys(process.env).filter(key => key.startsWith('EXPO_PUBLIC')));
