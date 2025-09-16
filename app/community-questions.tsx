@@ -17,61 +17,14 @@ import { ChevronLeft, HelpCircle, CheckCircle, Clock, MessageSquare, ThumbsUp, X
 import * as ImagePicker from 'expo-image-picker';
 import { useLanguage } from "@/hooks/language-context";
 import { useRouter, Stack } from "expo-router";
+import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/hooks/auth-context";
 
-interface Question {
-  id: string;
-  title: string;
-  content: string;
-  subject: string;
-  author: string;
-  time: string;
-  answers: number;
-  likes: number;
-  solved: boolean;
-  tags: string[];
-}
 
-const questions: Question[] = [
-  {
-    id: "1",
-    title: "수학 미적분 문제 질문입니다",
-    content: "극한값 구하는 문제인데 어떻게 접근해야 할지 모르겠어요...",
-    subject: "수학",
-    author: "김학생",
-    time: "10분 전",
-    answers: 3,
-    likes: 5,
-    solved: true,
-    tags: ["미적분", "극한"],
-  },
-  {
-    id: "2",
-    title: "영어 문법 관련 질문",
-    content: "현재완료와 과거시제 차이점이 헷갈려요",
-    subject: "영어",
-    author: "이학생",
-    time: "30분 전",
-    answers: 2,
-    likes: 8,
-    solved: false,
-    tags: ["문법", "시제"],
-  },
-  {
-    id: "3",
-    title: "국어 문학 작품 해석",
-    content: "윤동주 시인의 '서시' 주제가 무엇인가요?",
-    subject: "국어",
-    author: "박학생",
-    time: "1시간 전",
-    answers: 5,
-    likes: 12,
-    solved: true,
-    tags: ["현대문학", "시"],
-  },
-];
 
 export default function CommunityQuestionsScreen() {
   const { language } = useLanguage();
+  const { user } = useAuth();
   const router = useRouter();
   const [searchText, setSearchText] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("all");
@@ -80,6 +33,32 @@ export default function CommunityQuestionsScreen() {
   const [questionContent, setQuestionContent] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("");
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
+
+  const questionsQuery = trpc.community.questions.getQuestions.useQuery({
+    searchQuery: searchText || undefined,
+    isSolved: selectedFilter === "solved" ? true : selectedFilter === "unsolved" ? false : undefined,
+  });
+
+  const createQuestionMutation = trpc.community.questions.createQuestion.useMutation({
+    onSuccess: () => {
+      questionsQuery.refetch();
+      setQuestionTitle("");
+      setQuestionContent("");
+      setSelectedSubject("");
+      setSelectedImages([]);
+      setShowCreateQuestion(false);
+      Alert.alert(
+        language === 'ko' ? '성공' : 'Success',
+        language === 'ko' ? '질문이 등록되었습니다!' : 'Your question has been posted!'
+      );
+    },
+    onError: (error) => {
+      Alert.alert(
+        language === 'ko' ? '오류' : 'Error',
+        error.message || (language === 'ko' ? '질문 등록에 실패했습니다.' : 'Failed to post question.')
+      );
+    },
+  });
 
   const subjects = language === 'ko' 
     ? ["수학", "영어", "국어", "과학", "사회", "기타"]
@@ -94,16 +73,20 @@ export default function CommunityQuestionsScreen() {
       return;
     }
 
-    Alert.alert(
-      language === 'ko' ? '성공' : 'Success',
-      language === 'ko' ? '질문이 등록되었습니다!' : 'Your question has been posted!'
-    );
-    
-    setQuestionTitle("");
-    setQuestionContent("");
-    setSelectedSubject("");
-    setSelectedImages([]);
-    setShowCreateQuestion(false);
+    if (!user) {
+      Alert.alert(
+        language === 'ko' ? '로그인 필요' : 'Login Required',
+        language === 'ko' ? '질문을 등록하려면 로그인이 필요합니다.' : 'You need to login to post a question.'
+      );
+      return;
+    }
+
+    createQuestionMutation.mutate({
+      title: questionTitle,
+      content: questionContent,
+      subject: selectedSubject,
+      imageUrls: selectedImages.length > 0 ? selectedImages : undefined,
+    });
   };
 
   const requestPermissions = async () => {
@@ -197,15 +180,14 @@ export default function CommunityQuestionsScreen() {
     setSelectedImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  const filteredQuestions = questions.filter(q => {
-    const matchesSearch = q.title.toLowerCase().includes(searchText.toLowerCase()) ||
-                         q.content.toLowerCase().includes(searchText.toLowerCase());
-    
-    if (selectedFilter === "all") return matchesSearch;
-    if (selectedFilter === "solved") return matchesSearch && q.solved;
-    if (selectedFilter === "unsolved") return matchesSearch && !q.solved;
-    return matchesSearch;
-  });
+  const questions = questionsQuery.data || [];
+
+  const handleQuestionPress = (questionId: string) => {
+    router.push({
+      pathname: '/question-detail',
+      params: { id: questionId }
+    } as any);
+  };
 
   return (
     <>
@@ -266,17 +248,18 @@ export default function CommunityQuestionsScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {filteredQuestions.map((question) => (
+          {questions.map((question: any) => (
             <TouchableOpacity
               key={question.id}
               style={styles.questionCard}
               activeOpacity={0.7}
+              onPress={() => handleQuestionPress(question.id)}
             >
               <View style={styles.questionHeader}>
-                <View style={[styles.subjectBadge, { backgroundColor: question.solved ? "#34C759" : "#FF9500" }]}>
+                <View style={[styles.subjectBadge, { backgroundColor: question.is_solved ? "#34C759" : "#FF9500" }]}>
                   <Text style={styles.subjectText}>{question.subject}</Text>
                 </View>
-                {question.solved && (
+                {question.is_solved && (
                   <View style={styles.solvedBadge}>
                     <CheckCircle size={14} color="#34C759" />
                     <Text style={styles.solvedText}>
@@ -291,29 +274,33 @@ export default function CommunityQuestionsScreen() {
                 {question.content}
               </Text>
 
-              <View style={styles.questionTags}>
-                {question.tags.map((tag, index) => (
-                  <View key={index} style={styles.tag}>
-                    <Text style={styles.tagText}>#{tag}</Text>
-                  </View>
-                ))}
-              </View>
+              {question.tags && question.tags.length > 0 && (
+                <View style={styles.questionTags}>
+                  {question.tags.map((tag: string, index: number) => (
+                    <View key={index} style={styles.tag}>
+                      <Text style={styles.tagText}>#{tag}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
 
               <View style={styles.questionFooter}>
                 <View style={styles.questionMeta}>
                   <Clock size={12} color="#8E8E93" />
-                  <Text style={styles.metaText}>{question.time}</Text>
+                  <Text style={styles.metaText}>
+                    {new Date(question.created_at).toLocaleDateString()}
+                  </Text>
                   <Text style={styles.metaDot}>•</Text>
-                  <Text style={styles.metaText}>{question.author}</Text>
+                  <Text style={styles.metaText}>{question.user?.name || 'Anonymous'}</Text>
                 </View>
                 <View style={styles.questionStats}>
                   <View style={styles.stat}>
                     <MessageSquare size={14} color="#8E8E93" />
-                    <Text style={styles.statText}>{question.answers}</Text>
+                    <Text style={styles.statText}>{question.answers?.length || 0}</Text>
                   </View>
                   <View style={styles.stat}>
                     <ThumbsUp size={14} color="#8E8E93" />
-                    <Text style={styles.statText}>{question.likes}</Text>
+                    <Text style={styles.statText}>{question.likes?.length || 0}</Text>
                   </View>
                 </View>
               </View>

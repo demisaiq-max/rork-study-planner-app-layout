@@ -62,9 +62,11 @@ import { leaveGroupProcedure } from "./routes/community/groups/leave-group/route
 
 // Community routes - Questions
 import { getQuestionsProcedure } from "./routes/community/questions/get-questions/route";
+import { getQuestionByIdProcedure } from "./routes/community/questions/get-question-by-id/route";
 import { createQuestionProcedure } from "./routes/community/questions/create-question/route";
 import { addAnswerProcedure } from "./routes/community/questions/add-answer/route";
 import { likeQuestionProcedure } from "./routes/community/questions/like-question/route";
+import { likeAnswerProcedure } from "./routes/community/questions/like-answer/route";
 import { incrementQuestionViewProcedure } from "./routes/community/questions/increment-view/route";
 
 // Timer routes
@@ -160,9 +162,11 @@ export const appRouter = createTRPCRouter({
     }),
     questions: createTRPCRouter({
       getQuestions: getQuestionsProcedure,
+      getQuestionById: getQuestionByIdProcedure,
       createQuestion: createQuestionProcedure,
       addAnswer: addAnswerProcedure,
       likeQuestion: likeQuestionProcedure,
+      likeAnswer: likeAnswerProcedure,
       incrementView: incrementQuestionViewProcedure,
     }),
   }),
