@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -11,7 +11,9 @@ import {
   Alert,
   Image,
   ActionSheetIOS,
+  Keyboard,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { 
   ChevronLeft, 
   ThumbsUp, 
@@ -35,12 +37,15 @@ export default function QuestionDetailScreen() {
   const { user } = useUser();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const insets = useSafeAreaInsets();
+  const scrollViewRef = useRef<ScrollView>(null);
   
   const [answerText, setAnswerText] = useState("");
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [commentingOn, setCommentingOn] = useState<string | null>(null);
   const [commentText, setCommentText] = useState("");
   const [commentImages, setCommentImages] = useState<string[]>([]);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const questionQuery = trpc.community.questions.getQuestionById.useQuery(
     { questionId: id! },
@@ -101,6 +106,31 @@ export default function QuestionDetailScreen() {
       incrementViewMutation.mutate({ questionId: id });
     }
   }, [id, user]);
+
+  React.useEffect(() => {
+    const keyboardWillShow = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => {
+        setKeyboardHeight(e.endCoordinates.height);
+        // Scroll to bottom when keyboard opens
+        setTimeout(() => {
+          scrollViewRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      }
+    );
+    
+    const keyboardWillHide = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        setKeyboardHeight(0);
+      }
+    );
+
+    return () => {
+      keyboardWillShow.remove();
+      keyboardWillHide.remove();
+    };
+  }, []);
 
   const handleSubmitAnswer = () => {
     if (!answerText.trim()) {
@@ -291,6 +321,11 @@ export default function QuestionDetailScreen() {
   const handleComment = (answerId: string) => {
     setCommentingOn(answerId);
     setCommentText("");
+    setCommentImages([]);
+    // Scroll to show the input area
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 100);
   };
 
   const cancelComment = () => {
@@ -359,7 +394,13 @@ export default function QuestionDetailScreen() {
         }} 
       />
       
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        ref={scrollViewRef}
+        style={styles.scrollView} 
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: keyboardHeight > 0 ? 120 : 100 }]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={true}
+      >
         {/* Question Card */}
         <View style={styles.questionCard}>
           <View style={styles.questionHeader}>
@@ -590,10 +631,13 @@ export default function QuestionDetailScreen() {
 
       {/* Answer Input */}
       <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.answerInputContainer}
+        behavior={Platform.OS === 'ios' ? 'position' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        style={[styles.answerInputContainer, { 
+          paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 20) : insets.bottom + 10
+        }]}
       >
-        <View style={styles.answerInputWrapper}>
+        <View style={[styles.answerInputWrapper, { paddingBottom: Platform.OS === 'ios' ? 0 : 10 }]}>
           {commentingOn && (
             <View style={styles.commentingOnContainer}>
               <Text style={styles.commentingOnText}>
@@ -682,6 +726,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
+    flexGrow: 1,
     paddingBottom: 20,
   },
   questionCard: {
@@ -899,9 +944,19 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderTopWidth: 1,
     borderTopColor: "#E5E5EA",
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
   },
   answerInputWrapper: {
     padding: 16,
+    paddingTop: 12,
   },
   inputRow: {
     flexDirection: "row",
@@ -911,13 +966,15 @@ const styles = StyleSheet.create({
   answerInput: {
     flex: 1,
     minHeight: 40,
-    maxHeight: 100,
+    maxHeight: 80,
     backgroundColor: "#F2F2F7",
     borderRadius: 20,
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: Platform.OS === 'ios' ? 10 : 8,
+    paddingTop: Platform.OS === 'ios' ? 10 : 10,
     fontSize: 14,
     color: "#000000",
+    textAlignVertical: 'center',
   },
   imageButton: {
     width: 36,
