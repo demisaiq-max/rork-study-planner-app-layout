@@ -6,7 +6,7 @@ export const addAnswerProcedure = protectedProcedure
   .input(
     z.object({
       questionId: z.string().uuid(),
-      content: z.string().min(10).max(5000),
+      content: z.string().min(1).max(5000),
       imageUrls: z.array(z.string().url()).optional(),
     })
   )
