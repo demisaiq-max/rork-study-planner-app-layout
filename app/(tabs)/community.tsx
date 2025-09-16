@@ -107,6 +107,15 @@ export default function CommunityScreen() {
   const userId = user?.id;
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  
+  // Fetch user profile with real data
+  const userProfileQuery = trpc.users.getUserProfile.useQuery(
+    { userId: userId || '' },
+    { 
+      enabled: !!userId,
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    }
+  );
   const [activeTab, setActiveTab] = useState(0);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
@@ -731,12 +740,18 @@ export default function CommunityScreen() {
         <View style={styles.koreanPostHeader}>
           <View style={styles.koreanUserInfo}>
             <Image 
-              source={{ uri: `https://i.pravatar.cc/150?u=${post.user_id}` }} 
+              source={{ 
+                uri: post.user_id === userId && userProfileQuery.data?.profilePictureUrl 
+                  ? userProfileQuery.data.profilePictureUrl 
+                  : `https://i.pravatar.cc/150?u=${post.user_id}` 
+              }} 
               style={styles.koreanAvatar} 
             />
             <View style={styles.koreanUserDetails}>
               <Text style={styles.koreanUserName}>
-                {post.user?.name || '익명'}
+                {post.user_id === userId && userProfileQuery.data?.name 
+                  ? userProfileQuery.data.name 
+                  : (post.user?.name || '익명')}
               </Text>
               <Text style={styles.koreanUserMeta}>
                 {post.group ? `${post.group.name} | ` : ''}{post.study_hours || 5}등급
@@ -851,11 +866,17 @@ export default function CommunityScreen() {
         <View style={styles.discussionFooter}>
           <View style={styles.discussionAuthor}>
             <Image 
-              source={{ uri: `https://i.pravatar.cc/150?u=${question.user_id}` }} 
+              source={{ 
+                uri: question.user_id === userId && userProfileQuery.data?.profilePictureUrl 
+                  ? userProfileQuery.data.profilePictureUrl 
+                  : `https://i.pravatar.cc/150?u=${question.user_id}` 
+              }} 
               style={styles.smallAvatar} 
             />
             <Text style={styles.discussionAuthorName}>
-              {question.user?.name || 'Anonymous'}
+              {question.user_id === userId && userProfileQuery.data?.name 
+                ? userProfileQuery.data.name 
+                : (question.user?.name || 'Anonymous')}
             </Text>
             <Text style={styles.discussionTime}>{formatTime(question.created_at)}</Text>
           </View>
@@ -1195,12 +1216,18 @@ export default function CommunityScreen() {
               >
                 <View style={styles.postDetailHeader}>
                   <Image 
-                    source={{ uri: `https://i.pravatar.cc/150?u=${selectedPost.user_id}` }} 
+                    source={{ 
+                      uri: selectedPost.user_id === userId && userProfileQuery.data?.profilePictureUrl 
+                        ? userProfileQuery.data.profilePictureUrl 
+                        : `https://i.pravatar.cc/150?u=${selectedPost.user_id}` 
+                    }} 
                     style={styles.avatar} 
                   />
                   <View style={styles.postInfo}>
                     <Text style={styles.authorName}>
-                      {selectedPost.user?.name || 'Anonymous'}
+                      {selectedPost.user_id === userId && userProfileQuery.data?.name 
+                        ? userProfileQuery.data.name 
+                        : (selectedPost.user?.name || 'Anonymous')}
                     </Text>
                     <Text style={styles.postTime}>{formatTime(selectedPost.created_at)}</Text>
                   </View>
@@ -1237,13 +1264,19 @@ export default function CommunityScreen() {
                   {(postsQuery.data?.find(p => p.id === selectedPost.id)?.comments || selectedPost.comments)?.map((comment: { id: string; content: string; created_at: string; user?: { id: string; name: string } }) => (
                     <View key={comment.id} style={styles.commentItem}>
                       <Image 
-                        source={{ uri: `https://i.pravatar.cc/150?u=${comment.user?.id}` }} 
+                        source={{ 
+                          uri: comment.user?.id === userId && userProfileQuery.data?.profilePictureUrl 
+                            ? userProfileQuery.data.profilePictureUrl 
+                            : `https://i.pravatar.cc/150?u=${comment.user?.id}` 
+                        }} 
                         style={styles.commentAvatar} 
                       />
                       <View style={styles.commentContent}>
                         <View style={styles.commentHeader}>
                           <Text style={styles.commentAuthor}>
-                            {comment.user?.name || 'Anonymous'}
+                            {comment.user?.id === userId && userProfileQuery.data?.name 
+                              ? userProfileQuery.data.name 
+                              : (comment.user?.name || 'Anonymous')}
                           </Text>
                           <Text style={styles.commentTime}>
                             {formatTime(comment.created_at)}
