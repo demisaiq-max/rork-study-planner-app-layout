@@ -24,6 +24,8 @@ import { useLanguage } from "@/hooks/language-context";
 import { useUser } from "@/hooks/user-context";
 import { trpc } from "@/lib/trpc";
 import { supabase } from "@/lib/supabase";
+import * as ImagePicker from 'expo-image-picker';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 
 const { width } = Dimensions.get('window');
 
@@ -94,8 +96,12 @@ export default function GroupDetailScreen() {
   const [newComment, setNewComment] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const scrollViewRef = useRef<ScrollView>(null);
   const commentInputRef = useRef<TextInput>(null);
+  const cameraRef = useRef<CameraView>(null);
 
   // Fetch group details
   const groupQuery = trpc.community.groups.getGroups.useQuery({
@@ -276,7 +282,83 @@ export default function GroupDetailScreen() {
     createPostMutation.mutate({
       content: newPostContent,
       groupId: groupId,
+      imageUrl: selectedImage || undefined,
     });
+    
+    setSelectedImage(null);
+  };
+
+  const handleImagePicker = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          language === 'ko' ? '권한 필요' : 'Permission Required',
+          language === 'ko' ? '갤러리 접근 권한이 필요합니다' : 'Gallery access permission is required'
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setSelectedImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert(
+        language === 'ko' ? '오류' : 'Error',
+        language === 'ko' ? '이미지를 선택하는 중 오류가 발생했습니다' : 'Error occurred while selecting image'
+      );
+    }
+  };
+
+  const handleCameraCapture = async () => {
+    if (!cameraPermission) {
+      return;
+    }
+
+    if (!cameraPermission.granted) {
+      const permission = await requestCameraPermission();
+      if (!permission.granted) {
+        Alert.alert(
+          language === 'ko' ? '권한 필요' : 'Permission Required',
+          language === 'ko' ? '카메라 접근 권한이 필요합니다' : 'Camera access permission is required'
+        );
+        return;
+      }
+    }
+
+    setShowCamera(true);
+  };
+
+  const takePicture = async () => {
+    if (cameraRef.current) {
+      try {
+        const photo = await cameraRef.current.takePictureAsync({
+          quality: 0.8,
+        });
+        if (photo) {
+          setSelectedImage(photo.uri);
+          setShowCamera(false);
+        }
+      } catch (error) {
+        console.error('Error taking picture:', error);
+        Alert.alert(
+          language === 'ko' ? '오류' : 'Error',
+          language === 'ko' ? '사진을 촬영하는 중 오류가 발생했습니다' : 'Error occurred while taking picture'
+        );
+      }
+    }
+  };
+
+  const removeSelectedImage = () => {
+    setSelectedImage(null);
   };
 
   const formatTime = (dateString: string) => {
@@ -635,20 +717,78 @@ export default function GroupDetailScreen() {
               multiline
               autoFocus
             />
-          </View>
-          
-          <View style={[
-            styles.createPostActions,
-            { marginBottom: Platform.OS === 'ios' ? 0 : 20 }
-          ]}>
-            <TouchableOpacity style={styles.mediaButton}>
-              <Camera size={24} color="#007AFF" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.mediaButton}>
-              <ImageIcon size={24} color="#007AFF" />
-            </TouchableOpacity>
+            
+            {selectedImage && (
+              <View style={styles.selectedImageContainer}>
+                <Image source={{ uri: selectedImage }} style={styles.selectedImage} />
+                <TouchableOpacity 
+                  style={styles.removeImageButton}
+                  onPress={removeSelectedImage}
+                >
+                  <X size={16} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
+            )}
+            
+            <View style={[
+              styles.mediaButtonsContainer,
+              { bottom: keyboardHeight > 0 ? keyboardHeight + 20 : 20 }
+            ]}>
+              <TouchableOpacity 
+                style={styles.mediaActionButton}
+                onPress={handleCameraCapture}
+              >
+                <Camera size={24} color="#007AFF" />
+                <Text style={styles.mediaButtonText}>
+                  {language === 'ko' ? '사진 촬영' : 'Take Photo'}
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.mediaActionButton}
+                onPress={handleImagePicker}
+              >
+                <ImageIcon size={24} color="#007AFF" />
+                <Text style={styles.mediaButtonText}>
+                  {language === 'ko' ? '갤러리에서 선택' : 'Choose from Gallery'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Camera Modal */}
+      <Modal
+        visible={showCamera}
+        animationType="slide"
+        presentationStyle="fullScreen"
+      >
+        <View style={styles.cameraContainer}>
+          <CameraView
+            ref={cameraRef}
+            style={styles.camera}
+            facing="back"
+          >
+            <View style={styles.cameraOverlay}>
+              <TouchableOpacity
+                style={styles.cameraCloseButton}
+                onPress={() => setShowCamera(false)}
+              >
+                <X size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+              
+              <View style={styles.cameraControls}>
+                <TouchableOpacity
+                  style={styles.captureButton}
+                  onPress={takePicture}
+                >
+                  <View style={styles.captureButtonInner} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </CameraView>
+        </View>
       </Modal>
 
       {/* Floating Action Button */}
@@ -1026,6 +1166,99 @@ const styles = StyleSheet.create({
   },
   mediaButton: {
     padding: 8,
+  },
+  selectedImageContainer: {
+    marginTop: 16,
+    position: 'relative',
+    alignSelf: 'flex-start',
+  },
+  selectedImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 8,
+    backgroundColor: '#F0F0F0',
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#FF3B30',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mediaButtonsContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 40,
+    paddingHorizontal: 20,
+  },
+  mediaActionButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F2F2F7',
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    minWidth: 120,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+  },
+  mediaButtonText: {
+    fontSize: 12,
+    color: '#007AFF',
+    marginTop: 8,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  cameraContainer: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
+  camera: {
+    flex: 1,
+  },
+  cameraOverlay: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    justifyContent: 'space-between',
+  },
+  cameraCloseButton: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  cameraControls: {
+    alignItems: 'center',
+    paddingBottom: 50,
+  },
+  captureButton: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 4,
+    borderColor: '#FFFFFF',
+  },
+  captureButtonInner: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#FFFFFF',
   },
   fab: {
     position: 'absolute',
