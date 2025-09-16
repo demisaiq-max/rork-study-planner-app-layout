@@ -1333,11 +1333,7 @@ export default function CommunityScreen() {
         animationType="slide"
         presentationStyle="pageSheet"
       >
-        <KeyboardAvoidingView 
-          style={[styles.modalContainer, { paddingTop: insets.top }]}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={0}
-        >
+        <View style={[styles.modalContainer, { paddingTop: insets.top }]}>
           <View style={styles.createPostHeader}>
             <TouchableOpacity onPress={() => setShowCreatePost(false)}>
               <X size={24} color="#000000" />
@@ -1352,7 +1348,11 @@ export default function CommunityScreen() {
             </TouchableOpacity>
           </View>
           
-          <View style={styles.createPostContent}>
+          <KeyboardAvoidingView 
+            style={styles.createPostContent}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+          >
             <TextInput
               style={styles.postTextInput}
               placeholder={language === 'ko' ? '오늘의 공부를 공유해주세요...' : 'Share your study today...'}
@@ -1362,20 +1362,22 @@ export default function CommunityScreen() {
               multiline
               autoFocus
             />
-          </View>
-          
-          <View style={[
-            styles.createPostActions,
-            { marginBottom: Platform.OS === 'ios' ? 0 : 20 }
-          ]}>
-            <TouchableOpacity style={styles.mediaButton}>
-              <Camera size={24} color="#007AFF" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.mediaButton}>
-              <ImageIcon size={24} color="#007AFF" />
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
+            
+            <View style={[
+              styles.createPostActions,
+              { 
+                marginBottom: keyboardHeight > 0 ? 10 : (Platform.OS === 'ios' ? insets.bottom : 20)
+              }
+            ]}>
+              <TouchableOpacity style={styles.mediaButton}>
+                <Camera size={24} color="#007AFF" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.mediaButton}>
+                <ImageIcon size={24} color="#007AFF" />
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
       </Modal>
 
       {/* Create Question Modal */}
@@ -1402,8 +1404,15 @@ export default function CommunityScreen() {
           <KeyboardAvoidingView 
             style={styles.createPostContent}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
           >
-            <ScrollView style={styles.createQuestionScroll}>
+            <ScrollView 
+              style={styles.createQuestionScroll}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={{ 
+                paddingBottom: keyboardHeight > 0 ? 20 : (Platform.OS === 'ios' ? insets.bottom + 20 : 40)
+              }}
+            >
               <Text style={styles.inputLabel}>
                 {language === 'ko' ? '과목' : 'Subject'}
               </Text>
@@ -2136,13 +2145,15 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   questionTitleInput: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    fontSize: 18,
+    height: 44,
+    backgroundColor: '#F2F2F7',
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    fontSize: 16,
     fontWeight: '600',
     color: '#000000',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    marginHorizontal: 20,
+    marginBottom: 8,
   },
   createPostActions: {
     flexDirection: 'row',
@@ -2152,6 +2163,10 @@ const styles = StyleSheet.create({
     borderTopColor: '#E5E5EA',
     gap: 20,
     backgroundColor: '#FFFFFF',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
   mediaButton: {
     padding: 8,
