@@ -10,8 +10,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Image,
+  ActionSheetIOS,
 } from "react-native";
-import { ChevronLeft, HelpCircle, CheckCircle, Clock, MessageSquare, ThumbsUp, Plus, X, Send } from "lucide-react-native";
+import { ChevronLeft, HelpCircle, CheckCircle, Clock, MessageSquare, ThumbsUp, X, Camera } from "lucide-react-native";
+import * as ImagePicker from 'expo-image-picker';
 import { useLanguage } from "@/hooks/language-context";
 import { useRouter, Stack } from "expo-router";
 
@@ -76,6 +79,7 @@ export default function CommunityQuestionsScreen() {
   const [questionTitle, setQuestionTitle] = useState("");
   const [questionContent, setQuestionContent] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("");
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
 
   const subjects = language === 'ko' 
     ? ["수학", "영어", "국어", "과학", "사회", "기타"]
@@ -98,7 +102,99 @@ export default function CommunityQuestionsScreen() {
     setQuestionTitle("");
     setQuestionContent("");
     setSelectedSubject("");
+    setSelectedImages([]);
     setShowCreateQuestion(false);
+  };
+
+  const requestPermissions = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        language === 'ko' ? '권한 필요' : 'Permission Required',
+        language === 'ko' ? '사진을 선택하려면 갤러리 접근 권한이 필요합니다.' : 'We need gallery access permission to select photos.'
+      );
+      return false;
+    }
+    return true;
+  };
+
+  const requestCameraPermissions = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        language === 'ko' ? '권한 필요' : 'Permission Required',
+        language === 'ko' ? '사진을 촬영하려면 카메라 접근 권한이 필요합니다.' : 'We need camera access permission to take photos.'
+      );
+      return false;
+    }
+    return true;
+  };
+
+  const pickImageFromGallery = async () => {
+    const hasPermission = await requestPermissions();
+    if (!hasPermission) return;
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setSelectedImages(prev => [...prev, result.assets[0].uri]);
+    }
+  };
+
+  const takePhoto = async () => {
+    const hasPermission = await requestCameraPermissions();
+    if (!hasPermission) return;
+
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setSelectedImages(prev => [...prev, result.assets[0].uri]);
+    }
+  };
+
+  const showImagePicker = () => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: [
+            language === 'ko' ? '취소' : 'Cancel',
+            language === 'ko' ? '사진 촬영' : 'Take Photo',
+            language === 'ko' ? '갤러리에서 선택' : 'Choose from Gallery'
+          ],
+          cancelButtonIndex: 0,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) {
+            takePhoto();
+          } else if (buttonIndex === 2) {
+            pickImageFromGallery();
+          }
+        }
+      );
+    } else {
+      Alert.alert(
+        language === 'ko' ? '사진 선택' : 'Select Photo',
+        language === 'ko' ? '사진을 어떻게 추가하시겠습니까?' : 'How would you like to add a photo?',
+        [
+          { text: language === 'ko' ? '취소' : 'Cancel', style: 'cancel' },
+          { text: language === 'ko' ? '사진 촬영' : 'Take Photo', onPress: takePhoto },
+          { text: language === 'ko' ? '갤러리에서 선택' : 'Choose from Gallery', onPress: pickImageFromGallery },
+        ]
+      );
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
   };
 
   const filteredQuestions = questions.filter(q => {
@@ -301,6 +397,42 @@ export default function CommunityQuestionsScreen() {
                 multiline
                 textAlignVertical="top"
               />
+
+              <Text style={styles.inputLabel}>
+                {language === 'ko' ? '이미지 (선택사항)' : 'Images (Optional)'}
+              </Text>
+              
+              <View style={styles.imageSection}>
+                <TouchableOpacity 
+                  style={styles.addPhotoButton}
+                  onPress={showImagePicker}
+                >
+                  <Camera size={24} color="#007AFF" />
+                  <Text style={styles.addPhotoText}>
+                    {language === 'ko' ? '사진 추가' : 'Add Photo'}
+                  </Text>
+                </TouchableOpacity>
+                
+                {selectedImages.length > 0 && (
+                  <ScrollView 
+                    horizontal 
+                    style={styles.imagePreviewContainer}
+                    showsHorizontalScrollIndicator={false}
+                  >
+                    {selectedImages.map((imageUri, index) => (
+                      <View key={index} style={styles.imagePreview}>
+                        <Image source={{ uri: imageUri }} style={styles.previewImage} />
+                        <TouchableOpacity 
+                          style={styles.removeImageButton}
+                          onPress={() => removeImage(index)}
+                        >
+                          <X size={16} color="#FFFFFF" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </ScrollView>
+                )}
+              </View>
             </ScrollView>
           </KeyboardAvoidingView>
         </Modal>
@@ -556,5 +688,56 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 14,
     color: "#000000",
+  },
+  imageSection: {
+    marginTop: 8,
+  },
+  addPhotoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F2F2F7',
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#007AFF',
+    borderStyle: 'dashed',
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  addPhotoText: {
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: '500',
+  },
+  imagePreviewContainer: {
+    marginTop: 12,
+    maxHeight: 120,
+  },
+  imagePreview: {
+    position: 'relative',
+    marginRight: 12,
+  },
+  previewImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+    backgroundColor: '#F2F2F7',
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#FF3B30',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
   },
 });
