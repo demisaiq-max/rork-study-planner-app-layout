@@ -638,15 +638,26 @@ export default function GroupDetailScreen() {
           </View>
           
           <View style={[
-            styles.createPostActions,
+            styles.centeredMediaSection,
             { marginBottom: Platform.OS === 'ios' ? 0 : 20 }
           ]}>
-            <TouchableOpacity style={styles.mediaButton}>
-              <Camera size={24} color="#007AFF" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.mediaButton}>
-              <ImageIcon size={24} color="#007AFF" />
-            </TouchableOpacity>
+            <Text style={styles.mediaSectionTitle}>
+              {language === 'ko' ? '사진 추가' : 'Add Photo'}
+            </Text>
+            <View style={styles.centeredMediaButtons}>
+              <TouchableOpacity style={styles.centeredMediaButton}>
+                <Camera size={32} color="#007AFF" />
+                <Text style={styles.centeredMediaButtonText}>
+                  {language === 'ko' ? '사진 촬영' : 'Take Photo'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.centeredMediaButton}>
+                <ImageIcon size={32} color="#007AFF" />
+                <Text style={styles.centeredMediaButtonText}>
+                  {language === 'ko' ? '갤러리에서 선택' : 'Choose from Gallery'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -1026,6 +1037,51 @@ const styles = StyleSheet.create({
   },
   mediaButton: {
     padding: 8,
+  },
+  centeredMediaSection: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5EA',
+    backgroundColor: '#FFFFFF',
+  },
+  mediaSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  centeredMediaButtons: {
+    flexDirection: 'row',
+    gap: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  centeredMediaButton: {
+    backgroundColor: '#F2F2F7',
+    borderRadius: 12,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#007AFF',
+    borderStyle: 'dashed',
+    minWidth: 100,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  centeredMediaButtonText: {
+    fontSize: 12,
+    color: '#007AFF',
+    marginTop: 8,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   fab: {
     position: 'absolute',

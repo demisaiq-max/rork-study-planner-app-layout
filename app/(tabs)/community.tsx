@@ -1368,27 +1368,32 @@ export default function CommunityScreen() {
                 autoFocus
               />
               
-              {/* Image Upload Section */}
-              <View style={styles.imageUploadSection}>
-                <TouchableOpacity 
-                  style={styles.imageUploadButton}
-                  onPress={takePhoto}
-                >
-                  <Camera size={32} color="#007AFF" />
-                  <Text style={styles.imageUploadButtonText}>
-                    {language === 'ko' ? '사진 촬영' : 'Take Photo'}
-                  </Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={styles.imageUploadButton}
-                  onPress={pickImageFromGallery}
-                >
-                  <ImageIcon size={32} color="#007AFF" />
-                  <Text style={styles.imageUploadButtonText}>
-                    {language === 'ko' ? '갤러리에서 선택' : 'Choose from Gallery'}
-                  </Text>
-                </TouchableOpacity>
+              {/* Centered Image Upload Section */}
+              <View style={styles.centeredImageUploadSection}>
+                <Text style={styles.imageUploadTitle}>
+                  {language === 'ko' ? '사진 추가' : 'Add Photo'}
+                </Text>
+                <View style={styles.imageUploadButtons}>
+                  <TouchableOpacity 
+                    style={styles.centeredImageUploadButton}
+                    onPress={takePhoto}
+                  >
+                    <Camera size={40} color="#007AFF" />
+                    <Text style={styles.centeredImageUploadButtonText}>
+                      {language === 'ko' ? '사진 촬영' : 'Take Photo'}
+                    </Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={styles.centeredImageUploadButton}
+                    onPress={pickImageFromGallery}
+                  >
+                    <ImageIcon size={40} color="#007AFF" />
+                    <Text style={styles.centeredImageUploadButtonText}>
+                      {language === 'ko' ? '갤러리에서 선택' : 'Choose from Gallery'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </ScrollView>
           </View>
@@ -2196,6 +2201,49 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     marginTop: 8,
     fontWeight: '500',
+  },
+  centeredImageUploadSection: {
+    alignItems: 'center',
+    paddingVertical: 30,
+    paddingHorizontal: 20,
+    marginTop: 40,
+  },
+  imageUploadTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  imageUploadButtons: {
+    flexDirection: 'row',
+    gap: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  centeredImageUploadButton: {
+    backgroundColor: '#F2F2F7',
+    borderRadius: 16,
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#007AFF',
+    borderStyle: 'dashed',
+    minWidth: 120,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  centeredImageUploadButtonText: {
+    fontSize: 14,
+    color: '#007AFF',
+    marginTop: 12,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   fab: {
     position: 'absolute',
