@@ -38,9 +38,9 @@ export default function QuestionDetailScreen() {
   
   const [answerText, setAnswerText] = useState("");
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
-  const [replyingTo, setReplyingTo] = useState<string | null>(null);
-  const [replyText, setReplyText] = useState("");
-  const [replyImages, setReplyImages] = useState<string[]>([]);
+  const [commentingOn, setCommentingOn] = useState<string | null>(null);
+  const [commentText, setCommentText] = useState("");
+  const [commentImages, setCommentImages] = useState<string[]>([]);
 
   const questionQuery = trpc.community.questions.getQuestionById.useQuery(
     { questionId: id! },
@@ -52,14 +52,26 @@ export default function QuestionDetailScreen() {
       questionQuery.refetch();
       setAnswerText("");
       setSelectedImages([]);
-      setReplyingTo(null);
-      setReplyText("");
-      setReplyImages([]);
     },
     onError: (error) => {
       Alert.alert(
         language === 'ko' ? '오류' : 'Error',
         error.message || (language === 'ko' ? '답변 등록에 실패했습니다.' : 'Failed to post answer.')
+      );
+    },
+  });
+
+  const addCommentMutation = trpc.community.questions.addAnswerComment.useMutation({
+    onSuccess: () => {
+      questionQuery.refetch();
+      setCommentingOn(null);
+      setCommentText("");
+      setCommentImages([]);
+    },
+    onError: (error) => {
+      Alert.alert(
+        language === 'ko' ? '오류' : 'Error',
+        error.message || (language === 'ko' ? '댓글 등록에 실패했습니다.' : 'Failed to post comment.')
       );
     },
   });
@@ -76,6 +88,12 @@ export default function QuestionDetailScreen() {
     },
   });
 
+  const likeCommentMutation = trpc.community.questions.likeAnswerComment.useMutation({
+    onSuccess: () => {
+      questionQuery.refetch();
+    },
+  });
+
   const incrementViewMutation = trpc.community.questions.incrementView.useMutation();
 
   React.useEffect(() => {
@@ -85,10 +103,7 @@ export default function QuestionDetailScreen() {
   }, [id, user]);
 
   const handleSubmitAnswer = () => {
-    const textToSubmit = replyingTo ? replyText : answerText;
-    const imagesToSubmit = replyingTo ? replyImages : selectedImages;
-    
-    if (!textToSubmit.trim()) {
+    if (!answerText.trim()) {
       Alert.alert(
         language === 'ko' ? '알림' : 'Notice',
         language === 'ko' ? '답변을 입력해주세요' : 'Please enter your answer'
@@ -106,8 +121,34 @@ export default function QuestionDetailScreen() {
 
     addAnswerMutation.mutate({
       questionId: id!,
-      content: textToSubmit,
-      imageUrls: imagesToSubmit.length > 0 ? imagesToSubmit : undefined,
+      content: answerText,
+      imageUrls: selectedImages.length > 0 ? selectedImages : undefined,
+    });
+  };
+
+  const handleSubmitComment = () => {
+    if (!commentText.trim()) {
+      Alert.alert(
+        language === 'ko' ? '알림' : 'Notice',
+        language === 'ko' ? '댓글을 입력해주세요' : 'Please enter your comment'
+      );
+      return;
+    }
+
+    if (!user) {
+      Alert.alert(
+        language === 'ko' ? '로그인 필요' : 'Login Required',
+        language === 'ko' ? '댓글을 등록하려면 로그인이 필요합니다.' : 'You need to login to post a comment.'
+      );
+      return;
+    }
+
+    if (!commentingOn) return;
+
+    addCommentMutation.mutate({
+      answerId: commentingOn,
+      content: commentText,
+      imageUrls: commentImages.length > 0 ? commentImages : undefined,
     });
   };
 
@@ -131,6 +172,17 @@ export default function QuestionDetailScreen() {
       return;
     }
     likeAnswerMutation.mutate({ answerId });
+  };
+
+  const handleLikeComment = (commentId: string) => {
+    if (!user) {
+      Alert.alert(
+        language === 'ko' ? '로그인 필요' : 'Login Required',
+        language === 'ko' ? '좋아요를 누르려면 로그인이 필요합니다.' : 'You need to login to like.'
+      );
+      return;
+    }
+    likeCommentMutation.mutate({ commentId });
   };
 
   const requestPermissions = async () => {
@@ -158,8 +210,8 @@ export default function QuestionDetailScreen() {
   };
 
   const addImageToAnswer = (imageUri: string) => {
-    if (replyingTo) {
-      setReplyImages(prev => [...prev, imageUri]);
+    if (commentingOn) {
+      setCommentImages(prev => [...prev, imageUri]);
     } else {
       setSelectedImages(prev => [...prev, imageUri]);
     }
@@ -229,22 +281,22 @@ export default function QuestionDetailScreen() {
   };
 
   const removeImage = (index: number) => {
-    if (replyingTo) {
-      setReplyImages(prev => prev.filter((_, i) => i !== index));
+    if (commentingOn) {
+      setCommentImages(prev => prev.filter((_, i) => i !== index));
     } else {
       setSelectedImages(prev => prev.filter((_, i) => i !== index));
     }
   };
 
-  const handleReply = (answerId: string, userName: string) => {
-    setReplyingTo(answerId);
-    setReplyText(`@${userName} `);
+  const handleComment = (answerId: string) => {
+    setCommentingOn(answerId);
+    setCommentText("");
   };
 
-  const cancelReply = () => {
-    setReplyingTo(null);
-    setReplyText("");
-    setReplyImages([]);
+  const cancelComment = () => {
+    setCommentingOn(null);
+    setCommentText("");
+    setCommentImages([]);
   };
 
   if (questionQuery.isLoading) {
@@ -452,14 +504,74 @@ export default function QuestionDetailScreen() {
                     
                     <TouchableOpacity 
                       style={styles.socialActionButton}
-                      onPress={() => handleReply(answer.id, answer.user?.name || 'Anonymous')}
+                      onPress={() => handleComment(answer.id)}
                     >
                       <MessageSquare size={16} color="#8E8E93" />
                       <Text style={styles.socialActionText}>
-                        {language === 'ko' ? '답글' : 'Reply'}
+                        {language === 'ko' ? '댓글' : 'Comment'} ({answer.comments?.length || 0})
                       </Text>
                     </TouchableOpacity>
                   </View>
+                  
+                  {/* Comments Section */}
+                  {answer.comments && answer.comments.length > 0 && (
+                    <View style={styles.commentsSection}>
+                      {answer.comments.map((comment: any) => {
+                        const isCommentLiked = comment.likes?.some((like: any) => like.user_id === user?.id);
+                        
+                        return (
+                          <View key={comment.id} style={styles.commentCard}>
+                            <View style={styles.commentHeader}>
+                              <View style={styles.userInfo}>
+                                {comment.user?.profile_picture_url ? (
+                                  <Image source={{ uri: comment.user.profile_picture_url }} style={styles.commentAvatar} />
+                                ) : (
+                                  <View style={styles.commentAvatarPlaceholder}>
+                                    <User size={12} color="#8E8E93" />
+                                  </View>
+                                )}
+                                <Text style={styles.commentUserName}>{comment.user?.name || 'Anonymous'}</Text>
+                              </View>
+                              <View style={styles.timeInfo}>
+                                <Clock size={10} color="#8E8E93" />
+                                <Text style={styles.commentMetaText}>
+                                  {new Date(comment.created_at).toLocaleDateString()}
+                                </Text>
+                              </View>
+                            </View>
+                            
+                            <Text style={styles.commentContent}>{comment.content}</Text>
+                            
+                            {comment.image_urls && comment.image_urls.length > 0 && (
+                              <ScrollView 
+                                horizontal 
+                                style={styles.commentImageContainer}
+                                showsHorizontalScrollIndicator={false}
+                              >
+                                {comment.image_urls.map((imageUrl: string, index: number) => (
+                                  <Image key={`comment-${comment.id}-image-${index}`} source={{ uri: imageUrl }} style={styles.commentImage} />
+                                ))}
+                              </ScrollView>
+                            )}
+                            
+                            <TouchableOpacity 
+                              style={styles.commentLikeButton}
+                              onPress={() => handleLikeComment(comment.id)}
+                            >
+                              <Heart 
+                                size={12} 
+                                color={isCommentLiked ? "#FF3B30" : "#8E8E93"} 
+                                fill={isCommentLiked ? "#FF3B30" : "none"}
+                              />
+                              <Text style={[styles.commentLikeText, isCommentLiked && { color: "#FF3B30" }]}>
+                                {comment.likes?.length || 0}
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  )}
                 </View>
               );
             })
@@ -482,25 +594,25 @@ export default function QuestionDetailScreen() {
         style={styles.answerInputContainer}
       >
         <View style={styles.answerInputWrapper}>
-          {replyingTo && (
-            <View style={styles.replyingToContainer}>
-              <Text style={styles.replyingToText}>
-                {language === 'ko' ? '답글 작성 중...' : 'Replying...'}
+          {commentingOn && (
+            <View style={styles.commentingOnContainer}>
+              <Text style={styles.commentingOnText}>
+                {language === 'ko' ? '댓글 작성 중...' : 'Writing comment...'}
               </Text>
-              <TouchableOpacity onPress={cancelReply}>
+              <TouchableOpacity onPress={cancelComment}>
                 <X size={16} color="#8E8E93" />
               </TouchableOpacity>
             </View>
           )}
           
           {/* Image Preview */}
-          {(replyingTo ? replyImages : selectedImages).length > 0 && (
+          {(commentingOn ? commentImages : selectedImages).length > 0 && (
             <ScrollView 
               horizontal 
               style={styles.imagePreviewContainer}
               showsHorizontalScrollIndicator={false}
             >
-              {(replyingTo ? replyImages : selectedImages).map((imageUri, index) => (
+              {(commentingOn ? commentImages : selectedImages).map((imageUri: string, index: number) => (
                 <View key={`preview-${index}`} style={styles.imagePreview}>
                   <Image source={{ uri: imageUri }} style={styles.previewImage} />
                   <TouchableOpacity 
@@ -517,13 +629,13 @@ export default function QuestionDetailScreen() {
           <View style={styles.inputRow}>
             <TextInput
               style={styles.answerInput}
-              placeholder={replyingTo 
-                ? (language === 'ko' ? '답글을 입력하세요...' : 'Write a reply...') 
+              placeholder={commentingOn 
+                ? (language === 'ko' ? '댓글을 입력하세요...' : 'Write a comment...') 
                 : (language === 'ko' ? '답변을 입력하세요...' : 'Write your answer...')
               }
               placeholderTextColor="#8E8E93"
-              value={replyingTo ? replyText : answerText}
-              onChangeText={replyingTo ? setReplyText : setAnswerText}
+              value={commentingOn ? commentText : answerText}
+              onChangeText={commentingOn ? setCommentText : setAnswerText}
               multiline
               maxLength={1000}
             />
@@ -535,10 +647,10 @@ export default function QuestionDetailScreen() {
             </TouchableOpacity>
             <TouchableOpacity 
               style={[styles.sendButton, {
-                opacity: (replyingTo ? replyText.trim() : answerText.trim()) ? 1 : 0.5
+                opacity: (commentingOn ? commentText.trim() : answerText.trim()) ? 1 : 0.5
               }]}
-              onPress={handleSubmitAnswer}
-              disabled={addAnswerMutation.isPending || !(replyingTo ? replyText.trim() : answerText.trim())}
+              onPress={commentingOn ? handleSubmitComment : handleSubmitAnswer}
+              disabled={(commentingOn ? addCommentMutation.isPending : addAnswerMutation.isPending) || !(commentingOn ? commentText.trim() : answerText.trim())}
             >
               <Send size={18} color="#FFFFFF" />
             </TouchableOpacity>
@@ -867,5 +979,87 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 2,
     elevation: 3,
+  },
+  commentingOnContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#F2F2F7",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  commentingOnText: {
+    fontSize: 13,
+    color: "#007AFF",
+    fontWeight: "500",
+  },
+  commentsSection: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#F2F2F7",
+  },
+  commentCard: {
+    backgroundColor: "#F8F8F8",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+  },
+  commentHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  commentAvatar: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+  },
+  commentAvatarPlaceholder: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#E5E5EA",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  commentUserName: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#000000",
+  },
+  commentMetaText: {
+    fontSize: 10,
+    color: "#8E8E93",
+  },
+  commentContent: {
+    fontSize: 13,
+    color: "#000000",
+    lineHeight: 18,
+    marginBottom: 8,
+  },
+  commentImageContainer: {
+    marginBottom: 8,
+  },
+  commentImage: {
+    width: 80,
+    height: 60,
+    borderRadius: 6,
+    marginRight: 6,
+    backgroundColor: "#F2F2F7",
+  },
+  commentLikeButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    alignSelf: "flex-start",
+  },
+  commentLikeText: {
+    fontSize: 11,
+    color: "#8E8E93",
+    fontWeight: "500",
   },
 });

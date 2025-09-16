@@ -18,7 +18,12 @@ export const getQuestionByIdProcedure = publicProcedure
         answers:answers(
           *,
           user:users!answers_user_id_fkey(id, name, profile_picture_url),
-          likes:answer_likes(user_id)
+          likes:answer_likes(user_id),
+          comments:answer_comments(
+            *,
+            user:users!answer_comments_user_id_fkey(id, name, profile_picture_url),
+            likes:answer_comment_likes(user_id)
+          )
         )
       `)
       .eq('id', input.questionId)
