@@ -16,12 +16,10 @@ import {
   RefreshControl,
   Keyboard,
   KeyboardEvent,
-  ActionSheetIOS,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { Heart, MessageCircle, Eye, ChevronLeft, Send, Camera, Image as ImageIcon, X, Users, UserPlus } from "lucide-react-native";
-import * as ImagePicker from 'expo-image-picker';
 import { useLanguage } from "@/hooks/language-context";
 import { useUser } from "@/hooks/user-context";
 import { trpc } from "@/lib/trpc";
@@ -96,7 +94,6 @@ export default function GroupDetailScreen() {
   const [newComment, setNewComment] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const commentInputRef = useRef<TextInput>(null);
 
@@ -123,7 +120,6 @@ export default function GroupDetailScreen() {
     onSuccess: () => {
       postsQuery.refetch();
       setNewPostContent("");
-      setSelectedImage(null);
       setShowCreatePost(false);
       Alert.alert(
         language === 'ko' ? '성공' : 'Success',
@@ -280,119 +276,7 @@ export default function GroupDetailScreen() {
     createPostMutation.mutate({
       content: newPostContent,
       groupId: groupId,
-      imageUrl: selectedImage || undefined,
     });
-  };
-
-  const requestPermissions = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert(
-        language === 'ko' ? '권한 필요' : 'Permission Required',
-        language === 'ko' ? '사진 라이브러리 접근 권한이 필요합니다.' : 'We need photo library access permission.'
-      );
-      return false;
-    }
-    return true;
-  };
-
-  const requestCameraPermissions = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert(
-        language === 'ko' ? '권한 필요' : 'Permission Required',
-        language === 'ko' ? '사진을 촬영하려면 카메라 접근 권한이 필요합니다.' : 'We need camera access permission to take photos.'
-      );
-      return false;
-    }
-    return true;
-  };
-
-  const pickImageFromGallery = async () => {
-    const hasPermission = await requestPermissions();
-    if (!hasPermission) return;
-
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
-        base64: false,
-        exif: false,
-      });
-
-      if (!result.canceled && result.assets && result.assets[0]) {
-        const imageUri = result.assets[0].uri;
-        console.log('Selected image from gallery:', imageUri);
-        setSelectedImage(imageUri);
-      }
-    } catch (error) {
-      console.error('Error picking image from gallery:', error);
-      Alert.alert(
-        language === 'ko' ? '오류' : 'Error',
-        language === 'ko' ? '이미지를 선택하는 중 오류가 발생했습니다.' : 'An error occurred while selecting the image.'
-      );
-    }
-  };
-
-  const takePhoto = async () => {
-    const hasPermission = await requestCameraPermissions();
-    if (!hasPermission) return;
-
-    try {
-      const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
-        base64: false,
-        exif: false,
-      });
-
-      if (!result.canceled && result.assets && result.assets[0]) {
-        const imageUri = result.assets[0].uri;
-        console.log('Captured photo:', imageUri);
-        setSelectedImage(imageUri);
-      }
-    } catch (error) {
-      console.error('Error taking photo:', error);
-      Alert.alert(
-        language === 'ko' ? '오류' : 'Error',
-        language === 'ko' ? '사진을 촬영하는 중 오류가 발생했습니다.' : 'An error occurred while taking the photo.'
-      );
-    }
-  };
-
-  const showImagePicker = () => {
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: [
-            language === 'ko' ? '취소' : 'Cancel',
-            language === 'ko' ? '사진 촬영' : 'Take Photo',
-            language === 'ko' ? '갤러리에서 선택' : 'Choose from Gallery'
-          ],
-          cancelButtonIndex: 0,
-        },
-        (buttonIndex) => {
-          if (buttonIndex === 1) {
-            takePhoto();
-          } else if (buttonIndex === 2) {
-            pickImageFromGallery();
-          }
-        }
-      );
-    } else {
-      Alert.alert(
-        language === 'ko' ? '사진 선택' : 'Select Photo',
-        language === 'ko' ? '사진을 어떻게 추가하시겠습니까?' : 'How would you like to add a photo?',
-        [
-          { text: language === 'ko' ? '취소' : 'Cancel', style: 'cancel' },
-          { text: language === 'ko' ? '사진 촬영' : 'Take Photo', onPress: takePhoto },
-          { text: language === 'ko' ? '갤러리에서 선택' : 'Choose from Gallery', onPress: pickImageFromGallery },
-        ]
-      );
-    }
   };
 
   const formatTime = (dateString: string) => {
@@ -431,21 +315,21 @@ export default function GroupDetailScreen() {
           </View>
         </View>
         
-        {post.image_url && (
-          <TouchableOpacity 
-            style={styles.imageContainer}
-            onPress={() => {
-              setSelectedPost(post);
-              setShowPostDetail(true);
-              incrementPostViewMutation.mutate({ postId: post.id });
-            }}
-          >
-            <Image 
-              source={{ uri: post.image_url }} 
-              style={styles.postImage} 
-            />
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity 
+          style={styles.imageContainer}
+          onPress={() => {
+            setSelectedPost(post);
+            setShowPostDetail(true);
+            incrementPostViewMutation.mutate({ postId: post.id });
+          }}
+        >
+          <Image 
+            source={{ 
+              uri: post.image_url || 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400&h=400&fit=crop'
+            }} 
+            style={styles.postImage} 
+          />
+        </TouchableOpacity>
         
         <TouchableOpacity 
           style={styles.contentSection}
@@ -632,12 +516,12 @@ export default function GroupDetailScreen() {
                 
                 <Text style={styles.postDetailContent}>{selectedPost.content}</Text>
                 
-                {selectedPost.image_url && (
-                  <Image 
-                    source={{ uri: selectedPost.image_url }} 
-                    style={styles.postDetailImage} 
-                  />
-                )}
+                <Image 
+                  source={{ 
+                    uri: selectedPost.image_url || 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400&h=400&fit=crop'
+                  }} 
+                  style={styles.postDetailImage} 
+                />
                 
                 <View style={styles.postDetailActions}>
                   <TouchableOpacity 
@@ -741,7 +625,7 @@ export default function GroupDetailScreen() {
             </TouchableOpacity>
           </View>
           
-          <ScrollView style={styles.createPostContent}>
+          <View style={styles.createPostContent}>
             <TextInput
               style={styles.postTextInput}
               placeholder={language === 'ko' ? '그룹에 공유할 내용을 작성해주세요...' : 'Share with the group...'}
@@ -751,51 +635,17 @@ export default function GroupDetailScreen() {
               multiline
               autoFocus
             />
-            
-            {selectedImage && (
-              <View style={styles.imagePreviewContainer}>
-                <Image 
-                  source={{ uri: selectedImage }} 
-                  style={styles.selectedImagePreview}
-                  resizeMode="cover"
-                />
-                <TouchableOpacity 
-                  style={styles.removeImageButton}
-                  onPress={() => setSelectedImage(null)}
-                  activeOpacity={0.7}
-                >
-                  <X size={16} color="#FFFFFF" />
-                </TouchableOpacity>
-              </View>
-            )}
-          </ScrollView>
+          </View>
           
           <View style={[
             styles.createPostActions,
-            { 
-              marginBottom: keyboardHeight > 0 ? 0 : (Platform.OS === 'ios' ? 20 : 20),
-              paddingBottom: keyboardHeight > 0 ? 10 : 16,
-            }
+            { marginBottom: Platform.OS === 'ios' ? 0 : 20 }
           ]}>
-            <TouchableOpacity 
-              style={styles.uploadButton}
-              onPress={takePhoto}
-              activeOpacity={0.7}
-            >
-              <Camera size={20} color="#FFFFFF" />
-              <Text style={styles.uploadButtonText}>
-                {language === 'ko' ? '사진 촬영' : 'Capture'}
-              </Text>
+            <TouchableOpacity style={styles.mediaButton}>
+              <Camera size={24} color="#007AFF" />
             </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.uploadButton}
-              onPress={pickImageFromGallery}
-              activeOpacity={0.7}
-            >
-              <ImageIcon size={20} color="#FFFFFF" />
-              <Text style={styles.uploadButtonText}>
-                {language === 'ko' ? '갤러리' : 'Gallery'}
-              </Text>
+            <TouchableOpacity style={styles.mediaButton}>
+              <ImageIcon size={24} color="#007AFF" />
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -1171,49 +1021,11 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderTopWidth: 1,
     borderTopColor: '#E5E5EA',
-    gap: 12,
+    gap: 20,
     backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
   },
-  uploadButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    gap: 8,
-  },
-  uploadButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  imagePreviewContainer: {
-    marginTop: 16,
-    position: 'relative',
-  },
-  selectedImagePreview: {
-    width: '100%',
-    height: 200,
-    borderRadius: 8,
-    backgroundColor: '#F2F2F7',
-  },
-  removeImageButton: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#FF3B30',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 3,
+  mediaButton: {
+    padding: 8,
   },
   fab: {
     position: 'absolute',
