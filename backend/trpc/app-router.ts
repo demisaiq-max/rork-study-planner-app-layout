@@ -56,6 +56,7 @@ import { incrementViewProcedure } from "./routes/community/posts/increment-view/
 
 // Community routes - Groups
 import { getGroupsProcedure } from "./routes/community/groups/get-groups/route";
+import { createGroupProcedure } from "./routes/community/groups/create-group/route";
 import { joinGroupProcedure } from "./routes/community/groups/join-group/route";
 import { leaveGroupProcedure } from "./routes/community/groups/leave-group/route";
 
@@ -153,6 +154,7 @@ export const appRouter = createTRPCRouter({
     }),
     groups: createTRPCRouter({
       getGroups: getGroupsProcedure,
+      createGroup: createGroupProcedure,
       joinGroup: joinGroupProcedure,
       leaveGroup: leaveGroupProcedure,
     }),

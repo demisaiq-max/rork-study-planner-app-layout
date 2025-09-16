@@ -112,10 +112,17 @@ export default function CommunityScreen() {
   const [showQuestionDetail, setShowQuestionDetail] = useState(false);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [showCreateQuestion, setShowCreateQuestion] = useState(false);
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [newPostContent, setNewPostContent] = useState("");
   const [newQuestionTitle, setNewQuestionTitle] = useState("");
   const [newQuestionContent, setNewQuestionContent] = useState("");
+  const [newQuestionSubject, setNewQuestionSubject] = useState("");
+  const [questionImages, setQuestionImages] = useState<string[]>([]);
+  const [newGroupName, setNewGroupName] = useState("");
+  const [newGroupDescription, setNewGroupDescription] = useState("");
+  const [newGroupSubject, setNewGroupSubject] = useState("");
+  const [newGroupMaxMembers, setNewGroupMaxMembers] = useState(50);
   const [newComment, setNewComment] = useState("");
   const [newAnswer, setNewAnswer] = useState("");
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
@@ -187,10 +194,33 @@ export default function CommunityScreen() {
       questionsQuery.refetch();
       setNewQuestionTitle("");
       setNewQuestionContent("");
+      setNewQuestionSubject("");
+      setQuestionImages([]);
       setShowCreateQuestion(false);
       Alert.alert(
         language === 'ko' ? '성공' : 'Success',
         language === 'ko' ? '질문이 등록되었습니다' : 'Question posted successfully'
+      );
+    },
+    onError: (error) => {
+      Alert.alert(
+        language === 'ko' ? '오류' : 'Error',
+        error.message
+      );
+    },
+  });
+
+  const createGroupMutation = trpc.community.groups.createGroup.useMutation({
+    onSuccess: () => {
+      groupsQuery.refetch();
+      setNewGroupName("");
+      setNewGroupDescription("");
+      setNewGroupSubject("");
+      setNewGroupMaxMembers(50);
+      setShowCreateGroup(false);
+      Alert.alert(
+        language === 'ko' ? '성공' : 'Success',
+        language === 'ko' ? '그룹이 생성되었습니다' : 'Group created successfully'
       );
     },
     onError: (error) => {
@@ -512,7 +542,45 @@ export default function CommunityScreen() {
     createQuestionMutation.mutate({
       title: newQuestionTitle,
       content: newQuestionContent,
+      subject: newQuestionSubject,
+      imageUrls: questionImages.length > 0 ? questionImages : undefined,
     });
+  };
+
+  const handleCreateGroup = () => {
+    if (!newGroupName.trim()) {
+      Alert.alert(
+        language === 'ko' ? '알림' : 'Notice',
+        language === 'ko' ? '그룹 이름을 입력해주세요' : 'Please enter group name'
+      );
+      return;
+    }
+    
+    if (!userId) {
+      Alert.alert(
+        language === 'ko' ? '로그인 필요' : 'Login Required',
+        language === 'ko' ? '로그인 후 이용해주세요' : 'Please login to continue'
+      );
+      return;
+    }
+
+    createGroupMutation.mutate({
+      name: newGroupName,
+      description: newGroupDescription || undefined,
+      subject: newGroupSubject || undefined,
+      maxMembers: newGroupMaxMembers,
+      isPublic: true,
+    });
+  };
+
+  const handleAddQuestionImage = () => {
+    // For demo purposes, add a placeholder image URL
+    const demoImageUrl = `https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400&h=400&fit=crop&random=${Date.now()}`;
+    setQuestionImages(prev => [...prev, demoImageUrl]);
+  };
+
+  const handleRemoveQuestionImage = (index: number) => {
+    setQuestionImages(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleJoinGroup = (groupId: string) => {
@@ -1181,22 +1249,154 @@ export default function CommunityScreen() {
             style={styles.createPostContent}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           >
-            <TextInput
-              style={styles.questionTitleInput}
-              placeholder={language === 'ko' ? '질문 제목' : 'Question Title'}
-              placeholderTextColor="#8E8E93"
-              value={newQuestionTitle}
-              onChangeText={setNewQuestionTitle}
-              autoFocus
-            />
-            <TextInput
-              style={styles.postTextInput}
-              placeholder={language === 'ko' ? '질문 내용을 자세히 작성해주세요...' : 'Write your question in detail...'}
-              placeholderTextColor="#8E8E93"
-              value={newQuestionContent}
-              onChangeText={setNewQuestionContent}
-              multiline
-            />
+            <ScrollView style={styles.createQuestionScroll}>
+              <Text style={styles.inputLabel}>
+                {language === 'ko' ? '과목' : 'Subject'}
+              </Text>
+              <TextInput
+                style={styles.subjectInput}
+                placeholder={language === 'ko' ? '과목을 입력하세요' : 'Enter subject'}
+                placeholderTextColor="#8E8E93"
+                value={newQuestionSubject}
+                onChangeText={setNewQuestionSubject}
+              />
+              
+              <Text style={styles.inputLabel}>
+                {language === 'ko' ? '질문 제목' : 'Question Title'}
+              </Text>
+              <TextInput
+                style={styles.questionTitleInput}
+                placeholder={language === 'ko' ? '질문 제목' : 'Question Title'}
+                placeholderTextColor="#8E8E93"
+                value={newQuestionTitle}
+                onChangeText={setNewQuestionTitle}
+              />
+              
+              <Text style={styles.inputLabel}>
+                {language === 'ko' ? '질문 내용' : 'Question Content'}
+              </Text>
+              <TextInput
+                style={styles.postTextInput}
+                placeholder={language === 'ko' ? '질문 내용을 자세히 작성해주세요...' : 'Write your question in detail...'}
+                placeholderTextColor="#8E8E93"
+                value={newQuestionContent}
+                onChangeText={setNewQuestionContent}
+                multiline
+              />
+              
+              {/* Image Section */}
+              <Text style={styles.inputLabel}>
+                {language === 'ko' ? '이미지 (선택사항)' : 'Images (Optional)'}
+              </Text>
+              <View style={styles.imageSection}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  {questionImages.map((imageUrl, index) => (
+                    <View key={index} style={styles.imagePreview}>
+                      <Image source={{ uri: imageUrl }} style={styles.previewImage} />
+                      <TouchableOpacity 
+                        style={styles.removeImageButton}
+                        onPress={() => handleRemoveQuestionImage(index)}
+                      >
+                        <X size={16} color="#FFFFFF" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                  <TouchableOpacity 
+                    style={styles.addImageButton}
+                    onPress={handleAddQuestionImage}
+                  >
+                    <Camera size={24} color="#007AFF" />
+                    <Text style={styles.addImageText}>
+                      {language === 'ko' ? '사진 추가' : 'Add Photo'}
+                    </Text>
+                  </TouchableOpacity>
+                </ScrollView>
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
+
+      {/* Create Group Modal */}
+      <Modal
+        visible={showCreateGroup}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <View style={[styles.modalContainer, { paddingTop: insets.top }]}>
+          <View style={styles.createPostHeader}>
+            <TouchableOpacity onPress={() => setShowCreateGroup(false)}>
+              <X size={24} color="#000000" />
+            </TouchableOpacity>
+            <Text style={styles.createPostTitle}>
+              {language === 'ko' ? '새 그룹 만들기' : 'Create New Group'}
+            </Text>
+            <TouchableOpacity onPress={handleCreateGroup}>
+              <Text style={styles.postButton}>
+                {language === 'ko' ? '생성' : 'Create'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          
+          <KeyboardAvoidingView 
+            style={styles.createPostContent}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          >
+            <ScrollView style={styles.createGroupScroll}>
+              <Text style={styles.inputLabel}>
+                {language === 'ko' ? '그룹 이름 *' : 'Group Name *'}
+              </Text>
+              <TextInput
+                style={styles.groupNameInput}
+                placeholder={language === 'ko' ? '그룹 이름을 입력하세요' : 'Enter group name'}
+                placeholderTextColor="#8E8E93"
+                value={newGroupName}
+                onChangeText={setNewGroupName}
+                autoFocus
+              />
+              
+              <Text style={styles.inputLabel}>
+                {language === 'ko' ? '그룹 설명' : 'Group Description'}
+              </Text>
+              <TextInput
+                style={styles.groupDescriptionInput}
+                placeholder={language === 'ko' ? '그룹에 대한 설명을 입력하세요...' : 'Enter group description...'}
+                placeholderTextColor="#8E8E93"
+                value={newGroupDescription}
+                onChangeText={setNewGroupDescription}
+                multiline
+              />
+              
+              <Text style={styles.inputLabel}>
+                {language === 'ko' ? '주요 과목' : 'Main Subject'}
+              </Text>
+              <TextInput
+                style={styles.subjectInput}
+                placeholder={language === 'ko' ? '주요 과목을 입력하세요' : 'Enter main subject'}
+                placeholderTextColor="#8E8E93"
+                value={newGroupSubject}
+                onChangeText={setNewGroupSubject}
+              />
+              
+              <Text style={styles.inputLabel}>
+                {language === 'ko' ? '최대 멤버 수' : 'Max Members'}
+              </Text>
+              <View style={styles.memberCountContainer}>
+                <TouchableOpacity 
+                  style={styles.memberCountButton}
+                  onPress={() => setNewGroupMaxMembers(Math.max(2, newGroupMaxMembers - 10))}
+                >
+                  <Text style={styles.memberCountButtonText}>-</Text>
+                </TouchableOpacity>
+                <Text style={styles.memberCountText}>{newGroupMaxMembers}</Text>
+                <TouchableOpacity 
+                  style={styles.memberCountButton}
+                  onPress={() => setNewGroupMaxMembers(Math.min(100, newGroupMaxMembers + 10))}
+                >
+                  <Text style={styles.memberCountButtonText}>+</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
           </KeyboardAvoidingView>
         </View>
       </Modal>
@@ -1205,7 +1405,9 @@ export default function CommunityScreen() {
       <TouchableOpacity 
         style={styles.fab}
         onPress={() => {
-          if (activeTab === 2) {
+          if (activeTab === 1) {
+            setShowCreateGroup(true);
+          } else if (activeTab === 2) {
             setShowCreateQuestion(true);
           } else {
             setShowCreatePost(true);
@@ -1917,5 +2119,122 @@ const styles = StyleSheet.create({
   },
   groupsContainer: {
     paddingTop: 8,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#000000',
+    marginTop: 16,
+    marginBottom: 8,
+    paddingHorizontal: 20,
+  },
+  subjectInput: {
+    height: 44,
+    backgroundColor: '#F2F2F7',
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    fontSize: 14,
+    color: '#000000',
+    marginHorizontal: 20,
+    marginBottom: 8,
+  },
+  createQuestionScroll: {
+    flex: 1,
+  },
+  createGroupScroll: {
+    flex: 1,
+  },
+  imageSection: {
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  imagePreview: {
+    position: 'relative',
+    marginRight: 12,
+  },
+  previewImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: '#F0F0F0',
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#FF3B30',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addImageButton: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: '#F2F2F7',
+    borderWidth: 2,
+    borderColor: '#007AFF',
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addImageText: {
+    fontSize: 12,
+    color: '#007AFF',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  groupNameInput: {
+    height: 44,
+    backgroundColor: '#F2F2F7',
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+    marginHorizontal: 20,
+    marginBottom: 8,
+  },
+  groupDescriptionInput: {
+    minHeight: 100,
+    backgroundColor: '#F2F2F7',
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: '#000000',
+    marginHorizontal: 20,
+    marginBottom: 8,
+    textAlignVertical: 'top',
+  },
+  memberCountContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 20,
+    marginBottom: 16,
+  },
+  memberCountButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#007AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  memberCountButtonText: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  memberCountText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+    marginHorizontal: 24,
+    minWidth: 40,
+    textAlign: 'center',
   },
 });
