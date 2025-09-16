@@ -46,6 +46,7 @@ export default function QuestionDetailScreen() {
   const [commentText, setCommentText] = useState("");
   const [commentImages, setCommentImages] = useState<string[]>([]);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   const questionQuery = trpc.community.questions.getQuestionById.useQuery(
     { questionId: id! },
@@ -112,6 +113,7 @@ export default function QuestionDetailScreen() {
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
       (e) => {
         setKeyboardHeight(e.endCoordinates.height);
+        setIsKeyboardVisible(true);
         // Scroll to bottom when keyboard opens
         setTimeout(() => {
           scrollViewRef.current?.scrollToEnd({ animated: true });
@@ -123,6 +125,7 @@ export default function QuestionDetailScreen() {
       Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
       () => {
         setKeyboardHeight(0);
+        setIsKeyboardVisible(false);
       }
     );
 
@@ -397,7 +400,7 @@ export default function QuestionDetailScreen() {
       <ScrollView 
         ref={scrollViewRef}
         style={styles.scrollView} 
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: keyboardHeight > 0 ? 120 : 100 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={true}
       >
@@ -631,13 +634,15 @@ export default function QuestionDetailScreen() {
 
       {/* Answer Input */}
       <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'position' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-        style={[styles.answerInputContainer, { 
-          paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 20) : insets.bottom + 10
-        }]}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        style={styles.keyboardAvoidingView}
       >
-        <View style={[styles.answerInputWrapper, { paddingBottom: Platform.OS === 'ios' ? 0 : 10 }]}>
+        <View style={[styles.answerInputContainer, { 
+          bottom: isKeyboardVisible ? 0 : insets.bottom,
+          paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 20) : 20
+        }]}>
+          <View style={styles.answerInputWrapper}>
           {commentingOn && (
             <View style={styles.commentingOnContainer}>
               <Text style={styles.commentingOnText}>
@@ -699,6 +704,7 @@ export default function QuestionDetailScreen() {
               <Send size={18} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </View>
@@ -727,7 +733,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 20,
+    paddingBottom: 120,
   },
   questionCard: {
     backgroundColor: "#FFFFFF",
@@ -940,14 +946,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#C7C7CC",
   },
-  answerInputContainer: {
-    backgroundColor: "#FFFFFF",
-    borderTopWidth: 1,
-    borderTopColor: "#E5E5EA",
+  keyboardAvoidingView: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
+  },
+  answerInputContainer: {
+    backgroundColor: "#FFFFFF",
+    borderTopWidth: 1,
+    borderTopColor: "#E5E5EA",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
@@ -957,6 +965,7 @@ const styles = StyleSheet.create({
   answerInputWrapper: {
     padding: 16,
     paddingTop: 12,
+    paddingBottom: 8,
   },
   inputRow: {
     flexDirection: "row",
