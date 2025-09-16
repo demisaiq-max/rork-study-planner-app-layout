@@ -18,10 +18,11 @@ import {
   MessageSquare, 
   Clock, 
   CheckCircle, 
-  Camera,
   X,
   Send,
-  User
+  User,
+  Image as ImageIcon,
+  Heart
 } from "lucide-react-native";
 import * as ImagePicker from 'expo-image-picker';
 import { useLanguage } from "@/hooks/language-context";
@@ -37,7 +38,9 @@ export default function QuestionDetailScreen() {
   
   const [answerText, setAnswerText] = useState("");
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
-  const [showImageToggle, setShowImageToggle] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [replyImages, setReplyImages] = useState<string[]>([]);
 
   const questionQuery = trpc.community.questions.getQuestionById.useQuery(
     { questionId: id! },
@@ -49,7 +52,9 @@ export default function QuestionDetailScreen() {
       questionQuery.refetch();
       setAnswerText("");
       setSelectedImages([]);
-      setShowImageToggle(false);
+      setReplyingTo(null);
+      setReplyText("");
+      setReplyImages([]);
     },
     onError: (error) => {
       Alert.alert(
@@ -80,7 +85,10 @@ export default function QuestionDetailScreen() {
   }, [id, user]);
 
   const handleSubmitAnswer = () => {
-    if (!answerText.trim()) {
+    const textToSubmit = replyingTo ? replyText : answerText;
+    const imagesToSubmit = replyingTo ? replyImages : selectedImages;
+    
+    if (!textToSubmit.trim()) {
       Alert.alert(
         language === 'ko' ? '알림' : 'Notice',
         language === 'ko' ? '답변을 입력해주세요' : 'Please enter your answer'
@@ -98,8 +106,8 @@ export default function QuestionDetailScreen() {
 
     addAnswerMutation.mutate({
       questionId: id!,
-      content: answerText,
-      imageUrls: selectedImages.length > 0 ? selectedImages : undefined,
+      content: textToSubmit,
+      imageUrls: imagesToSubmit.length > 0 ? imagesToSubmit : undefined,
     });
   };
 
@@ -149,6 +157,14 @@ export default function QuestionDetailScreen() {
     return true;
   };
 
+  const addImageToAnswer = (imageUri: string) => {
+    if (replyingTo) {
+      setReplyImages(prev => [...prev, imageUri]);
+    } else {
+      setSelectedImages(prev => [...prev, imageUri]);
+    }
+  };
+
   const pickImageFromGallery = async () => {
     const hasPermission = await requestPermissions();
     if (!hasPermission) return;
@@ -161,7 +177,7 @@ export default function QuestionDetailScreen() {
     });
 
     if (!result.canceled && result.assets[0]) {
-      setSelectedImages(prev => [...prev, result.assets[0].uri]);
+      addImageToAnswer(result.assets[0].uri);
     }
   };
 
@@ -176,7 +192,7 @@ export default function QuestionDetailScreen() {
     });
 
     if (!result.canceled && result.assets[0]) {
-      setSelectedImages(prev => [...prev, result.assets[0].uri]);
+      addImageToAnswer(result.assets[0].uri);
     }
   };
 
@@ -213,7 +229,22 @@ export default function QuestionDetailScreen() {
   };
 
   const removeImage = (index: number) => {
-    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+    if (replyingTo) {
+      setReplyImages(prev => prev.filter((_, i) => i !== index));
+    } else {
+      setSelectedImages(prev => prev.filter((_, i) => i !== index));
+    }
+  };
+
+  const handleReply = (answerId: string, userName: string) => {
+    setReplyingTo(answerId);
+    setReplyText(`@${userName} `);
+  };
+
+  const cancelReply = () => {
+    setReplyingTo(null);
+    setReplyText("");
+    setReplyImages([]);
   };
 
   if (questionQuery.isLoading) {
@@ -303,7 +334,7 @@ export default function QuestionDetailScreen() {
               showsHorizontalScrollIndicator={false}
             >
               {question.image_urls.map((imageUrl: string, index: number) => (
-                <Image key={index} source={{ uri: imageUrl }} style={styles.questionImage} />
+                <Image key={`question-image-${index}`} source={{ uri: imageUrl }} style={styles.questionImage} />
               ))}
             </ScrollView>
           )}
@@ -311,7 +342,7 @@ export default function QuestionDetailScreen() {
           {question.tags && question.tags.length > 0 && (
             <View style={styles.questionTags}>
               {question.tags.map((tag: string, index: number) => (
-                <View key={index} style={styles.tag}>
+                <View key={`tag-${index}`} style={styles.tag}>
                   <Text style={styles.tagText}>#{tag}</Text>
                 </View>
               ))}
@@ -399,23 +430,33 @@ export default function QuestionDetailScreen() {
                       showsHorizontalScrollIndicator={false}
                     >
                       {answer.image_urls.map((imageUrl: string, index: number) => (
-                        <Image key={index} source={{ uri: imageUrl }} style={styles.answerImage} />
+                        <Image key={`answer-${answer.id}-image-${index}`} source={{ uri: imageUrl }} style={styles.answerImage} />
                       ))}
                     </ScrollView>
                   )}
                   
-                  <View style={styles.answerFooter}>
+                  <View style={styles.answerActions}>
                     <TouchableOpacity 
-                      style={styles.actionButton}
+                      style={styles.socialActionButton}
                       onPress={() => handleLikeAnswer(answer.id)}
                     >
-                      <ThumbsUp 
-                        size={14} 
-                        color={isAnswerLiked ? "#007AFF" : "#8E8E93"} 
-                        fill={isAnswerLiked ? "#007AFF" : "none"}
+                      <Heart 
+                        size={16} 
+                        color={isAnswerLiked ? "#FF3B30" : "#8E8E93"} 
+                        fill={isAnswerLiked ? "#FF3B30" : "none"}
                       />
-                      <Text style={[styles.actionText, isAnswerLiked && styles.actionTextActive]}>
+                      <Text style={[styles.socialActionText, isAnswerLiked && { color: "#FF3B30" }]}>
                         {answer.likes?.length || 0}
+                      </Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={styles.socialActionButton}
+                      onPress={() => handleReply(answer.id, answer.user?.name || 'Anonymous')}
+                    >
+                      <MessageSquare size={16} color="#8E8E93" />
+                      <Text style={styles.socialActionText}>
+                        {language === 'ko' ? '답글' : 'Reply'}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -441,64 +482,67 @@ export default function QuestionDetailScreen() {
         style={styles.answerInputContainer}
       >
         <View style={styles.answerInputWrapper}>
+          {replyingTo && (
+            <View style={styles.replyingToContainer}>
+              <Text style={styles.replyingToText}>
+                {language === 'ko' ? '답글 작성 중...' : 'Replying...'}
+              </Text>
+              <TouchableOpacity onPress={cancelReply}>
+                <X size={16} color="#8E8E93" />
+              </TouchableOpacity>
+            </View>
+          )}
+          
+          {/* Image Preview */}
+          {(replyingTo ? replyImages : selectedImages).length > 0 && (
+            <ScrollView 
+              horizontal 
+              style={styles.imagePreviewContainer}
+              showsHorizontalScrollIndicator={false}
+            >
+              {(replyingTo ? replyImages : selectedImages).map((imageUri, index) => (
+                <View key={`preview-${index}`} style={styles.imagePreview}>
+                  <Image source={{ uri: imageUri }} style={styles.previewImage} />
+                  <TouchableOpacity 
+                    style={styles.removeImageButton}
+                    onPress={() => removeImage(index)}
+                  >
+                    <X size={12} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </ScrollView>
+          )}
+          
           <View style={styles.inputRow}>
             <TextInput
               style={styles.answerInput}
-              placeholder={language === 'ko' ? '답변을 입력하세요...' : 'Write your answer...'}
+              placeholder={replyingTo 
+                ? (language === 'ko' ? '답글을 입력하세요...' : 'Write a reply...') 
+                : (language === 'ko' ? '답변을 입력하세요...' : 'Write your answer...')
+              }
               placeholderTextColor="#8E8E93"
-              value={answerText}
-              onChangeText={setAnswerText}
+              value={replyingTo ? replyText : answerText}
+              onChangeText={replyingTo ? setReplyText : setAnswerText}
               multiline
               maxLength={1000}
             />
             <TouchableOpacity 
-              style={styles.imageToggleButton}
-              onPress={() => setShowImageToggle(!showImageToggle)}
+              style={styles.imageButton}
+              onPress={showImagePicker}
             >
-              <Camera size={20} color={showImageToggle ? "#007AFF" : "#8E8E93"} />
+              <ImageIcon size={20} color="#8E8E93" />
             </TouchableOpacity>
             <TouchableOpacity 
-              style={styles.sendButton}
+              style={[styles.sendButton, {
+                opacity: (replyingTo ? replyText.trim() : answerText.trim()) ? 1 : 0.5
+              }]}
               onPress={handleSubmitAnswer}
-              disabled={addAnswerMutation.isPending}
+              disabled={addAnswerMutation.isPending || !(replyingTo ? replyText.trim() : answerText.trim())}
             >
-              <Send size={20} color="#FFFFFF" />
+              <Send size={18} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
-          
-          {showImageToggle && (
-            <View style={styles.imageToggleSection}>
-              <TouchableOpacity 
-                style={styles.addPhotoButton}
-                onPress={showImagePicker}
-              >
-                <Camera size={20} color="#007AFF" />
-                <Text style={styles.addPhotoText}>
-                  {language === 'ko' ? '사진 추가' : 'Add Photo'}
-                </Text>
-              </TouchableOpacity>
-              
-              {selectedImages.length > 0 && (
-                <ScrollView 
-                  horizontal 
-                  style={styles.imagePreviewContainer}
-                  showsHorizontalScrollIndicator={false}
-                >
-                  {selectedImages.map((imageUri, index) => (
-                    <View key={index} style={styles.imagePreview}>
-                      <Image source={{ uri: imageUri }} style={styles.previewImage} />
-                      <TouchableOpacity 
-                        style={styles.removeImageButton}
-                        onPress={() => removeImage(index)}
-                      >
-                        <X size={12} color="#FFFFFF" />
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </ScrollView>
-              )}
-            </View>
-          )}
         </View>
       </KeyboardAvoidingView>
     </View>
@@ -701,9 +745,23 @@ const styles = StyleSheet.create({
     marginRight: 8,
     backgroundColor: "#F2F2F7",
   },
-  answerFooter: {
+  answerActions: {
     flexDirection: "row",
-    justifyContent: "flex-end",
+    alignItems: "center",
+    gap: 20,
+    marginTop: 8,
+  },
+  socialActionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  socialActionText: {
+    fontSize: 13,
+    color: "#8E8E93",
+    fontWeight: "500",
   },
   noAnswersContainer: {
     backgroundColor: "#FFFFFF",
@@ -749,46 +807,40 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#000000",
   },
-  imageToggleButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  imageButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: "#F2F2F7",
     justifyContent: "center",
     alignItems: "center",
   },
   sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: "#007AFF",
     justifyContent: "center",
     alignItems: "center",
   },
-  imageToggleSection: {
-    marginTop: 12,
-  },
-  addPhotoButton: {
+  replyingToContainer: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    justifyContent: "center",
     backgroundColor: "#F2F2F7",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#007AFF",
-    borderStyle: "dashed",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    gap: 8,
     marginBottom: 8,
   },
-  addPhotoText: {
-    fontSize: 14,
+  replyingToText: {
+    fontSize: 13,
     color: "#007AFF",
     fontWeight: "500",
   },
   imagePreviewContainer: {
     maxHeight: 80,
+    marginBottom: 8,
   },
   imagePreview: {
     position: "relative",
