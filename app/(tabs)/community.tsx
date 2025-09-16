@@ -1333,7 +1333,11 @@ export default function CommunityScreen() {
         animationType="slide"
         presentationStyle="pageSheet"
       >
-        <View style={[styles.modalContainer, { paddingTop: insets.top }]}>
+        <KeyboardAvoidingView 
+          style={[styles.modalContainer, { paddingTop: insets.top }]}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={0}
+        >
           <View style={styles.createPostHeader}>
             <TouchableOpacity onPress={() => setShowCreatePost(false)}>
               <X size={24} color="#000000" />
@@ -1348,36 +1352,47 @@ export default function CommunityScreen() {
             </TouchableOpacity>
           </View>
           
-          <KeyboardAvoidingView 
-            style={styles.createPostContent}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-          >
-            <TextInput
-              style={styles.postTextInput}
-              placeholder={language === 'ko' ? '오늘의 공부를 공유해주세요...' : 'Share your study today...'}
-              placeholderTextColor="#8E8E93"
-              value={newPostContent}
-              onChangeText={setNewPostContent}
-              multiline
-              autoFocus
-            />
-            
-            <View style={[
-              styles.createPostActions,
-              { 
-                marginBottom: keyboardHeight > 0 ? 10 : (Platform.OS === 'ios' ? insets.bottom : 20)
-              }
-            ]}>
-              <TouchableOpacity style={styles.mediaButton}>
-                <Camera size={24} color="#007AFF" />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.mediaButton}>
-                <ImageIcon size={24} color="#007AFF" />
-              </TouchableOpacity>
-            </View>
-          </KeyboardAvoidingView>
-        </View>
+          <View style={styles.createPostContent}>
+            <ScrollView 
+              style={styles.createPostScrollView}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <TextInput
+                style={styles.postTextInput}
+                placeholder={language === 'ko' ? '오늘의 공부를 공유해주세요...' : 'Share your study today...'}
+                placeholderTextColor="#8E8E93"
+                value={newPostContent}
+                onChangeText={setNewPostContent}
+                multiline
+                autoFocus
+              />
+              
+              {/* Image Upload Section */}
+              <View style={styles.imageUploadSection}>
+                <TouchableOpacity 
+                  style={styles.imageUploadButton}
+                  onPress={takePhoto}
+                >
+                  <Camera size={32} color="#007AFF" />
+                  <Text style={styles.imageUploadButtonText}>
+                    {language === 'ko' ? '사진 촬영' : 'Take Photo'}
+                  </Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.imageUploadButton}
+                  onPress={pickImageFromGallery}
+                >
+                  <ImageIcon size={32} color="#007AFF" />
+                  <Text style={styles.imageUploadButtonText}>
+                    {language === 'ko' ? '갤러리에서 선택' : 'Choose from Gallery'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Create Question Modal */}
@@ -2135,10 +2150,13 @@ const styles = StyleSheet.create({
   },
   createPostContent: {
     flex: 1,
-    paddingHorizontal: 20,
+  },
+  createPostScrollView: {
+    flex: 1,
   },
   postTextInput: {
-    flex: 1,
+    minHeight: 200,
+    paddingHorizontal: 20,
     paddingTop: 20,
     fontSize: 16,
     color: '#000000',
@@ -2155,21 +2173,29 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginBottom: 8,
   },
-  createPostActions: {
+  imageUploadSection: {
     flexDirection: 'row',
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E5EA',
-    gap: 20,
-    backgroundColor: '#FFFFFF',
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    paddingVertical: 20,
+    gap: 16,
+    marginTop: 20,
   },
-  mediaButton: {
-    padding: 8,
+  imageUploadButton: {
+    flex: 1,
+    backgroundColor: '#F2F2F7',
+    borderRadius: 12,
+    paddingVertical: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    borderStyle: 'dashed',
+  },
+  imageUploadButtonText: {
+    fontSize: 14,
+    color: '#007AFF',
+    marginTop: 8,
+    fontWeight: '500',
   },
   fab: {
     position: 'absolute',
