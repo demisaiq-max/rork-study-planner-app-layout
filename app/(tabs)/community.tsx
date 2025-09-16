@@ -721,10 +721,8 @@ export default function CommunityScreen() {
         key={question.id} 
         style={styles.discussionPostCard}
         onPress={() => {
-          setSelectedQuestion(question);
-          setShowQuestionDetail(true);
-          // Increment view count
-          incrementQuestionViewMutation.mutate({ questionId: question.id });
+          // Navigate to question detail page
+          router.push(`/question-detail?id=${question.id}`);
         }}
       >
         <View style={styles.discussionHeader}>
@@ -756,14 +754,26 @@ export default function CommunityScreen() {
           </View>
           
           <View style={styles.discussionActions}>
-            <View style={styles.discussionActionItem}>
-              <Heart size={14} color={isLiked ? "#FF3B30" : "#8E8E93"} />
-              <Text style={styles.discussionActionText}>{question.likes_count}</Text>
-            </View>
-            <View style={styles.discussionActionItem}>
+            <TouchableOpacity 
+              style={styles.discussionActionItem}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleLikeQuestion(question.id);
+              }}
+            >
+              <Heart size={14} color={isLiked ? "#FF3B30" : "#8E8E93"} fill={isLiked ? "#FF3B30" : "none"} />
+              <Text style={[styles.discussionActionText, isLiked && { color: "#FF3B30" }]}>{question.likes_count}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.discussionActionItem}
+              onPress={(e) => {
+                e.stopPropagation();
+                router.push(`/question-detail?id=${question.id}`);
+              }}
+            >
               <MessageCircle size={14} color="#8E8E93" />
               <Text style={styles.discussionActionText}>{question.answers_count}</Text>
-            </View>
+            </TouchableOpacity>
             <View style={styles.discussionActionItem}>
               <Eye size={14} color="#8E8E93" />
               <Text style={styles.discussionActionText}>{question.views_count}</Text>

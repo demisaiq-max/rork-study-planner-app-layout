@@ -25,13 +25,13 @@ import {
 } from "lucide-react-native";
 import * as ImagePicker from 'expo-image-picker';
 import { useLanguage } from "@/hooks/language-context";
-import { useAuth } from "@/hooks/auth-context";
+import { useUser } from "@/hooks/user-context";
 import { useRouter, Stack, useLocalSearchParams } from "expo-router";
 import { trpc } from "@/lib/trpc";
 
 export default function QuestionDetailScreen() {
   const { language } = useLanguage();
-  const { user } = useAuth();
+  const { user } = useUser();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   
