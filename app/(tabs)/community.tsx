@@ -126,6 +126,7 @@ export default function CommunityScreen() {
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [newPostContent, setNewPostContent] = useState("");
+  const [newPostImage, setNewPostImage] = useState<string | null>(null);
   const [newQuestionTitle, setNewQuestionTitle] = useState("");
   const [newQuestionContent, setNewQuestionContent] = useState("");
   const [newQuestionSubject, setNewQuestionSubject] = useState("");
@@ -186,6 +187,7 @@ export default function CommunityScreen() {
     onSuccess: () => {
       postsQuery.refetch();
       setNewPostContent("");
+      setNewPostImage(null);
       setShowCreatePost(false);
       Alert.alert(
         language === 'ko' ? '성공' : 'Success',
@@ -530,6 +532,7 @@ export default function CommunityScreen() {
     createPostMutation.mutate({
       content: newPostContent,
       groupId: selectedGroup || undefined,
+      imageUrl: newPostImage || undefined,
     });
   };
 
@@ -608,7 +611,7 @@ export default function CommunityScreen() {
     return true;
   };
 
-  const pickImageFromGallery = async () => {
+  const pickImageFromGallery = async (forPost: boolean = false) => {
     const hasPermission = await requestPermissions();
     if (!hasPermission) return;
 
@@ -625,7 +628,11 @@ export default function CommunityScreen() {
       if (!result.canceled && result.assets && result.assets[0]) {
         const imageUri = result.assets[0].uri;
         console.log('Selected image from gallery:', imageUri);
-        setQuestionImages(prev => [...prev, imageUri]);
+        if (forPost) {
+          setNewPostImage(imageUri);
+        } else {
+          setQuestionImages(prev => [...prev, imageUri]);
+        }
       }
     } catch (error) {
       console.error('Error picking image from gallery:', error);
@@ -636,7 +643,7 @@ export default function CommunityScreen() {
     }
   };
 
-  const takePhoto = async () => {
+  const takePhoto = async (forPost: boolean = false) => {
     const hasPermission = await requestCameraPermissions();
     if (!hasPermission) return;
 
@@ -652,7 +659,11 @@ export default function CommunityScreen() {
       if (!result.canceled && result.assets && result.assets[0]) {
         const imageUri = result.assets[0].uri;
         console.log('Captured photo:', imageUri);
-        setQuestionImages(prev => [...prev, imageUri]);
+        if (forPost) {
+          setNewPostImage(imageUri);
+        } else {
+          setQuestionImages(prev => [...prev, imageUri]);
+        }
       }
     } catch (error) {
       console.error('Error taking photo:', error);
@@ -676,9 +687,9 @@ export default function CommunityScreen() {
         },
         (buttonIndex) => {
           if (buttonIndex === 1) {
-            takePhoto();
+            takePhoto(false);
           } else if (buttonIndex === 2) {
-            pickImageFromGallery();
+            pickImageFromGallery(false);
           }
         }
       );
@@ -688,8 +699,8 @@ export default function CommunityScreen() {
         language === 'ko' ? '사진을 어떻게 추가하시겠습니까?' : 'How would you like to add a photo?',
         [
           { text: language === 'ko' ? '취소' : 'Cancel', style: 'cancel' },
-          { text: language === 'ko' ? '사진 촬영' : 'Take Photo', onPress: takePhoto },
-          { text: language === 'ko' ? '갤러리에서 선택' : 'Choose from Gallery', onPress: pickImageFromGallery },
+          { text: language === 'ko' ? '사진 촬영' : 'Take Photo', onPress: () => takePhoto(false) },
+          { text: language === 'ko' ? '갤러리에서 선택' : 'Choose from Gallery', onPress: () => pickImageFromGallery(false) },
         ]
       );
     }
@@ -1370,25 +1381,39 @@ export default function CommunityScreen() {
               
               {/* Image Upload Section */}
               <View style={styles.imageUploadSection}>
-                <TouchableOpacity 
-                  style={styles.imageUploadButton}
-                  onPress={takePhoto}
-                >
-                  <Camera size={32} color="#007AFF" />
-                  <Text style={styles.imageUploadButtonText}>
-                    {language === 'ko' ? '사진 촬영' : 'Take Photo'}
-                  </Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={styles.imageUploadButton}
-                  onPress={pickImageFromGallery}
-                >
-                  <ImageIcon size={32} color="#007AFF" />
-                  <Text style={styles.imageUploadButtonText}>
-                    {language === 'ko' ? '갤러리에서 선택' : 'Choose from Gallery'}
-                  </Text>
-                </TouchableOpacity>
+                {newPostImage ? (
+                  <View style={styles.selectedImageContainer}>
+                    <Image source={{ uri: newPostImage }} style={styles.selectedImage} />
+                    <TouchableOpacity 
+                      style={styles.removeSelectedImageButton}
+                      onPress={() => setNewPostImage(null)}
+                    >
+                      <X size={20} color="#FFFFFF" />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <>
+                    <TouchableOpacity 
+                      style={styles.imageUploadButton}
+                      onPress={() => takePhoto(true)}
+                    >
+                      <Camera size={32} color="#007AFF" />
+                      <Text style={styles.imageUploadButtonText}>
+                        {language === 'ko' ? '사진 촬영' : 'Take Photo'}
+                      </Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={styles.imageUploadButton}
+                      onPress={() => pickImageFromGallery(true)}
+                    >
+                      <ImageIcon size={32} color="#007AFF" />
+                      <Text style={styles.imageUploadButtonText}>
+                        {language === 'ko' ? '갤러리에서 선택' : 'Choose from Gallery'}
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                )}
               </View>
             </ScrollView>
           </View>
@@ -2415,5 +2440,27 @@ const styles = StyleSheet.create({
     marginHorizontal: 24,
     minWidth: 40,
     textAlign: 'center',
+  },
+  selectedImageContainer: {
+    position: 'relative',
+    width: '100%',
+    aspectRatio: 1.5,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  selectedImage: {
+    width: '100%',
+    height: '100%',
+  },
+  removeSelectedImageButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

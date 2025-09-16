@@ -20,6 +20,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { Heart, MessageCircle, Eye, ChevronLeft, Send, Camera, Image as ImageIcon, X, Users, UserPlus } from "lucide-react-native";
+import * as ImagePicker from 'expo-image-picker';
 import { useLanguage } from "@/hooks/language-context";
 import { useUser } from "@/hooks/user-context";
 import { trpc } from "@/lib/trpc";
@@ -91,6 +92,7 @@ export default function GroupDetailScreen() {
   const [showPostDetail, setShowPostDetail] = useState(false);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [newPostContent, setNewPostContent] = useState("");
+  const [newPostImage, setNewPostImage] = useState<string | null>(null);
   const [newComment, setNewComment] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -120,6 +122,7 @@ export default function GroupDetailScreen() {
     onSuccess: () => {
       postsQuery.refetch();
       setNewPostContent("");
+      setNewPostImage(null);
       setShowCreatePost(false);
       Alert.alert(
         language === 'ko' ? '성공' : 'Success',
@@ -276,7 +279,87 @@ export default function GroupDetailScreen() {
     createPostMutation.mutate({
       content: newPostContent,
       groupId: groupId,
+      imageUrl: newPostImage || undefined,
     });
+  };
+
+  const requestPermissions = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        language === 'ko' ? '권한 필요' : 'Permission Required',
+        language === 'ko' ? '사진을 선택하려면 갤러리 접근 권한이 필요합니다.' : 'We need gallery access permission to select photos.'
+      );
+      return false;
+    }
+    return true;
+  };
+
+  const requestCameraPermissions = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        language === 'ko' ? '권한 필요' : 'Permission Required',
+        language === 'ko' ? '사진을 촬영하려면 카메라 접근 권한이 필요합니다.' : 'We need camera access permission to take photos.'
+      );
+      return false;
+    }
+    return true;
+  };
+
+  const pickImageFromGallery = async () => {
+    const hasPermission = await requestPermissions();
+    if (!hasPermission) return;
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+        base64: false,
+        exif: false,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const imageUri = result.assets[0].uri;
+        console.log('Selected image from gallery:', imageUri);
+        setNewPostImage(imageUri);
+      }
+    } catch (error) {
+      console.error('Error picking image from gallery:', error);
+      Alert.alert(
+        language === 'ko' ? '오류' : 'Error',
+        language === 'ko' ? '이미지를 선택하는 중 오류가 발생했습니다.' : 'An error occurred while selecting the image.'
+      );
+    }
+  };
+
+  const takePhoto = async () => {
+    const hasPermission = await requestCameraPermissions();
+    if (!hasPermission) return;
+
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+        base64: false,
+        exif: false,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const imageUri = result.assets[0].uri;
+        console.log('Captured photo:', imageUri);
+        setNewPostImage(imageUri);
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert(
+        language === 'ko' ? '오류' : 'Error',
+        language === 'ko' ? '사진을 촬영하는 중 오류가 발생했습니다.' : 'An error occurred while taking the photo.'
+      );
+    }
   };
 
   const formatTime = (dateString: string) => {
@@ -641,12 +724,38 @@ export default function GroupDetailScreen() {
             styles.createPostActions,
             { marginBottom: Platform.OS === 'ios' ? 0 : 20 }
           ]}>
-            <TouchableOpacity style={styles.mediaButton}>
-              <Camera size={24} color="#007AFF" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.mediaButton}>
-              <ImageIcon size={24} color="#007AFF" />
-            </TouchableOpacity>
+            {newPostImage ? (
+              <View style={styles.selectedImageContainer}>
+                <Image source={{ uri: newPostImage }} style={styles.selectedImage} />
+                <TouchableOpacity 
+                  style={styles.removeSelectedImageButton}
+                  onPress={() => setNewPostImage(null)}
+                >
+                  <X size={20} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                <TouchableOpacity 
+                  style={styles.mediaButton}
+                  onPress={takePhoto}
+                >
+                  <Camera size={24} color="#007AFF" />
+                  <Text style={styles.mediaButtonText}>
+                    {language === 'ko' ? '사진 촬영' : 'Take Photo'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.mediaButton}
+                  onPress={pickImageFromGallery}
+                >
+                  <ImageIcon size={24} color="#007AFF" />
+                  <Text style={styles.mediaButtonText}>
+                    {language === 'ko' ? '갤러리에서 선택' : 'Choose from Gallery'}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -1025,7 +1134,44 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   mediaButton: {
-    padding: 8,
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 12,
+    backgroundColor: '#F2F2F7',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    borderStyle: 'dashed',
+  },
+  mediaButtonText: {
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: '500',
+  },
+  selectedImageContainer: {
+    position: 'relative',
+    width: '100%',
+    aspectRatio: 1.5,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  selectedImage: {
+    width: '100%',
+    height: '100%',
+  },
+  removeSelectedImageButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   fab: {
     position: 'absolute',
