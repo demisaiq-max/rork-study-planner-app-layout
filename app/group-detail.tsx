@@ -315,21 +315,21 @@ export default function GroupDetailScreen() {
           </View>
         </View>
         
-        {post.image_url && (
-          <TouchableOpacity 
-            style={styles.imageContainer}
-            onPress={() => {
-              setSelectedPost(post);
-              setShowPostDetail(true);
-              incrementPostViewMutation.mutate({ postId: post.id });
-            }}
-          >
-            <Image 
-              source={{ uri: post.image_url }} 
-              style={styles.postImage} 
-            />
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity 
+          style={styles.imageContainer}
+          onPress={() => {
+            setSelectedPost(post);
+            setShowPostDetail(true);
+            incrementPostViewMutation.mutate({ postId: post.id });
+          }}
+        >
+          <Image 
+            source={{ 
+              uri: post.image_url || 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400&h=400&fit=crop'
+            }} 
+            style={styles.postImage} 
+          />
+        </TouchableOpacity>
         
         <TouchableOpacity 
           style={styles.contentSection}
@@ -516,9 +516,12 @@ export default function GroupDetailScreen() {
                 
                 <Text style={styles.postDetailContent}>{selectedPost.content}</Text>
                 
-                {selectedPost.image_url && (
-                  <Image source={{ uri: selectedPost.image_url }} style={styles.postDetailImage} />
-                )}
+                <Image 
+                  source={{ 
+                    uri: selectedPost.image_url || 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400&h=400&fit=crop'
+                  }} 
+                  style={styles.postDetailImage} 
+                />
                 
                 <View style={styles.postDetailActions}>
                   <TouchableOpacity 
