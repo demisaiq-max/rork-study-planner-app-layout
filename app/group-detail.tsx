@@ -625,7 +625,7 @@ export default function GroupDetailScreen() {
             </TouchableOpacity>
           </View>
           
-          <View style={styles.createPostContent}>
+          <ScrollView style={styles.createPostContent} keyboardShouldPersistTaps="handled">
             <TextInput
               style={styles.postTextInput}
               placeholder={language === 'ko' ? '그룹에 공유할 내용을 작성해주세요...' : 'Share with the group...'}
@@ -635,30 +635,27 @@ export default function GroupDetailScreen() {
               multiline
               autoFocus
             />
-          </View>
-          
-          <View style={[
-            styles.centeredMediaSection,
-            { marginBottom: Platform.OS === 'ios' ? 0 : 20 }
-          ]}>
-            <Text style={styles.mediaSectionTitle}>
-              {language === 'ko' ? '사진 추가' : 'Add Photo'}
-            </Text>
-            <View style={styles.centeredMediaButtons}>
-              <TouchableOpacity style={styles.centeredMediaButton}>
-                <Camera size={32} color="#007AFF" />
-                <Text style={styles.centeredMediaButtonText}>
-                  {language === 'ko' ? '사진 촬영' : 'Take Photo'}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.centeredMediaButton}>
-                <ImageIcon size={32} color="#007AFF" />
-                <Text style={styles.centeredMediaButtonText}>
-                  {language === 'ko' ? '갤러리에서 선택' : 'Choose from Gallery'}
-                </Text>
-              </TouchableOpacity>
+            
+            <View style={styles.centeredMediaSection}>
+              <Text style={styles.mediaSectionTitle}>
+                {language === 'ko' ? '사진 추가' : 'Add Photo'}
+              </Text>
+              <View style={styles.centeredMediaButtons}>
+                <TouchableOpacity style={styles.centeredMediaButton}>
+                  <Camera size={32} color="#007AFF" />
+                  <Text style={styles.centeredMediaButtonText}>
+                    {language === 'ko' ? '사진 촬영' : 'Take Photo'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.centeredMediaButton}>
+                  <ImageIcon size={32} color="#007AFF" />
+                  <Text style={styles.centeredMediaButtonText}>
+                    {language === 'ko' ? '갤러리에서 선택' : 'Choose from Gallery'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
 
@@ -1020,8 +1017,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   postTextInput: {
-    flex: 1,
+    minHeight: 120,
     paddingTop: 20,
+    paddingBottom: 20,
     fontSize: 16,
     color: '#000000',
     textAlignVertical: 'top',
@@ -1040,11 +1038,15 @@ const styles = StyleSheet.create({
   },
   centeredMediaSection: {
     alignItems: 'center',
-    paddingVertical: 24,
+    justifyContent: 'center',
+    paddingVertical: 40,
     paddingHorizontal: 20,
+    marginTop: 40,
     borderTopWidth: 1,
     borderTopColor: '#E5E5EA',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    marginHorizontal: 0,
   },
   mediaSectionTitle: {
     fontSize: 16,
