@@ -16,9 +16,11 @@ import {
   RefreshControl,
   Keyboard,
   KeyboardEvent,
+  ActionSheetIOS,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Search, Heart, MessageCircle, Eye, ChevronLeft, MoreHorizontal, Send, Camera, Image as ImageIcon, X, ChevronDown, Users } from "lucide-react-native";
+import * as ImagePicker from 'expo-image-picker';
 import { useLanguage } from "@/hooks/language-context";
 import { useUser } from "@/hooks/user-context";
 import { trpc } from "@/lib/trpc";
@@ -573,10 +575,115 @@ export default function CommunityScreen() {
     });
   };
 
+  const requestPermissions = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        language === 'ko' ? '권한 필요' : 'Permission Required',
+        language === 'ko' ? '사진을 선택하려면 갤러리 접근 권한이 필요합니다.' : 'We need gallery access permission to select photos.'
+      );
+      return false;
+    }
+    return true;
+  };
+
+  const requestCameraPermissions = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        language === 'ko' ? '권한 필요' : 'Permission Required',
+        language === 'ko' ? '사진을 촬영하려면 카메라 접근 권한이 필요합니다.' : 'We need camera access permission to take photos.'
+      );
+      return false;
+    }
+    return true;
+  };
+
+  const pickImageFromGallery = async () => {
+    const hasPermission = await requestPermissions();
+    if (!hasPermission) return;
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+        base64: false,
+        exif: false,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const imageUri = result.assets[0].uri;
+        console.log('Selected image from gallery:', imageUri);
+        setQuestionImages(prev => [...prev, imageUri]);
+      }
+    } catch (error) {
+      console.error('Error picking image from gallery:', error);
+      Alert.alert(
+        language === 'ko' ? '오류' : 'Error',
+        language === 'ko' ? '이미지를 선택하는 중 오류가 발생했습니다.' : 'An error occurred while selecting the image.'
+      );
+    }
+  };
+
+  const takePhoto = async () => {
+    const hasPermission = await requestCameraPermissions();
+    if (!hasPermission) return;
+
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+        base64: false,
+        exif: false,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const imageUri = result.assets[0].uri;
+        console.log('Captured photo:', imageUri);
+        setQuestionImages(prev => [...prev, imageUri]);
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert(
+        language === 'ko' ? '오류' : 'Error',
+        language === 'ko' ? '사진을 촬영하는 중 오류가 발생했습니다.' : 'An error occurred while taking the photo.'
+      );
+    }
+  };
+
   const handleAddQuestionImage = () => {
-    // For demo purposes, add a placeholder image URL
-    const demoImageUrl = `https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400&h=400&fit=crop&random=${Date.now()}`;
-    setQuestionImages(prev => [...prev, demoImageUrl]);
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: [
+            language === 'ko' ? '취소' : 'Cancel',
+            language === 'ko' ? '사진 촬영' : 'Take Photo',
+            language === 'ko' ? '갤러리에서 선택' : 'Choose from Gallery'
+          ],
+          cancelButtonIndex: 0,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) {
+            takePhoto();
+          } else if (buttonIndex === 2) {
+            pickImageFromGallery();
+          }
+        }
+      );
+    } else {
+      Alert.alert(
+        language === 'ko' ? '사진 선택' : 'Select Photo',
+        language === 'ko' ? '사진을 어떻게 추가하시겠습니까?' : 'How would you like to add a photo?',
+        [
+          { text: language === 'ko' ? '취소' : 'Cancel', style: 'cancel' },
+          { text: language === 'ko' ? '사진 촬영' : 'Take Photo', onPress: takePhoto },
+          { text: language === 'ko' ? '갤러리에서 선택' : 'Choose from Gallery', onPress: pickImageFromGallery },
+        ]
+      );
+    }
   };
 
   const handleRemoveQuestionImage = (index: number) => {
