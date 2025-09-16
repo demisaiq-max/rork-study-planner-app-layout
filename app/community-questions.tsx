@@ -117,15 +117,27 @@ export default function CommunityQuestionsScreen() {
     const hasPermission = await requestPermissions();
     if (!hasPermission) return;
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
-    });
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+        base64: false,
+        exif: false,
+      });
 
-    if (!result.canceled && result.assets[0]) {
-      setSelectedImages(prev => [...prev, result.assets[0].uri]);
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const imageUri = result.assets[0].uri;
+        console.log('Selected image from gallery:', imageUri);
+        setSelectedImages(prev => [...prev, imageUri]);
+      }
+    } catch (error) {
+      console.error('Error picking image from gallery:', error);
+      Alert.alert(
+        language === 'ko' ? '오류' : 'Error',
+        language === 'ko' ? '이미지를 선택하는 중 오류가 발생했습니다.' : 'An error occurred while selecting the image.'
+      );
     }
   };
 
@@ -133,14 +145,26 @@ export default function CommunityQuestionsScreen() {
     const hasPermission = await requestCameraPermissions();
     if (!hasPermission) return;
 
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
-    });
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+        base64: false,
+        exif: false,
+      });
 
-    if (!result.canceled && result.assets[0]) {
-      setSelectedImages(prev => [...prev, result.assets[0].uri]);
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const imageUri = result.assets[0].uri;
+        console.log('Captured photo:', imageUri);
+        setSelectedImages(prev => [...prev, imageUri]);
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert(
+        language === 'ko' ? '오류' : 'Error',
+        language === 'ko' ? '사진을 촬영하는 중 오류가 발생했습니다.' : 'An error occurred while taking the photo.'
+      );
     }
   };
 
@@ -390,16 +414,6 @@ export default function CommunityQuestionsScreen() {
               </Text>
               
               <View style={styles.imageSection}>
-                <TouchableOpacity 
-                  style={styles.addPhotoButton}
-                  onPress={showImagePicker}
-                >
-                  <Camera size={24} color="#007AFF" />
-                  <Text style={styles.addPhotoText}>
-                    {language === 'ko' ? '사진 추가' : 'Add Photo'}
-                  </Text>
-                </TouchableOpacity>
-                
                 {selectedImages.length > 0 && (
                   <ScrollView 
                     horizontal 
@@ -408,10 +422,15 @@ export default function CommunityQuestionsScreen() {
                   >
                     {selectedImages.map((imageUri, index) => (
                       <View key={index} style={styles.imagePreview}>
-                        <Image source={{ uri: imageUri }} style={styles.previewImage} />
+                        <Image 
+                          source={{ uri: imageUri }} 
+                          style={styles.previewImage}
+                          resizeMode="cover"
+                        />
                         <TouchableOpacity 
                           style={styles.removeImageButton}
                           onPress={() => removeImage(index)}
+                          activeOpacity={0.7}
                         >
                           <X size={16} color="#FFFFFF" />
                         </TouchableOpacity>
@@ -419,6 +438,20 @@ export default function CommunityQuestionsScreen() {
                     ))}
                   </ScrollView>
                 )}
+                
+                <TouchableOpacity 
+                  style={styles.addPhotoButton}
+                  onPress={showImagePicker}
+                  activeOpacity={0.7}
+                >
+                  <Camera size={24} color="#007AFF" />
+                  <Text style={styles.addPhotoText}>
+                    {selectedImages.length > 0 
+                      ? (language === 'ko' ? '사진 추가' : 'Add More Photos')
+                      : (language === 'ko' ? '사진 추가' : 'Add Photo')
+                    }
+                  </Text>
+                </TouchableOpacity>
               </View>
             </ScrollView>
           </KeyboardAvoidingView>
@@ -688,9 +721,10 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#007AFF',
     borderStyle: 'dashed',
-    paddingVertical: 20,
+    paddingVertical: 16,
     paddingHorizontal: 16,
     gap: 8,
+    minHeight: 56,
   },
   addPhotoText: {
     fontSize: 14,
@@ -698,7 +732,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   imagePreviewContainer: {
-    marginTop: 12,
+    marginBottom: 12,
     maxHeight: 120,
   },
   imagePreview: {
