@@ -68,7 +68,7 @@ interface Group {
   description?: string;
   subject?: string;
   member_count: number;
-  max_members: number;
+  max_members?: number;
   is_public: boolean;
   created_by: string;
   creator?: {
@@ -435,7 +435,7 @@ export default function GroupDetailScreen() {
             <Text style={styles.groupDescription}>{currentGroup.description}</Text>
           )}
           <Text style={styles.groupMembers}>
-            {currentGroup.member_count} / {currentGroup.max_members} {language === 'ko' ? '멤버' : 'members'}
+            {currentGroup.member_count} {language === 'ko' ? '멤버' : 'members'}
           </Text>
         </View>
       )}

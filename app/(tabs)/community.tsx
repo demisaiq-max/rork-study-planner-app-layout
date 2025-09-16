@@ -88,7 +88,7 @@ interface Group {
   description?: string;
   subject?: string;
   member_count: number;
-  max_members: number;
+  max_members?: number;
   is_public: boolean;
   created_by: string;
   creator?: {
@@ -122,7 +122,7 @@ export default function CommunityScreen() {
   const [newGroupName, setNewGroupName] = useState("");
   const [newGroupDescription, setNewGroupDescription] = useState("");
   const [newGroupSubject, setNewGroupSubject] = useState("");
-  const [newGroupMaxMembers, setNewGroupMaxMembers] = useState(50);
+  const [newGroupMaxMembers, setNewGroupMaxMembers] = useState<number | undefined>(undefined);
   const [newComment, setNewComment] = useState("");
   const [newAnswer, setNewAnswer] = useState("");
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
@@ -216,7 +216,7 @@ export default function CommunityScreen() {
       setNewGroupName("");
       setNewGroupDescription("");
       setNewGroupSubject("");
-      setNewGroupMaxMembers(50);
+      setNewGroupMaxMembers(undefined);
       setShowCreateGroup(false);
       Alert.alert(
         language === 'ko' ? '성공' : 'Success',
@@ -794,7 +794,7 @@ export default function CommunityScreen() {
               </Text>
             )}
             <Text style={styles.groupMembers}>
-              {group.member_count} / {group.max_members} {language === 'ko' ? '멤버' : 'members'}
+              {group.member_count} {language === 'ko' ? '멤버' : 'members'}
             </Text>
           </View>
         </View>
@@ -1378,24 +1378,7 @@ export default function CommunityScreen() {
                 onChangeText={setNewGroupSubject}
               />
               
-              <Text style={styles.inputLabel}>
-                {language === 'ko' ? '최대 멤버 수' : 'Max Members'}
-              </Text>
-              <View style={styles.memberCountContainer}>
-                <TouchableOpacity 
-                  style={styles.memberCountButton}
-                  onPress={() => setNewGroupMaxMembers(Math.max(2, newGroupMaxMembers - 10))}
-                >
-                  <Text style={styles.memberCountButtonText}>-</Text>
-                </TouchableOpacity>
-                <Text style={styles.memberCountText}>{newGroupMaxMembers}</Text>
-                <TouchableOpacity 
-                  style={styles.memberCountButton}
-                  onPress={() => setNewGroupMaxMembers(Math.min(100, newGroupMaxMembers + 10))}
-                >
-                  <Text style={styles.memberCountButtonText}>+</Text>
-                </TouchableOpacity>
-              </View>
+
             </ScrollView>
           </KeyboardAvoidingView>
         </View>

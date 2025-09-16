@@ -8,7 +8,7 @@ export const createGroupProcedure = protectedProcedure
       name: z.string().min(1, 'Group name is required'),
       description: z.string().optional(),
       subject: z.string().optional(),
-      maxMembers: z.number().min(2).max(100).default(50),
+      maxMembers: z.number().min(1).optional(),
       isPublic: z.boolean().default(true),
     })
   )
@@ -36,7 +36,7 @@ export const createGroupProcedure = protectedProcedure
         name: input.name,
         description: input.description,
         subject: input.subject,
-        max_members: input.maxMembers,
+        max_members: input.maxMembers || null,
         is_public: input.isPublic,
         created_by: userId,
         member_count: 1, // Creator is automatically a member
