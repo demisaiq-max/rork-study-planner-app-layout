@@ -1333,7 +1333,11 @@ export default function CommunityScreen() {
         animationType="slide"
         presentationStyle="pageSheet"
       >
-        <View style={[styles.modalContainer, { paddingTop: insets.top }]}>
+        <KeyboardAvoidingView 
+          style={[styles.modalContainer, { paddingTop: insets.top }]}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={0}
+        >
           <View style={styles.createPostHeader}>
             <TouchableOpacity onPress={() => setShowCreatePost(false)}>
               <X size={24} color="#000000" />
@@ -1348,10 +1352,7 @@ export default function CommunityScreen() {
             </TouchableOpacity>
           </View>
           
-          <KeyboardAvoidingView 
-            style={styles.createPostContent}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          >
+          <View style={styles.createPostContent}>
             <TextInput
               style={styles.postTextInput}
               placeholder={language === 'ko' ? '오늘의 공부를 공유해주세요...' : 'Share your study today...'}
@@ -1361,17 +1362,20 @@ export default function CommunityScreen() {
               multiline
               autoFocus
             />
-            
-            <View style={styles.createPostActions}>
-              <TouchableOpacity style={styles.mediaButton}>
-                <Camera size={24} color="#007AFF" />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.mediaButton}>
-                <ImageIcon size={24} color="#007AFF" />
-              </TouchableOpacity>
-            </View>
-          </KeyboardAvoidingView>
-        </View>
+          </View>
+          
+          <View style={[
+            styles.createPostActions,
+            { marginBottom: Platform.OS === 'ios' ? 0 : 20 }
+          ]}>
+            <TouchableOpacity style={styles.mediaButton}>
+              <Camera size={24} color="#007AFF" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.mediaButton}>
+              <ImageIcon size={24} color="#007AFF" />
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Create Question Modal */}
@@ -2122,10 +2126,10 @@ const styles = StyleSheet.create({
   },
   createPostContent: {
     flex: 1,
+    paddingHorizontal: 20,
   },
   postTextInput: {
     flex: 1,
-    paddingHorizontal: 20,
     paddingTop: 20,
     fontSize: 16,
     color: '#000000',
@@ -2147,6 +2151,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#E5E5EA',
     gap: 20,
+    backgroundColor: '#FFFFFF',
   },
   mediaButton: {
     padding: 8,
