@@ -17,11 +17,9 @@ export const createContext = async (opts: FetchCreateContextFnOptions) => {
   try {
     // Get the Authorization header
     const authHeader = opts.req.headers.get('authorization');
-    console.log('🔍 tRPC Context - Auth header present:', !!authHeader);
     
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-      console.log('🔑 tRPC Context - Token length:', token.length);
       
       // Verify the JWT token with Supabase
       const { data: { user: authUser }, error } = await supabase.auth.getUser(token);
@@ -32,8 +30,6 @@ export const createContext = async (opts: FetchCreateContextFnOptions) => {
         userId = authUser.id;
         user = authUser;
         console.log('✅ Authenticated user in tRPC:', userId);
-      } else {
-        console.log('⚠️ No user returned from Supabase auth');
       }
     } else {
       console.log('⚠️ No authorization header found in tRPC request');
@@ -41,8 +37,6 @@ export const createContext = async (opts: FetchCreateContextFnOptions) => {
   } catch (error) {
     console.error('❌ Error getting user in tRPC context:', error);
   }
-  
-  console.log('📋 tRPC Context created - userId:', userId ? 'present' : 'null');
   
   return {
     req: opts.req,

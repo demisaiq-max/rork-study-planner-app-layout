@@ -3,7 +3,6 @@ import { protectedProcedure } from '@/backend/trpc/create-context';
 const getLatestTestResults = protectedProcedure
   .query(async ({ ctx }) => {
     try {
-      console.log('🔍 getLatestTestResults called for user:', ctx.userId);
       
       // Get the latest test result for each subject
       const { data, error } = await ctx.supabase
@@ -21,12 +20,10 @@ const getLatestTestResults = protectedProcedure
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('❌ Supabase error in getLatestTestResults:', error);
+        console.error('Supabase error in getLatestTestResults:', error);
         // Return empty array instead of throwing to avoid JSON parse errors
         return [];
       }
-
-      console.log('✅ getLatestTestResults data:', data?.length || 0, 'results');
 
       if (!data || data.length === 0) {
         return [];
@@ -45,11 +42,9 @@ const getLatestTestResults = protectedProcedure
         }
       });
 
-      const results = Object.values(latestBySubject);
-      console.log('📊 Returning', results.length, 'latest test results');
-      return results;
+      return Object.values(latestBySubject);
     } catch (err) {
-      console.error('❌ Error in getLatestTestResults:', err);
+      console.error('Error in getLatestTestResults:', err);
       // Always return valid JSON
       return [];
     }

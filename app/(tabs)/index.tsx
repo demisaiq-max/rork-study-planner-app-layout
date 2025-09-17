@@ -82,11 +82,7 @@ export default function HomeScreen() {
     undefined,
     { 
       enabled: !!authUser?.id && !authLoading && enableSecondaryQueries,
-      retry: (failureCount) => {
-        console.log('🔄 Retry attempt', failureCount, 'for getLatestTestResults');
-        return failureCount < 2; // Only retry twice
-      },
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      retry: 1,
       staleTime: 30000
     }
   );

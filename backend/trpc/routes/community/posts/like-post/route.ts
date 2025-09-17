@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { protectedProcedure } from '@/backend/trpc/create-context';
+import { supabase } from '@/lib/supabase';
 import { TRPCError } from '@trpc/server';
 
 export const likePostProcedure = protectedProcedure
@@ -13,7 +14,7 @@ export const likePostProcedure = protectedProcedure
       console.log('Like post request:', { postId: input.postId, userId: ctx.userId });
       
       // First verify the post exists
-      const { data: post, error: postError } = await ctx.supabase
+      const { data: post, error: postError } = await supabase
         .from('daily_posts')
         .select('id')
         .eq('id', input.postId)
@@ -28,7 +29,7 @@ export const likePostProcedure = protectedProcedure
       }
 
       // Check if already liked
-      const { data: existingLike, error: likeCheckError } = await ctx.supabase
+      const { data: existingLike, error: likeCheckError } = await supabase
         .from('post_likes')
         .select('id')
         .eq('post_id', input.postId)
@@ -45,7 +46,7 @@ export const likePostProcedure = protectedProcedure
 
       if (existingLike) {
         // Unlike
-        const { error: deleteError } = await ctx.supabase
+        const { error: deleteError } = await supabase
           .from('post_likes')
           .delete()
           .eq('post_id', input.postId)
@@ -63,7 +64,7 @@ export const likePostProcedure = protectedProcedure
         return { liked: false };
       } else {
         // Like
-        const { error: insertError } = await ctx.supabase
+        const { error: insertError } = await supabase
           .from('post_likes')
           .insert({
             post_id: input.postId,

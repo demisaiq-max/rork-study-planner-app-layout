@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { protectedProcedure } from '@/backend/trpc/create-context';
+import { supabase } from '@/lib/supabase';
 import { TRPCError } from '@trpc/server';
 
 export const addCommentProcedure = protectedProcedure
@@ -15,7 +16,7 @@ export const addCommentProcedure = protectedProcedure
       console.log('Add comment request:', { postId: input.postId, userId: ctx.userId, content: input.content });
       
       // First verify the post exists
-      const { data: post, error: postError } = await ctx.supabase
+      const { data: post, error: postError } = await supabase
         .from('daily_posts')
         .select('id')
         .eq('id', input.postId)
@@ -30,7 +31,7 @@ export const addCommentProcedure = protectedProcedure
       }
 
       // Insert the comment
-      const { data, error } = await ctx.supabase
+      const { data, error } = await supabase
         .from('post_comments')
         .insert({
           post_id: input.postId,
