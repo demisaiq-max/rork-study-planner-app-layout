@@ -182,6 +182,30 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     }
   }, []);
 
+  const resetPassword = useCallback(async (email: string) => {
+    if (!email?.trim()) {
+      return { error: 'Email is required' };
+    }
+
+    try {
+      console.log('🔐 Sending password reset email to:', email.trim());
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: 'exp://localhost:8081/(auth)/reset-password',
+      });
+
+      if (error) {
+        console.error('❌ Password reset error:', error);
+        return { error: error.message };
+      }
+
+      console.log('✅ Password reset email sent');
+      return {};
+    } catch (error) {
+      console.error('❌ Password reset exception:', error);
+      return { error: 'An unexpected error occurred' };
+    }
+  }, []);
+
   return useMemo(() => ({
     user,
     session,
@@ -190,7 +214,8 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     signUp,
     signOut,
     signInWithGoogle,
-  }), [user, session, isLoading, signIn, signUp, signOut, signInWithGoogle]);
+    resetPassword,
+  }), [user, session, isLoading, signIn, signUp, signOut, signInWithGoogle, resetPassword]);
 });
 
 // Helper hook to check if user is signed in
