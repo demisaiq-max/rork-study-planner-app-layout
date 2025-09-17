@@ -1356,4 +1356,10 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
+  moreButton: {
+    padding: 8,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });
