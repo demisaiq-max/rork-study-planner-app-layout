@@ -31,37 +31,15 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   global: {
     headers: {
       'X-Client-Info': 'expo-react-native'
-    },
-    fetch: (url, options = {}) => {
-      // Add timeout to all Supabase requests
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
-      
-      return fetch(url, {
-        ...options,
-        signal: controller.signal,
-      }).finally(() => {
-        clearTimeout(timeoutId);
-      });
     }
   }
 });
 
-// Test connection on initialization with better error handling
+// Test connection on initialization
 const testSupabaseConnection = async () => {
   try {
     console.log('🔍 Testing Supabase connection...');
-    
-    // Add timeout to prevent hanging
-    const connectionPromise = supabase.from('users').select('id').limit(1);
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Connection timeout')), 5000)
-    );
-    
-    const { data, error } = await Promise.race([
-      connectionPromise,
-      timeoutPromise
-    ]) as any;
+    const { data, error } = await supabase.from('users').select('id').limit(1);
     
     if (error) {
       console.error('❌ Supabase connection test failed:', {

@@ -79,32 +79,21 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
     try {
       console.log('🔐 Signing in with email:', email.trim());
-      
-      // Add timeout to prevent hanging
-      const signInPromise = supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       });
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Sign in timeout')), 10000)
-      );
-      
-      const { error } = await Promise.race([
-        signInPromise,
-        timeoutPromise
-      ]) as any;
 
       if (error) {
         console.error('❌ Sign in error:', error);
-        return { error: error.message || 'Sign in failed' };
+        return { error: error.message };
       }
 
       console.log('✅ Sign in successful');
       return {};
     } catch (error) {
       console.error('❌ Sign in exception:', error);
-      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
-      return { error: errorMessage };
+      return { error: 'An unexpected error occurred' };
     }
   }, []);
 
@@ -115,9 +104,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
     try {
       console.log('🔐 Signing up with email:', email.trim());
-      
-      // Add timeout to prevent hanging
-      const signUpPromise = supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
@@ -129,26 +116,17 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
             : 'exp://localhost:8081/(auth)/confirm-email',
         },
       });
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Sign up timeout')), 10000)
-      );
-      
-      const { error } = await Promise.race([
-        signUpPromise,
-        timeoutPromise
-      ]) as any;
 
       if (error) {
         console.error('❌ Sign up error:', error);
-        return { error: error.message || 'Sign up failed' };
+        return { error: error.message };
       }
 
       console.log('✅ Sign up successful');
       return {};
     } catch (error) {
       console.error('❌ Sign up exception:', error);
-      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
-      return { error: errorMessage };
+      return { error: 'An unexpected error occurred' };
     }
   }, []);
 

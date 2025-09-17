@@ -25,39 +25,17 @@ export const trpcClient = trpc.createClient({
     httpBatchLink({
       url: trpcUrl,
       transformer: superjson,
-      fetch: async (url, options) => {
+      fetch: (url, options) => {
         // Add timeout to prevent hanging requests
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
         
-        try {
-          const response = await fetch(url, {
-            ...options,
-            signal: controller.signal,
-          });
-          
-          // Check if response is ok and has valid content type
-          if (!response.ok) {
-            console.error('❌ tRPC fetch error:', {
-              status: response.status,
-              statusText: response.statusText,
-              url: response.url
-            });
-          }
-          
-          // Check content type to ensure it's JSON
-          const contentType = response.headers.get('content-type');
-          if (contentType && !contentType.includes('application/json')) {
-            console.warn('⚠️ Non-JSON response from tRPC:', contentType);
-          }
-          
-          return response;
-        } catch (error) {
-          console.error('❌ tRPC fetch exception:', error);
-          throw error;
-        } finally {
+        return fetch(url, {
+          ...options,
+          signal: controller.signal,
+        }).finally(() => {
           clearTimeout(timeoutId);
-        }
+        });
       },
       headers: async () => {
         const headers: Record<string, string> = {
@@ -101,39 +79,17 @@ export const createAuthenticatedTRPCClient = () => {
       httpBatchLink({
         url: trpcUrl,
         transformer: superjson,
-        fetch: async (url, options) => {
+        fetch: (url, options) => {
           // Add timeout to prevent hanging requests
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
           
-          try {
-            const response = await fetch(url, {
-              ...options,
-              signal: controller.signal,
-            });
-            
-            // Check if response is ok and has valid content type
-            if (!response.ok) {
-              console.error('❌ tRPC fetch error:', {
-                status: response.status,
-                statusText: response.statusText,
-                url: response.url
-              });
-            }
-            
-            // Check content type to ensure it's JSON
-            const contentType = response.headers.get('content-type');
-            if (contentType && !contentType.includes('application/json')) {
-              console.warn('⚠️ Non-JSON response from tRPC:', contentType);
-            }
-            
-            return response;
-          } catch (error) {
-            console.error('❌ tRPC fetch exception:', error);
-            throw error;
-          } finally {
+          return fetch(url, {
+            ...options,
+            signal: controller.signal,
+          }).finally(() => {
             clearTimeout(timeoutId);
-          }
+          });
         },
         headers: async () => {
           const headers: Record<string, string> = {
