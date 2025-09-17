@@ -1223,7 +1223,7 @@ export default function CommunityScreen() {
                 ref={scrollViewRef}
                 style={styles.modalScrollContent}
                 keyboardShouldPersistTaps="handled"
-                contentContainerStyle={{ paddingBottom: 120 }}
+                contentContainerStyle={{ paddingBottom: keyboardHeight > 0 ? keyboardHeight + 80 : 120 }}
                 showsVerticalScrollIndicator={true}
               >
                 <View style={styles.postDetailHeader}>
@@ -1302,44 +1302,38 @@ export default function CommunityScreen() {
               </ScrollView>
               
               {/* Comment Input with Keyboard Avoidance */}
-              <KeyboardAvoidingView 
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-                style={styles.keyboardAvoidingView}
-              >
-                <View style={[styles.commentInputContainer, { 
-                  bottom: isKeyboardVisible ? 0 : insets.bottom,
-                  paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 20) : 20
-                }]}>
-                  <View style={styles.commentInputWrapper}>
-                    <View style={styles.inputRow}>
-                      <TextInput
-                        ref={commentInputRef}
-                        style={styles.commentInput}
-                        placeholder={language === 'ko' ? '댓글을 입력하세요...' : 'Write a comment...'}
-                        placeholderTextColor="#8E8E93"
-                        value={newComment}
-                        onChangeText={setNewComment}
-                        multiline
-                        maxLength={500}
-                      />
-                      <TouchableOpacity 
-                        style={[styles.sendButton, {
-                          opacity: newComment.trim() ? 1 : 0.5
-                        }]}
-                        onPress={handleAddComment}
-                        disabled={!newComment.trim() || addCommentMutation.isPending}
-                      >
-                        {addCommentMutation.isPending ? (
-                          <ActivityIndicator size="small" color="#FFFFFF" />
-                        ) : (
-                          <Send size={18} color="#FFFFFF" />
-                        )}
-                      </TouchableOpacity>
-                    </View>
+              <View style={[styles.commentInputContainer, { 
+                bottom: keyboardHeight > 0 ? keyboardHeight : 0,
+                paddingBottom: Platform.OS === 'ios' ? 20 : 20
+              }]}>
+                <View style={styles.commentInputWrapper}>
+                  <View style={styles.inputRow}>
+                    <TextInput
+                      ref={commentInputRef}
+                      style={styles.commentInput}
+                      placeholder={language === 'ko' ? '댓글을 입력하세요...' : 'Write a comment...'}
+                      placeholderTextColor="#8E8E93"
+                      value={newComment}
+                      onChangeText={setNewComment}
+                      multiline
+                      maxLength={500}
+                    />
+                    <TouchableOpacity 
+                      style={[styles.sendButton, {
+                        opacity: newComment.trim() ? 1 : 0.5
+                      }]}
+                      onPress={handleAddComment}
+                      disabled={!newComment.trim() || addCommentMutation.isPending}
+                    >
+                      {addCommentMutation.isPending ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <Send size={18} color="#FFFFFF" />
+                      )}
+                    </TouchableOpacity>
                   </View>
                 </View>
-              </KeyboardAvoidingView>
+              </View>
             </View>
           )}
         </View>
@@ -2128,6 +2122,9 @@ const styles = StyleSheet.create({
     right: 0,
   },
   commentInputContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E5E5EA',
