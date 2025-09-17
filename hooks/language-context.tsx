@@ -578,16 +578,8 @@ export const [LanguageProvider, useLanguage] = createContextHook(() => {
         })
       });
 
-      try {
-        // parse safely so HTML errors are surfaced with a helpful message
-        const { parseJsonResponse } = await import('@/lib/fetchUtils');
-        const data = await parseJsonResponse<any>(response);
-        return data.completion || text;
-      } catch (err) {
-        console.error('translateText: failed to parse JSON response', err);
-        // If the response was HTML or invalid JSON, return the original text
-        return text;
-      }
+      const data = await response.json();
+      return data.completion || text;
     } catch (error) {
       console.error('Translation failed:', error);
       return text;
