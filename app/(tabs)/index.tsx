@@ -55,49 +55,65 @@ export default function HomeScreen() {
 
   console.log('🏠 Home Screen - Auth Status:', { authLoading, isSignedIn, hasAuthUser: !!authUser });
   
-  // Fetch exams from database
+  // Stagger queries to prevent hydration timeout
+  const [enableSecondaryQueries, setEnableSecondaryQueries] = useState(false);
+  
+  // Primary queries (load first)
   const { data: exams, isLoading: isLoadingExams, refetch: refetchExams } = trpc.exams.getUserExams.useQuery(
     undefined,
     { 
-      enabled: !!authUser?.id // Only enabled when user is authenticated
+      enabled: !!authUser?.id && !authLoading,
+      retry: 1,
+      staleTime: 30000 // 30 seconds
     }
   );
   
-  // Fetch graded exams
-  const { data: gradedExams, isLoading: isLoadingGradedExams, error: gradedExamsError, refetch: refetchGradedExams } = trpc.tests.getLatestTestResults.useQuery(
-    undefined,
-    { 
-      enabled: !!authUser?.id, // Only enabled when user is authenticated
-      retry: 1
-    }
-  );
-  
-  // Fetch brain dumps from database
-  const { data: brainDumps, isLoading: isLoadingBrainDumps, error: brainDumpsError, refetch: refetchBrainDumps } = trpc.brainDumps.getBrainDumps.useQuery(
-    { limit: 10 },
-    { 
-      enabled: !!authUser?.id, // Only enabled when user is authenticated
-      retry: 1
-    }
-  );
-  
-  // Fetch priority tasks from database
-  const { data: dbPriorityTasks, isLoading: isLoadingPriorityTasks, refetch: refetchPriorityTasks } = trpc.priorityTasks.getPriorityTasks.useQuery(
-    { userId: authUser?.id || '' },
-    { 
-      enabled: !!authUser?.id, // Only enabled when user is authenticated
-      retry: 1
-    }
-  );
-  
-  // Fetch user profile for profile picture
   const { data: userProfile, isLoading: isLoadingProfile, refetch: refetchProfile } = trpc.users.getUserProfile.useQuery(
     { userId: authUser?.id || '' },
     { 
-      enabled: !!authUser?.id, // Only enabled when user is authenticated
-      retry: 1
+      enabled: !!authUser?.id && !authLoading,
+      retry: 1,
+      staleTime: 60000 // 1 minute
     }
   );
+  
+  // Secondary queries (load after primary queries complete)
+  const { data: gradedExams, isLoading: isLoadingGradedExams, error: gradedExamsError, refetch: refetchGradedExams } = trpc.tests.getLatestTestResults.useQuery(
+    undefined,
+    { 
+      enabled: !!authUser?.id && !authLoading && enableSecondaryQueries,
+      retry: 1,
+      staleTime: 30000
+    }
+  );
+  
+  const { data: brainDumps, isLoading: isLoadingBrainDumps, error: brainDumpsError, refetch: refetchBrainDumps } = trpc.brainDumps.getBrainDumps.useQuery(
+    { limit: 10 },
+    { 
+      enabled: !!authUser?.id && !authLoading && enableSecondaryQueries,
+      retry: 1,
+      staleTime: 30000
+    }
+  );
+  
+  const { data: dbPriorityTasks, isLoading: isLoadingPriorityTasks, refetch: refetchPriorityTasks } = trpc.priorityTasks.getPriorityTasks.useQuery(
+    { userId: authUser?.id || '' },
+    { 
+      enabled: !!authUser?.id && !authLoading && enableSecondaryQueries,
+      retry: 1,
+      staleTime: 30000
+    }
+  );
+  
+  // Enable secondary queries after primary ones complete
+  useEffect(() => {
+    if (authUser?.id && !authLoading && !isLoadingExams && !isLoadingProfile) {
+      const timer = setTimeout(() => {
+        setEnableSecondaryQueries(true);
+      }, 100); // Small delay to prevent race conditions
+      return () => clearTimeout(timer);
+    }
+  }, [authUser?.id, authLoading, isLoadingExams, isLoadingProfile]);
   
   // Log data status after all queries are defined
   console.log('🏠 Home Screen - Data Status:', { 

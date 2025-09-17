@@ -19,12 +19,24 @@ const getBaseUrl = () => {
 
 const trpcUrl = `${getBaseUrl()}/api/trpc`;
 
-// Create the tRPC client
+// Create the tRPC client with timeout and retry configuration
 export const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
       url: trpcUrl,
       transformer: superjson,
+      fetch: (url, options) => {
+        // Add timeout to prevent hanging requests
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
+        return fetch(url, {
+          ...options,
+          signal: controller.signal,
+        }).finally(() => {
+          clearTimeout(timeoutId);
+        });
+      },
       headers: async () => {
         const headers: Record<string, string> = {
           'content-type': 'application/json',
@@ -32,8 +44,16 @@ export const trpcClient = trpc.createClient({
         };
 
         try {
-          // Get the current session
-          const { data: { session } } = await supabase.auth.getSession();
+          // Add timeout to session request
+          const sessionPromise = supabase.auth.getSession();
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Session timeout')), 3000)
+          );
+          
+          const { data: { session } } = await Promise.race([
+            sessionPromise,
+            timeoutPromise
+          ]) as any;
           
           if (session?.access_token) {
             headers['authorization'] = `Bearer ${session.access_token}`;
@@ -43,6 +63,7 @@ export const trpcClient = trpc.createClient({
           }
         } catch (error) {
           console.error('❌ Error getting session for tRPC:', error);
+          // Continue without auth header rather than failing
         }
 
         return headers;
@@ -58,6 +79,18 @@ export const createAuthenticatedTRPCClient = () => {
       httpBatchLink({
         url: trpcUrl,
         transformer: superjson,
+        fetch: (url, options) => {
+          // Add timeout to prevent hanging requests
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+          
+          return fetch(url, {
+            ...options,
+            signal: controller.signal,
+          }).finally(() => {
+            clearTimeout(timeoutId);
+          });
+        },
         headers: async () => {
           const headers: Record<string, string> = {
             'content-type': 'application/json',
@@ -65,8 +98,16 @@ export const createAuthenticatedTRPCClient = () => {
           };
 
           try {
-            // Get the current session
-            const { data: { session } } = await supabase.auth.getSession();
+            // Add timeout to session request
+            const sessionPromise = supabase.auth.getSession();
+            const timeoutPromise = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Session timeout')), 3000)
+            );
+            
+            const { data: { session } } = await Promise.race([
+              sessionPromise,
+              timeoutPromise
+            ]) as any;
             
             if (session?.access_token) {
               headers['authorization'] = `Bearer ${session.access_token}`;
@@ -76,6 +117,7 @@ export const createAuthenticatedTRPCClient = () => {
             }
           } catch (error) {
             console.error('❌ Error getting session for tRPC:', error);
+            // Continue without auth header rather than failing
           }
 
           return headers;

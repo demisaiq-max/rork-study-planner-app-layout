@@ -59,7 +59,7 @@ function AuthenticatedTRPCProvider({ children, queryClient }: { children: React.
 }
 
 export default function RootLayout() {
-  // Create QueryClient inside the component to ensure it's fresh for each app instance
+  // Create QueryClient with optimized settings to prevent hydration timeout
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
       queries: {
@@ -68,16 +68,17 @@ export default function RootLayout() {
           if (error instanceof Error && error.message.includes('4')) {
             return false;
           }
-          // Retry up to 2 times for other errors
-          return failureCount < 2;
+          // Reduce retries to prevent timeout
+          return failureCount < 1;
         },
-        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-        staleTime: 5 * 60 * 1000, // 5 minutes
-        gcTime: 10 * 60 * 1000, // 10 minutes
+        retryDelay: 1000, // Fixed delay instead of exponential backoff
+        staleTime: 30 * 1000, // 30 seconds - shorter to prevent stale data issues
+        gcTime: 5 * 60 * 1000, // 5 minutes
+        networkMode: 'online', // Only run queries when online
       },
       mutations: {
-        retry: 1,
-        retryDelay: 1000,
+        retry: 0, // No retries for mutations to prevent timeout
+        networkMode: 'online',
       },
     },
   }));

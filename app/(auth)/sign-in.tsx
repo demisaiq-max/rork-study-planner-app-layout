@@ -65,6 +65,7 @@ export default function SignInScreen() {
           autoCapitalize="none"
           value={email}
           placeholder="Enter email"
+          placeholderTextColor="#8E8E93"
           onChangeText={setEmail}
           keyboardType="email-address"
           autoComplete="email"
@@ -74,6 +75,7 @@ export default function SignInScreen() {
           style={styles.input}
           value={password}
           placeholder="Enter password"
+          placeholderTextColor="#8E8E93"
           secureTextEntry={true}
           onChangeText={setPassword}
           autoComplete="current-password"

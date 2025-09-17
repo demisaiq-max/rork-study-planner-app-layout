@@ -9,11 +9,25 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
+    let mounted = true;
+    
+    // Get initial session with timeout
     const getInitialSession = async () => {
       try {
         console.log('🔐 Getting initial session...');
-        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        // Add timeout to prevent hanging
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Session timeout')), 5000)
+        );
+        
+        const { data: { session }, error } = await Promise.race([
+          sessionPromise,
+          timeoutPromise
+        ]) as any;
+        
+        if (!mounted) return;
         
         if (error) {
           console.error('❌ Error getting initial session:', error);
@@ -24,8 +38,15 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         }
       } catch (error) {
         console.error('❌ Error in getInitialSession:', error);
+        if (mounted) {
+          // Set to null on timeout/error to prevent infinite loading
+          setSession(null);
+          setUser(null);
+        }
       } finally {
-        setIsLoading(false);
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
     };
 
@@ -34,6 +55,8 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, sessionData) => {
+        if (!mounted) return;
+        
         console.log('🔐 Auth state changed:', event || 'unknown', sessionData ? 'Session exists' : 'No session');
         
         setSession(sessionData);
@@ -43,6 +66,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     );
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
