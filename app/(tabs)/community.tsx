@@ -126,6 +126,7 @@ export default function CommunityScreen() {
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [newPostContent, setNewPostContent] = useState("");
+  const [postImage, setPostImage] = useState<string | null>(null);
   const [newQuestionTitle, setNewQuestionTitle] = useState("");
   const [newQuestionContent, setNewQuestionContent] = useState("");
   const [newQuestionSubject, setNewQuestionSubject] = useState("");
@@ -186,6 +187,7 @@ export default function CommunityScreen() {
     onSuccess: () => {
       postsQuery.refetch();
       setNewPostContent("");
+      setPostImage(null);
       setShowCreatePost(false);
       Alert.alert(
         language === 'ko' ? '성공' : 'Success',
@@ -530,6 +532,7 @@ export default function CommunityScreen() {
     createPostMutation.mutate({
       content: newPostContent,
       groupId: selectedGroup || undefined,
+      imageUrl: postImage || undefined,
     });
   };
 
@@ -608,7 +611,7 @@ export default function CommunityScreen() {
     return true;
   };
 
-  const pickImageFromGallery = async () => {
+  const pickImageFromGallery = async (isForPost = false) => {
     const hasPermission = await requestPermissions();
     if (!hasPermission) return;
 
@@ -625,7 +628,11 @@ export default function CommunityScreen() {
       if (!result.canceled && result.assets && result.assets[0]) {
         const imageUri = result.assets[0].uri;
         console.log('Selected image from gallery:', imageUri);
-        setQuestionImages(prev => [...prev, imageUri]);
+        if (isForPost) {
+          setPostImage(imageUri);
+        } else {
+          setQuestionImages(prev => [...prev, imageUri]);
+        }
       }
     } catch (error) {
       console.error('Error picking image from gallery:', error);
@@ -636,7 +643,7 @@ export default function CommunityScreen() {
     }
   };
 
-  const takePhoto = async () => {
+  const takePhoto = async (isForPost = false) => {
     const hasPermission = await requestCameraPermissions();
     if (!hasPermission) return;
 
@@ -652,7 +659,11 @@ export default function CommunityScreen() {
       if (!result.canceled && result.assets && result.assets[0]) {
         const imageUri = result.assets[0].uri;
         console.log('Captured photo:', imageUri);
-        setQuestionImages(prev => [...prev, imageUri]);
+        if (isForPost) {
+          setPostImage(imageUri);
+        } else {
+          setQuestionImages(prev => [...prev, imageUri]);
+        }
       }
     } catch (error) {
       console.error('Error taking photo:', error);
@@ -676,9 +687,9 @@ export default function CommunityScreen() {
         },
         (buttonIndex) => {
           if (buttonIndex === 1) {
-            takePhoto();
+            takePhoto(false);
           } else if (buttonIndex === 2) {
-            pickImageFromGallery();
+            pickImageFromGallery(false);
           }
         }
       );
@@ -688,8 +699,8 @@ export default function CommunityScreen() {
         language === 'ko' ? '사진을 어떻게 추가하시겠습니까?' : 'How would you like to add a photo?',
         [
           { text: language === 'ko' ? '취소' : 'Cancel', style: 'cancel' },
-          { text: language === 'ko' ? '사진 촬영' : 'Take Photo', onPress: takePhoto },
-          { text: language === 'ko' ? '갤러리에서 선택' : 'Choose from Gallery', onPress: pickImageFromGallery },
+          { text: language === 'ko' ? '사진 촬영' : 'Take Photo', onPress: () => takePhoto(false) },
+          { text: language === 'ko' ? '갤러리에서 선택' : 'Choose from Gallery', onPress: () => pickImageFromGallery(false) },
         ]
       );
     }
@@ -1368,6 +1379,21 @@ export default function CommunityScreen() {
                 autoFocus
               />
               
+              {/* Image Preview Section */}
+              {postImage && (
+                <View style={styles.imagePreviewSection}>
+                  <View style={styles.imagePreviewContainer}>
+                    <Image source={{ uri: postImage }} style={styles.postImagePreview} />
+                    <TouchableOpacity 
+                      style={styles.removePostImageButton}
+                      onPress={() => setPostImage(null)}
+                    >
+                      <X size={20} color="#FFFFFF" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+              
               {/* Centered Image Upload Section */}
               <View style={styles.centeredImageUploadSection}>
                 <Text style={styles.imageUploadTitle}>
@@ -1376,7 +1402,7 @@ export default function CommunityScreen() {
                 <View style={styles.imageUploadButtons}>
                   <TouchableOpacity 
                     style={styles.centeredImageUploadButton}
-                    onPress={takePhoto}
+                    onPress={() => takePhoto(true)}
                   >
                     <Camera size={40} color="#007AFF" />
                     <Text style={styles.centeredImageUploadButtonText}>
@@ -1386,7 +1412,7 @@ export default function CommunityScreen() {
                   
                   <TouchableOpacity 
                     style={styles.centeredImageUploadButton}
-                    onPress={pickImageFromGallery}
+                    onPress={() => pickImageFromGallery(true)}
                   >
                     <ImageIcon size={40} color="#007AFF" />
                     <Text style={styles.centeredImageUploadButtonText}>
@@ -2463,5 +2489,35 @@ const styles = StyleSheet.create({
     marginHorizontal: 24,
     minWidth: 40,
     textAlign: 'center',
+  },
+  imagePreviewSection: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  imagePreviewContainer: {
+    position: 'relative',
+  },
+  postImagePreview: {
+    width: 200,
+    height: 200,
+    borderRadius: 12,
+    backgroundColor: '#F0F0F0',
+  },
+  removePostImageButton: {
+    position: 'absolute',
+    top: -10,
+    right: -10,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FF3B30',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
   },
 });
