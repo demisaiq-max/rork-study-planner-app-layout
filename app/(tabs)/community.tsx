@@ -1195,7 +1195,11 @@ export default function CommunityScreen() {
         animationType="slide"
         presentationStyle="pageSheet"
       >
-        <View style={[styles.modalContainer, { paddingTop: insets.top }]}>
+        <KeyboardAvoidingView 
+          style={[styles.modalContainer, { paddingTop: insets.top }]}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={0}
+        >
           <View style={styles.modalHeader}>
             <TouchableOpacity 
               onPress={() => setShowPostDetail(false)}
@@ -1214,7 +1218,7 @@ export default function CommunityScreen() {
                 ref={scrollViewRef}
                 style={styles.modalScrollContent}
                 keyboardShouldPersistTaps="handled"
-                contentContainerStyle={{ paddingBottom: 120 }}
+                contentContainerStyle={{ paddingBottom: 100 }}
                 showsVerticalScrollIndicator={true}
               >
                 <View style={styles.postDetailHeader}>
@@ -1293,47 +1297,38 @@ export default function CommunityScreen() {
               </ScrollView>
               
               {/* Comment Input */}
-              <KeyboardAvoidingView 
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-                style={styles.keyboardAvoidingView}
-              >
-                <View style={[styles.commentInputContainer, { 
-                  bottom: keyboardHeight > 0 ? 0 : insets.bottom,
-                  paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 20) : 20
-                }]}>
-                  <View style={styles.commentInputWrapper}>
-                    <View style={styles.inputRow}>
-                      <TextInput
-                        ref={commentInputRef}
-                        style={styles.commentInput}
-                        placeholder={language === 'ko' ? '댓글을 입력하세요...' : 'Write a comment...'}
-                        placeholderTextColor="#8E8E93"
-                        value={newComment}
-                        onChangeText={setNewComment}
-                        multiline
-                        maxLength={500}
-                      />
-                      <TouchableOpacity 
-                        style={[styles.sendButton, {
-                          opacity: newComment.trim() ? 1 : 0.5
-                        }]}
-                        onPress={handleAddComment}
-                        disabled={!newComment.trim() || addCommentMutation.isPending}
-                      >
-                        {addCommentMutation.isPending ? (
-                          <ActivityIndicator size="small" color="#FFFFFF" />
-                        ) : (
-                          <Send size={18} color="#FFFFFF" />
-                        )}
-                      </TouchableOpacity>
-                    </View>
-                  </View>
+              <View style={[styles.commentInputContainer, { 
+                paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 20) : 20
+              }]}>
+                <View style={styles.inputRow}>
+                  <TextInput
+                    ref={commentInputRef}
+                    style={styles.commentInput}
+                    placeholder={language === 'ko' ? '댓글을 입력하세요...' : 'Write a comment...'}
+                    placeholderTextColor="#8E8E93"
+                    value={newComment}
+                    onChangeText={setNewComment}
+                    multiline
+                    maxLength={500}
+                  />
+                  <TouchableOpacity 
+                    style={[styles.sendButton, {
+                      opacity: newComment.trim() ? 1 : 0.5
+                    }]}
+                    onPress={handleAddComment}
+                    disabled={!newComment.trim() || addCommentMutation.isPending}
+                  >
+                    {addCommentMutation.isPending ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Send size={18} color="#FFFFFF" />
+                    )}
+                  </TouchableOpacity>
                 </View>
-              </KeyboardAvoidingView>
+              </View>
             </View>
           )}
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Create Post Modal */}
@@ -2113,6 +2108,10 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   commentInputContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: Platform.OS === 'ios' ? 12 : 12,
@@ -2518,12 +2517,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
-  keyboardAvoidingView: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
+
   inputRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
