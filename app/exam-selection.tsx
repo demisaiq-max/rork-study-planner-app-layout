@@ -154,9 +154,9 @@ export default function ExamSelectionScreen() {
   };
 
   const handleSubmit = () => {
-    // Handle form submission
-    console.log("Form submitted");
-    router.back();
+    // Navigate to answer sheets page
+    console.log("Navigating to answer sheets");
+    router.push('/answer-sheets');
   };
 
   return (
