@@ -33,9 +33,17 @@ export default function SignUpScreen() {
       if (result.error) {
         Alert.alert('Sign Up Failed', result.error);
       } else {
-        console.log('✅ Sign up successful, navigating to home');
-        Alert.alert('Success', 'Account created successfully! Please check your email for verification.');
-        router.replace('/(tabs)');
+        console.log('✅ Sign up successful, email confirmation required');
+        Alert.alert(
+          'Check Your Email', 
+          'We\'ve sent you a confirmation email. Please click the link in the email to verify your account.',
+          [
+            {
+              text: 'OK',
+              onPress: () => router.replace('/(auth)/sign-in')
+            }
+          ]
+        );
       }
     } catch (error) {
       console.error('❌ Sign up error:', error);

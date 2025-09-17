@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
+import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 import createContextHook from '@nkzw/create-context-hook';
@@ -110,6 +111,9 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
           data: {
             name: name?.trim() || email.split('@')[0],
           },
+          emailRedirectTo: Platform.OS === 'web' 
+            ? `${window.location.origin}/(auth)/confirm-email`
+            : 'exp://localhost:8081/(auth)/confirm-email',
         },
       });
 
@@ -190,7 +194,9 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     try {
       console.log('🔐 Sending password reset email to:', email.trim());
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: 'exp://localhost:8081/(auth)/reset-password',
+        redirectTo: Platform.OS === 'web' 
+          ? `${window.location.origin}/(auth)/reset-password`
+          : 'exp://localhost:8081/(auth)/reset-password',
       });
 
       if (error) {
@@ -206,6 +212,31 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     }
   }, []);
 
+  const confirmEmail = useCallback(async (token: string) => {
+    if (!token?.trim()) {
+      return { error: 'Confirmation token is required' };
+    }
+
+    try {
+      console.log('📧 Confirming email with token');
+      const { data, error } = await supabase.auth.verifyOtp({
+        token_hash: token.trim(),
+        type: 'signup'
+      });
+
+      if (error) {
+        console.error('❌ Email confirmation error:', error);
+        return { error: error.message };
+      }
+
+      console.log('✅ Email confirmed successfully:', data);
+      return { data };
+    } catch (error) {
+      console.error('❌ Email confirmation exception:', error);
+      return { error: 'An unexpected error occurred' };
+    }
+  }, []);
+
   return useMemo(() => ({
     user,
     session,
@@ -215,7 +246,8 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     signOut,
     signInWithGoogle,
     resetPassword,
-  }), [user, session, isLoading, signIn, signUp, signOut, signInWithGoogle, resetPassword]);
+    confirmEmail,
+  }), [user, session, isLoading, signIn, signUp, signOut, signInWithGoogle, resetPassword, confirmEmail]);
 });
 
 // Helper hook to check if user is signed in
