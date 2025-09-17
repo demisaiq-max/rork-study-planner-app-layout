@@ -7,12 +7,14 @@ import { createExam } from "./routes/exams/create-exam/route";
 import { getPriorityExams } from "./routes/exams/get-priority-exams/route";
 import { updateExam } from "./routes/exams/update-exam/route";
 import { deleteExam } from "./routes/exams/delete-exam/route";
+import { seedExamData } from "./routes/exams/seed-exam-data/route";
 
 
 // Grade routes
 import { getSubjectGrades } from "./routes/grades/get-subject-grades/route";
 import { updateSubjectGrade } from "./routes/grades/update-subject-grade/route";
 import { deleteSubjectGrade } from "./routes/grades/delete-subject-grade/route";
+import { seedDummyDataProcedure } from "./routes/grades/seed-dummy-data/route";
 
 
 // Settings routes
@@ -33,6 +35,8 @@ import { getTestById } from "./routes/tests/get-test-by-id/route";
 import { createSubject } from "./routes/tests/create-subject/route";
 import { deleteSubject } from "./routes/tests/delete-subject/route";
 import { updateSubject } from "./routes/tests/update-subject/route";
+import { seedTestData } from "./routes/tests/seed-test-data/route";
+import { supabaseTestProcedure } from "./routes/tests/supabase-test/route";
 
 
 // Brain dump routes
@@ -95,6 +99,7 @@ import { deleteStudyNoteProcedure } from "./routes/study-notes/delete-study-note
 // User profile routes
 import { getUserProfileProcedure } from "./routes/users/get-user-profile/route";
 import { updateUserProfileProcedure } from "./routes/users/update-user-profile/route";
+import { syncClerkUserProcedure } from "./routes/users/sync-clerk-user/route";
 
 
 
@@ -110,13 +115,13 @@ export const appRouter = createTRPCRouter({
     updateExam: updateExam,
     deleteExam: deleteExam,
     getPriorityExams: getPriorityExams,
-
+    seedExamData: seedExamData,
   }),
   grades: createTRPCRouter({
     getSubjectGrades: getSubjectGrades,
     updateSubjectGrade: updateSubjectGrade,
     deleteSubjectGrade: deleteSubjectGrade,
-
+    seedDummyData: seedDummyDataProcedure,
   }),
   settings: createTRPCRouter({
     getUserSettings: getUserSettings,
@@ -136,7 +141,8 @@ export const appRouter = createTRPCRouter({
     createSubject: createSubject,
     deleteSubject: deleteSubject,
     updateSubject: updateSubject,
-
+    seedTestData: seedTestData,
+    supabaseTest: supabaseTestProcedure,
   }),
   brainDumps: createTRPCRouter({
     getBrainDumps: getBrainDumpsProcedure,
@@ -200,6 +206,7 @@ export const appRouter = createTRPCRouter({
   users: createTRPCRouter({
     getUserProfile: getUserProfileProcedure,
     updateUserProfile: updateUserProfileProcedure,
+    syncClerkUser: syncClerkUserProcedure,
   }),
 });
 

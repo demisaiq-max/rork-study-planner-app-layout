@@ -37,6 +37,10 @@ function RootLayoutNav() {
       <Stack.Screen name="exam-score-edit" options={{ title: "Edit Exam Score" }} />
       <Stack.Screen name="trpc-debug" options={{ title: "tRPC Debug" }} />
       <Stack.Screen name="supabase-test" options={{ title: "Supabase Test" }} />
+      <Stack.Screen name="question-detail" options={{ title: "Question Detail" }} />
+      <Stack.Screen name="group-detail" options={{ title: "Group Detail" }} />
+      <Stack.Screen name="oauth-native-callback" options={{ title: "OAuth Callback" }} />
+      <Stack.Screen name="clerk-sync-test" options={{ title: "Clerk Sync Test" }} />
     </Stack>
   );
 }

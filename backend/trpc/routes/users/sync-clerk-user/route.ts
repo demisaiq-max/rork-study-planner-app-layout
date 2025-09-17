@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { publicProcedure } from "../../../create-context";
-import { supabase } from "@/lib/supabase";
 
 export const syncClerkUserProcedure = publicProcedure
   .input(z.object({
@@ -9,7 +8,8 @@ export const syncClerkUserProcedure = publicProcedure
     name: z.string().optional(),
     profilePictureUrl: z.string().optional(),
   }))
-  .mutation(async ({ input }) => {
+  .mutation(async ({ input, ctx }) => {
+    const { supabase } = ctx;
     console.log('🔄 Syncing Clerk user to Supabase:', input);
     
     try {
