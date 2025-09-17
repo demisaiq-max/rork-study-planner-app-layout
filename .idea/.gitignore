@@ -1,0 +1,10 @@
+# Ignore IDE caches and local workspace files
+caches/
+workspace.xml
+workspace.owner
+deployment.xml
+shelf
+usage.statistics.xml
+.idea_modules/# Default ignored files
+/shelf/
+/workspace.xml
