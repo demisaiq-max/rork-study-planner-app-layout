@@ -31,7 +31,7 @@ export default function LandingScreen() {
           <View style={styles.headerSection}>
             <View style={styles.logoContainer}>
               <Image
-                source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/kjbg4216eathswonv8sug' }}
+                source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/kx8en0sq0cs0zgj0ikqzt' }}
                 style={styles.logo}
                 resizeMode="contain"
               />
