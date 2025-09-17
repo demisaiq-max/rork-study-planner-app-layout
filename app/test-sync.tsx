@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useUser, useAuth } from '@clerk/clerk-expo';
+import { useAuth } from '@/hooks/auth-context';
 import { trpcClient } from '@/lib/trpc';
 import { supabase } from '@/lib/supabase';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TestSyncScreen() {
-  const { user, isLoaded: userLoaded } = useUser();
-  const { isSignedIn } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
+  const insets = useSafeAreaInsets();
+  const isSignedIn = !!user;
+  const userLoaded = !authLoading;
   const [syncResult, setSyncResult] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dbTestResult, setDbTestResult] = useState<any>(null);
 
@@ -39,16 +42,16 @@ export default function TestSyncScreen() {
       return;
     }
 
-    setIsLoading(true);
+    setIsSyncing(true);
     setError(null);
     setSyncResult(null);
 
     try {
       const userData = {
         clerkUserId: user.id,
-        email: user.primaryEmailAddress?.emailAddress || '',
-        name: user.fullName || user.firstName || user.username || undefined,
-        profilePictureUrl: user.imageUrl || undefined,
+        email: user.email || '',
+        name: user.user_metadata?.name || user.email?.split('@')[0] || undefined,
+        profilePictureUrl: user.user_metadata?.avatar_url || undefined,
       };
 
       console.log('📤 Sending sync request:', userData);
@@ -61,7 +64,7 @@ export default function TestSyncScreen() {
       console.error('❌ Sync failed:', err);
       setError(err.message || 'Sync failed');
     } finally {
-      setIsLoading(false);
+      setIsSyncing(false);
     }
   };
 
@@ -71,7 +74,7 @@ export default function TestSyncScreen() {
       return;
     }
 
-    setIsLoading(true);
+    setIsSyncing(true);
     setError(null);
 
     try {
@@ -95,96 +98,98 @@ export default function TestSyncScreen() {
       console.error('❌ Check user error:', err);
       setError(err.message);
     } finally {
-      setIsLoading(false);
+      setIsSyncing(false);
     }
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Clerk-Supabase Sync Test</Text>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <ScrollView style={styles.scrollView}>
+        <View style={styles.content}>
+          <Text style={styles.title}>Supabase User Sync Test</Text>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Clerk User Info</Text>
-          {userLoaded ? (
-            isSignedIn && user ? (
-              <View style={styles.infoBox}>
-                <Text style={styles.infoText}>ID: {user.id}</Text>
-                <Text style={styles.infoText}>Email: {user.primaryEmailAddress?.emailAddress}</Text>
-                <Text style={styles.infoText}>Name: {user.fullName || user.firstName || 'N/A'}</Text>
-              </View>
-            ) : (
-              <Text style={styles.warningText}>Not signed in</Text>
-            )
-          ) : (
-            <ActivityIndicator />
-          )}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Database Connection</Text>
-          <TouchableOpacity 
-            style={styles.button} 
-            onPress={testDatabaseConnection}
-            disabled={isLoading}
-          >
-            <Text style={styles.buttonText}>Test Database Connection</Text>
-          </TouchableOpacity>
-          {dbTestResult && (
-            <View style={[styles.resultBox, dbTestResult.success ? styles.successBox : styles.errorBox]}>
-              <Text style={styles.resultText}>
-                {dbTestResult.success ? '✅ Connected' : `❌ Failed: ${dbTestResult.error}`}
-              </Text>
-            </View>
-          )}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Sync Actions</Text>
-          
-          <TouchableOpacity 
-            style={[styles.button, (!user || isLoading) && styles.buttonDisabled]} 
-            onPress={manualSync}
-            disabled={!user || isLoading}
-          >
-            <Text style={styles.buttonText}>
-              {isLoading ? 'Syncing...' : 'Manual Sync User'}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.button, styles.buttonSecondary, (!user || isLoading) && styles.buttonDisabled]} 
-            onPress={checkUserInDatabase}
-            disabled={!user || isLoading}
-          >
-            <Text style={styles.buttonText}>Check User in Database</Text>
-          </TouchableOpacity>
-        </View>
-
-        {error && (
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>Error: {error}</Text>
-          </View>
-        )}
-
-        {syncResult && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Result</Text>
-            <View style={styles.resultBox}>
-              <Text style={styles.resultText}>
-                {JSON.stringify(syncResult, null, 2)}
-              </Text>
-            </View>
+            <Text style={styles.sectionTitle}>Supabase User Info</Text>
+            {userLoaded ? (
+              isSignedIn && user ? (
+                <View style={styles.infoBox}>
+                  <Text style={styles.infoText}>ID: {user.id}</Text>
+                  <Text style={styles.infoText}>Email: {user.email}</Text>
+                  <Text style={styles.infoText}>Name: {user.user_metadata?.name || user.email?.split('@')[0] || 'N/A'}</Text>
+                </View>
+              ) : (
+                <Text style={styles.warningText}>Not signed in</Text>
+              )
+            ) : (
+              <ActivityIndicator />
+            )}
           </View>
-        )}
 
-        {isLoading && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#007AFF" />
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Database Connection</Text>
+            <TouchableOpacity 
+              style={styles.button} 
+              onPress={testDatabaseConnection}
+              disabled={isSyncing || authLoading}
+            >
+              <Text style={styles.buttonText}>Test Database Connection</Text>
+            </TouchableOpacity>
+            {dbTestResult && (
+              <View style={[styles.resultBox, dbTestResult.success ? styles.successBox : styles.errorBox]}>
+                <Text style={styles.resultText}>
+                  {dbTestResult.success ? '✅ Connected' : `❌ Failed: ${dbTestResult.error}`}
+                </Text>
+              </View>
+            )}
           </View>
-        )}
-      </View>
-    </ScrollView>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Sync Actions</Text>
+            
+            <TouchableOpacity 
+              style={[styles.button, (!user || isSyncing || authLoading) && styles.buttonDisabled]} 
+              onPress={manualSync}
+              disabled={!user || isSyncing || authLoading}
+            >
+              <Text style={styles.buttonText}>
+                {isSyncing ? 'Syncing...' : 'Manual Sync User'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.button, styles.buttonSecondary, (!user || isSyncing || authLoading) && styles.buttonDisabled]} 
+              onPress={checkUserInDatabase}
+              disabled={!user || isSyncing || authLoading}
+            >
+              <Text style={styles.buttonText}>Check User in Database</Text>
+            </TouchableOpacity>
+          </View>
+
+          {error && (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>Error: {error}</Text>
+            </View>
+          )}
+
+          {syncResult && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Result</Text>
+              <View style={styles.resultBox}>
+                <Text style={styles.resultText}>
+                  {JSON.stringify(syncResult, null, 2)}
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {isSyncing && (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#007AFF" />
+            </View>
+          )}
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -192,6 +197,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  scrollView: {
+    flex: 1,
   },
   content: {
     padding: 20,
