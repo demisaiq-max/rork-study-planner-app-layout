@@ -140,6 +140,7 @@ export default function CommunityScreen() {
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const commentInputRef = useRef<TextInput>(null);
 
@@ -424,6 +425,13 @@ export default function CommunityScreen() {
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
       (e: KeyboardEvent) => {
         setKeyboardHeight(e.endCoordinates.height);
+        setIsKeyboardVisible(true);
+        // Scroll to bottom when keyboard opens in post detail
+        if (showPostDetail) {
+          setTimeout(() => {
+            scrollViewRef.current?.scrollToEnd({ animated: true });
+          }, 100);
+        }
       }
     );
     
@@ -431,6 +439,7 @@ export default function CommunityScreen() {
       Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
       () => {
         setKeyboardHeight(0);
+        setIsKeyboardVisible(false);
       }
     );
 
@@ -438,7 +447,7 @@ export default function CommunityScreen() {
       keyboardWillShow.remove();
       keyboardWillHide.remove();
     };
-  }, []);
+  }, [showPostDetail]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -1195,11 +1204,7 @@ export default function CommunityScreen() {
         animationType="slide"
         presentationStyle="pageSheet"
       >
-        <KeyboardAvoidingView 
-          style={[styles.modalContainer, { paddingTop: insets.top }]}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={0}
-        >
+        <View style={[styles.modalContainer, { paddingTop: insets.top }]}>
           <View style={styles.modalHeader}>
             <TouchableOpacity 
               onPress={() => setShowPostDetail(false)}
@@ -1218,7 +1223,7 @@ export default function CommunityScreen() {
                 ref={scrollViewRef}
                 style={styles.modalScrollContent}
                 keyboardShouldPersistTaps="handled"
-                contentContainerStyle={{ paddingBottom: 100 }}
+                contentContainerStyle={{ paddingBottom: 120 }}
                 showsVerticalScrollIndicator={true}
               >
                 <View style={styles.postDetailHeader}>
@@ -1296,39 +1301,48 @@ export default function CommunityScreen() {
                 </View>
               </ScrollView>
               
-              {/* Comment Input */}
-              <View style={[styles.commentInputContainer, { 
-                paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 20) : 20
-              }]}>
-                <View style={styles.inputRow}>
-                  <TextInput
-                    ref={commentInputRef}
-                    style={styles.commentInput}
-                    placeholder={language === 'ko' ? '댓글을 입력하세요...' : 'Write a comment...'}
-                    placeholderTextColor="#8E8E93"
-                    value={newComment}
-                    onChangeText={setNewComment}
-                    multiline
-                    maxLength={500}
-                  />
-                  <TouchableOpacity 
-                    style={[styles.sendButton, {
-                      opacity: newComment.trim() ? 1 : 0.5
-                    }]}
-                    onPress={handleAddComment}
-                    disabled={!newComment.trim() || addCommentMutation.isPending}
-                  >
-                    {addCommentMutation.isPending ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
-                    ) : (
-                      <Send size={18} color="#FFFFFF" />
-                    )}
-                  </TouchableOpacity>
+              {/* Comment Input with Keyboard Avoidance */}
+              <KeyboardAvoidingView 
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+                style={styles.keyboardAvoidingView}
+              >
+                <View style={[styles.commentInputContainer, { 
+                  bottom: isKeyboardVisible ? 0 : insets.bottom,
+                  paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 20) : 20
+                }]}>
+                  <View style={styles.commentInputWrapper}>
+                    <View style={styles.inputRow}>
+                      <TextInput
+                        ref={commentInputRef}
+                        style={styles.commentInput}
+                        placeholder={language === 'ko' ? '댓글을 입력하세요...' : 'Write a comment...'}
+                        placeholderTextColor="#8E8E93"
+                        value={newComment}
+                        onChangeText={setNewComment}
+                        multiline
+                        maxLength={500}
+                      />
+                      <TouchableOpacity 
+                        style={[styles.sendButton, {
+                          opacity: newComment.trim() ? 1 : 0.5
+                        }]}
+                        onPress={handleAddComment}
+                        disabled={!newComment.trim() || addCommentMutation.isPending}
+                      >
+                        {addCommentMutation.isPending ? (
+                          <ActivityIndicator size="small" color="#FFFFFF" />
+                        ) : (
+                          <Send size={18} color="#FFFFFF" />
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  </View>
                 </View>
-              </View>
+              </KeyboardAvoidingView>
             </View>
           )}
-        </KeyboardAvoidingView>
+        </View>
       </Modal>
 
       {/* Create Post Modal */}
@@ -2107,22 +2121,21 @@ const styles = StyleSheet.create({
     color: "#000000",
     lineHeight: 18,
   },
-  commentInputContainer: {
+  keyboardAvoidingView: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: Platform.OS === 'ios' ? 12 : 12,
+  },
+  commentInputContainer: {
+    backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E5E5EA',
-    backgroundColor: '#FFFFFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 3,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
   },
   commentInputWrapper: {
     padding: 16,
