@@ -17,7 +17,7 @@ export const deletePostProcedure = protectedProcedure
 
     // First check if the post exists and belongs to the user
     const { data: post, error: fetchError } = await supabase
-      .from("community_posts")
+      .from("daily_posts")
       .select("user_id")
       .eq("id", postId)
       .single();
@@ -33,7 +33,7 @@ export const deletePostProcedure = protectedProcedure
 
     // Delete the post (cascade will handle related data)
     const { error: deleteError } = await supabase
-      .from("community_posts")
+      .from("daily_posts")
       .delete()
       .eq("id", postId)
       .eq("user_id", userId);

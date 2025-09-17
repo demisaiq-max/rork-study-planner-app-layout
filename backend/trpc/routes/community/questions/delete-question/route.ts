@@ -17,7 +17,7 @@ export const deleteQuestionProcedure = protectedProcedure
 
     // First check if the question exists and belongs to the user
     const { data: question, error: fetchError } = await supabase
-      .from("community_questions")
+      .from("questions")
       .select("user_id")
       .eq("id", questionId)
       .single();
@@ -33,7 +33,7 @@ export const deleteQuestionProcedure = protectedProcedure
 
     // Delete the question (cascade will handle related data)
     const { error: deleteError } = await supabase
-      .from("community_questions")
+      .from("questions")
       .delete()
       .eq("id", questionId)
       .eq("user_id", userId);
