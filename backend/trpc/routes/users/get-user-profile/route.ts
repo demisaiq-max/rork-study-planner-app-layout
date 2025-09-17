@@ -1,17 +1,16 @@
 import { z } from "zod";
-import { protectedProcedure } from "../../../create-context";
-import { supabase } from "@/lib/supabase";
+import { protectedProcedure } from "@/backend/trpc/create-context";
 
 export const getUserProfileProcedure = protectedProcedure
   .input(z.object({
     userId: z.string(),
   }))
-  .query(async ({ input }) => {
+  .query(async ({ input, ctx }) => {
     console.log('Getting user profile for userId:', input.userId);
     
     try {
       // First try with profile_picture_url
-      let { data, error } = await supabase
+      let { data, error } = await ctx.supabase
         .from('users')
         .select('id, name, email, profile_picture_url')
         .eq('id', input.userId)
@@ -24,7 +23,7 @@ export const getUserProfileProcedure = protectedProcedure
         if (error.message?.includes('profile_picture_url') || error.code === '42703') {
           console.log('Profile picture column not found, fetching without it');
           
-          const { data: retryData, error: retryError } = await supabase
+          const { data: retryData, error: retryError } = await ctx.supabase
             .from('users')
             .select('id, name, email')
             .eq('id', input.userId)

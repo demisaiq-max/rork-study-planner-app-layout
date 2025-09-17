@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { publicProcedure } from '@/backend/trpc/create-context';
-import { supabase } from '@/lib/supabase';
 
 export const getGroupsProcedure = publicProcedure
   .input(
@@ -9,8 +8,8 @@ export const getGroupsProcedure = publicProcedure
       searchQuery: z.string().optional(),
     })
   )
-  .query(async ({ input }) => {
-    let query = supabase
+  .query(async ({ input, ctx }) => {
+    let query = ctx.supabase
       .from('study_groups')
       .select(`
         *,

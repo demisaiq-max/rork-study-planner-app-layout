@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { publicProcedure } from '@/backend/trpc/create-context';
-import { supabase } from '@/lib/supabase';
 
 export const getQuestionsProcedure = publicProcedure
   .input(
@@ -12,8 +11,8 @@ export const getQuestionsProcedure = publicProcedure
       offset: z.number().min(0).default(0),
     })
   )
-  .query(async ({ input }) => {
-    let query = supabase
+  .query(async ({ input, ctx }) => {
+    let query = ctx.supabase
       .from('questions')
       .select(`
         *,

@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { publicProcedure } from '@/backend/trpc/create-context';
-import { supabase } from '@/lib/supabase';
 
 export const getPostsProcedure = publicProcedure
   .input(
@@ -11,8 +10,8 @@ export const getPostsProcedure = publicProcedure
       offset: z.number().min(0).default(0),
     })
   )
-  .query(async ({ input }) => {
-    let query = supabase
+  .query(async ({ input, ctx }) => {
+    let query = ctx.supabase
       .from('daily_posts')
       .select(`
         *,
