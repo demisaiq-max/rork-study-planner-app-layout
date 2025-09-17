@@ -16,7 +16,9 @@ import {
   RefreshControl,
   Keyboard,
   KeyboardEvent,
+  ActionSheetIOS,
 } from "react-native";
+import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { Heart, MessageCircle, Eye, ChevronLeft, Send, Camera, Image as ImageIcon, X, Users, UserPlus } from "lucide-react-native";
@@ -91,6 +93,7 @@ export default function GroupDetailScreen() {
   const [showPostDetail, setShowPostDetail] = useState(false);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [newPostContent, setNewPostContent] = useState("");
+  const [postImage, setPostImage] = useState<string | null>(null);
   const [newComment, setNewComment] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -126,6 +129,7 @@ export default function GroupDetailScreen() {
     onSuccess: () => {
       postsQuery.refetch();
       setNewPostContent("");
+      setPostImage(null);
       setShowCreatePost(false);
       Alert.alert(
         language === 'ko' ? '성공' : 'Success',
@@ -282,7 +286,119 @@ export default function GroupDetailScreen() {
     createPostMutation.mutate({
       content: newPostContent,
       groupId: groupId,
+      imageUrl: postImage || undefined,
     });
+  };
+
+  const requestPermissions = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        language === 'ko' ? '권한 필요' : 'Permission Required',
+        language === 'ko' ? '사진을 선택하려면 갤러리 접근 권한이 필요합니다.' : 'We need gallery access permission to select photos.'
+      );
+      return false;
+    }
+    return true;
+  };
+
+  const requestCameraPermissions = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        language === 'ko' ? '권한 필요' : 'Permission Required',
+        language === 'ko' ? '사진을 촬영하려면 카메라 접근 권한이 필요합니다.' : 'We need camera access permission to take photos.'
+      );
+      return false;
+    }
+    return true;
+  };
+
+  const pickImageFromGallery = async () => {
+    const hasPermission = await requestPermissions();
+    if (!hasPermission) return;
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+        base64: false,
+        exif: false,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const imageUri = result.assets[0].uri;
+        console.log('Selected image from gallery:', imageUri);
+        setPostImage(imageUri);
+      }
+    } catch (error) {
+      console.error('Error picking image from gallery:', error);
+      Alert.alert(
+        language === 'ko' ? '오류' : 'Error',
+        language === 'ko' ? '이미지를 선택하는 중 오류가 발생했습니다.' : 'An error occurred while selecting the image.'
+      );
+    }
+  };
+
+  const takePhoto = async () => {
+    const hasPermission = await requestCameraPermissions();
+    if (!hasPermission) return;
+
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+        base64: false,
+        exif: false,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const imageUri = result.assets[0].uri;
+        console.log('Captured photo:', imageUri);
+        setPostImage(imageUri);
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert(
+        language === 'ko' ? '오류' : 'Error',
+        language === 'ko' ? '사진을 촬영하는 중 오류가 발생했습니다.' : 'An error occurred while taking the photo.'
+      );
+    }
+  };
+
+  const handleImageSelection = () => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: [
+            language === 'ko' ? '취소' : 'Cancel',
+            language === 'ko' ? '사진 촬영' : 'Take Photo',
+            language === 'ko' ? '갤러리에서 선택' : 'Choose from Gallery'
+          ],
+          cancelButtonIndex: 0,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) {
+            takePhoto();
+          } else if (buttonIndex === 2) {
+            pickImageFromGallery();
+          }
+        }
+      );
+    } else {
+      Alert.alert(
+        language === 'ko' ? '사진 선택' : 'Select Photo',
+        language === 'ko' ? '사진을 어떻게 추가하시겠습니까?' : 'How would you like to add a photo?',
+        [
+          { text: language === 'ko' ? '취소' : 'Cancel', style: 'cancel' },
+          { text: language === 'ko' ? '사진 촬영' : 'Take Photo', onPress: () => takePhoto() },
+          { text: language === 'ko' ? '갤러리에서 선택' : 'Choose from Gallery', onPress: () => pickImageFromGallery() },
+        ]
+      );
+    }
   };
 
   const formatTime = (dateString: string) => {
@@ -660,18 +776,39 @@ export default function GroupDetailScreen() {
               autoFocus
             />
             
+            {/* Image Preview Section */}
+            {postImage && (
+              <View style={styles.imagePreviewSection}>
+                <View style={styles.imagePreviewContainer}>
+                  <Image source={{ uri: postImage }} style={styles.postImagePreview} />
+                  <TouchableOpacity 
+                    style={styles.removePostImageButton}
+                    onPress={() => setPostImage(null)}
+                  >
+                    <X size={20} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+            
             <View style={styles.centeredMediaSection}>
               <Text style={styles.mediaSectionTitle}>
                 {language === 'ko' ? '사진 추가' : 'Add Photo'}
               </Text>
               <View style={styles.centeredMediaButtons}>
-                <TouchableOpacity style={styles.centeredMediaButton}>
+                <TouchableOpacity 
+                  style={styles.centeredMediaButton}
+                  onPress={takePhoto}
+                >
                   <Camera size={32} color="#007AFF" />
                   <Text style={styles.centeredMediaButtonText}>
                     {language === 'ko' ? '사진 촬영' : 'Take Photo'}
                   </Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.centeredMediaButton}>
+                <TouchableOpacity 
+                  style={styles.centeredMediaButton}
+                  onPress={pickImageFromGallery}
+                >
                   <ImageIcon size={32} color="#007AFF" />
                   <Text style={styles.centeredMediaButtonText}>
                     {language === 'ko' ? '갤러리에서 선택' : 'Choose from Gallery'}
@@ -1129,5 +1266,35 @@ const styles = StyleSheet.create({
     fontSize: 28,
     color: '#FFFFFF',
     fontWeight: '400',
+  },
+  imagePreviewSection: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  imagePreviewContainer: {
+    position: 'relative',
+  },
+  postImagePreview: {
+    width: 200,
+    height: 200,
+    borderRadius: 12,
+    backgroundColor: '#F0F0F0',
+  },
+  removePostImageButton: {
+    position: 'absolute',
+    top: -10,
+    right: -10,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FF3B30',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
   },
 });
