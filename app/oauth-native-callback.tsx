@@ -1,19 +1,19 @@
 import { useEffect } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAuth } from '@clerk/clerk-expo';
+import { useAuth } from '@/hooks/auth-context';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function OAuthCallbackScreen() {
   const router = useRouter();
-  const { isSignedIn, isLoaded } = useAuth();
+  const { user, isLoading } = useAuth();
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
-    console.log('🔐 OAuth callback - isLoaded:', isLoaded, 'isSignedIn:', isSignedIn);
+    console.log('🔐 OAuth callback - isLoading:', isLoading, 'isSignedIn:', !!user);
     
-    if (isLoaded) {
-      if (isSignedIn) {
+    if (!isLoading) {
+      if (user) {
         console.log('🔐 OAuth successful, redirecting to home');
         router.replace('/(tabs)');
       } else {
@@ -21,7 +21,7 @@ export default function OAuthCallbackScreen() {
         router.replace('/(auth)/sign-in');
       }
     }
-  }, [isLoaded, isSignedIn, router]);
+  }, [isLoading, user, router]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
