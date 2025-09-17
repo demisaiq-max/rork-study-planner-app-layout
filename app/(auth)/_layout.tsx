@@ -25,12 +25,16 @@ export default function AuthRoutesLayout() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="sign-in" />
-      <Stack.Screen name="sign-up" />
-      <Stack.Screen name="forgot-password" />
-      <Stack.Screen name="confirm-email" />
-    </Stack>
+    <>
+      <Redirect href="/(auth)/landing" />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="landing" options={{ headerShown: false }} />
+        <Stack.Screen name="sign-in" options={{ headerShown: false }} />
+        <Stack.Screen name="sign-up" options={{ headerShown: false }} />
+        <Stack.Screen name="forgot-password" options={{ headerShown: false }} />
+        <Stack.Screen name="confirm-email" options={{ headerShown: false }} />
+      </Stack>
+    </>
   );
 }
 
