@@ -21,7 +21,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
-import { Heart, MessageCircle, Eye, ChevronLeft, Send, Camera, Image as ImageIcon, X, Users, UserPlus } from "lucide-react-native";
+import { Heart, MessageCircle, Eye, ChevronLeft, Send, Camera, Image as ImageIcon, X, Users, UserPlus, MoreVertical, Trash2 } from "lucide-react-native";
 import { useLanguage } from "@/hooks/language-context";
 import { useUser } from "@/hooks/user-context";
 import { trpc } from "@/lib/trpc";
@@ -165,6 +165,24 @@ export default function GroupDetailScreen() {
 
   const incrementPostViewMutation = trpc.community.posts.incrementView.useMutation();
 
+  const deletePostMutation = trpc.community.posts.deletePost.useMutation({
+    onSuccess: () => {
+      postsQuery.refetch();
+      setShowPostDetail(false);
+      setSelectedPost(null);
+      Alert.alert(
+        language === 'ko' ? '성공' : 'Success',
+        language === 'ko' ? '게시물이 삭제되었습니다.' : 'Post deleted successfully.'
+      );
+    },
+    onError: (error) => {
+      Alert.alert(
+        language === 'ko' ? '오류' : 'Error',
+        error.message || (language === 'ko' ? '게시물 삭제에 실패했습니다.' : 'Failed to delete post.')
+      );
+    },
+  });
+
   const joinGroupMutation = trpc.community.groups.joinGroup.useMutation({
     onSuccess: () => {
       groupQuery.refetch();
@@ -243,6 +261,48 @@ export default function GroupDetailScreen() {
       postId: selectedPost.id,
       content: newComment,
     });
+  };
+
+  const handleDeletePost = (postId: string) => {
+    Alert.alert(
+      language === 'ko' ? '게시물 삭제' : 'Delete Post',
+      language === 'ko' ? '이 게시물을 삭제하시겠습니까?' : 'Are you sure you want to delete this post?',
+      [
+        {
+          text: language === 'ko' ? '취소' : 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: language === 'ko' ? '삭제' : 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            deletePostMutation.mutate({ postId });
+          },
+        },
+      ]
+    );
+  };
+
+  const showPostOptions = (post: Post) => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: [
+            language === 'ko' ? '취소' : 'Cancel',
+            language === 'ko' ? '게시물 삭제' : 'Delete Post',
+          ],
+          destructiveButtonIndex: 1,
+          cancelButtonIndex: 0,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) {
+            handleDeletePost(post.id);
+          }
+        }
+      );
+    } else {
+      handleDeletePost(post.id);
+    }
   };
 
   const handleCreatePost = () => {
@@ -420,6 +480,14 @@ export default function GroupDetailScreen() {
               <Text style={styles.postTime}>{formatTime(post.created_at)}</Text>
             </View>
           </View>
+          {post.user_id === userId && (
+            <TouchableOpacity 
+              onPress={() => showPostOptions(post)}
+              style={styles.moreButton}
+            >
+              <MoreVertical size={20} color="#8E8E93" />
+            </TouchableOpacity>
+          )}
         </View>
         
         <TouchableOpacity 
@@ -593,7 +661,16 @@ export default function GroupDetailScreen() {
             <Text style={styles.modalTitle}>
               {language === 'ko' ? '게시물' : 'Post'}
             </Text>
-            <View style={styles.spacer} />
+            {selectedPost?.user_id === userId ? (
+              <TouchableOpacity 
+                onPress={() => selectedPost && showPostOptions(selectedPost)}
+                style={styles.moreButton}
+              >
+                <MoreVertical size={20} color="#8E8E93" />
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.spacer} />
+            )}
           </View>
           
           {selectedPost && (

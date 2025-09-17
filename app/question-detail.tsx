@@ -24,7 +24,8 @@ import {
   Send,
   User,
   Image as ImageIcon,
-  Heart
+  Heart,
+  MoreVertical
 } from "lucide-react-native";
 import * as ImagePicker from 'expo-image-picker';
 import { useLanguage } from "@/hooks/language-context";
@@ -101,6 +102,27 @@ export default function QuestionDetailScreen() {
   });
 
   const incrementViewMutation = trpc.community.questions.incrementView.useMutation();
+
+  const deleteQuestionMutation = trpc.community.questions.deleteQuestion.useMutation({
+    onSuccess: () => {
+      Alert.alert(
+        language === 'ko' ? '성공' : 'Success',
+        language === 'ko' ? '질문이 삭제되었습니다.' : 'Question deleted successfully.',
+        [
+          {
+            text: language === 'ko' ? '확인' : 'OK',
+            onPress: () => router.back(),
+          },
+        ]
+      );
+    },
+    onError: (error) => {
+      Alert.alert(
+        language === 'ko' ? '오류' : 'Error',
+        error.message || (language === 'ko' ? '질문 삭제에 실패했습니다.' : 'Failed to delete question.')
+      );
+    },
+  });
 
   React.useEffect(() => {
     if (id && user) {
@@ -337,6 +359,50 @@ export default function QuestionDetailScreen() {
     setCommentImages([]);
   };
 
+  const handleDeleteQuestion = () => {
+    Alert.alert(
+      language === 'ko' ? '질문 삭제' : 'Delete Question',
+      language === 'ko' ? '이 질문을 삭제하시겠습니까?' : 'Are you sure you want to delete this question?',
+      [
+        {
+          text: language === 'ko' ? '취소' : 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: language === 'ko' ? '삭제' : 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            if (id) {
+              deleteQuestionMutation.mutate({ questionId: id });
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const showQuestionOptions = () => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: [
+            language === 'ko' ? '취소' : 'Cancel',
+            language === 'ko' ? '질문 삭제' : 'Delete Question',
+          ],
+          destructiveButtonIndex: 1,
+          cancelButtonIndex: 0,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) {
+            handleDeleteQuestion();
+          }
+        }
+      );
+    } else {
+      handleDeleteQuestion();
+    }
+  };
+
   if (questionQuery.isLoading) {
     return (
       <View style={styles.container}>
@@ -393,6 +459,13 @@ export default function QuestionDetailScreen() {
             <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
               <ChevronLeft size={24} color="#000000" />
             </TouchableOpacity>
+          ),
+          headerRight: () => (
+            question?.user_id === user?.id ? (
+              <TouchableOpacity onPress={showQuestionOptions} style={styles.headerButton}>
+                <MoreVertical size={24} color="#000000" />
+              </TouchableOpacity>
+            ) : null
           ),
         }} 
       />
