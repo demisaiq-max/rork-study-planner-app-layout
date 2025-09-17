@@ -79,6 +79,10 @@ export default function SignInScreen() {
           autoComplete="current-password"
           editable={!loading && !isLoading}
         />
+        
+        <TouchableOpacity style={styles.forgotPasswordContainer}>
+          <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+        </TouchableOpacity>
         <TouchableOpacity 
           style={[styles.button, (loading || isLoading) && styles.buttonDisabled]} 
           onPress={handleSignIn}
@@ -148,6 +152,16 @@ const styles = StyleSheet.create({
     padding: 16,
     fontSize: 16,
     marginBottom: 16,
+    color: '#000000',
+  },
+  forgotPasswordContainer: {
+    alignSelf: 'flex-end',
+    marginBottom: 16,
+  },
+  forgotPasswordText: {
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: '500',
   },
   button: {
     backgroundColor: '#007AFF',
