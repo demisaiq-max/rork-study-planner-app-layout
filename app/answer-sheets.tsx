@@ -259,8 +259,14 @@ export default function AnswerSheetsScreen() {
                 <TouchableOpacity 
                   style={[styles.openSheetButton, { backgroundColor: selectedSubjectInfo.color + '20' }]}
                   onPress={() => {
-                    // Navigate to answer sheet detail/editor
-                    Alert.alert('Info', `Opening ${sheet.name}`);
+                    router.push({
+                      pathname: '/answer-sheet-editor',
+                      params: {
+                        subject: sheet.subject,
+                        name: sheet.name,
+                        questions: sheet.questions.toString()
+                      }
+                    });
                   }}
                 >
                   <Text style={[styles.openSheetText, { color: selectedSubjectInfo.color }]}>
