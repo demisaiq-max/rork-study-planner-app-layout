@@ -37,10 +37,10 @@ export default function LandingScreen() {
               />
             </View>
             
-            <Text style={styles.welcomeText}>Welcome to</Text>
+            <Text style={styles.welcomeText}>환영합니다</Text>
             <Text style={styles.appName}>프로플래너</Text>
             <Text style={styles.tagline}>
-              Your ultimate study companion for academic excellence
+              학업 성취를 위한 최고의 학습 동반자
             </Text>
           </View>
           
@@ -50,9 +50,9 @@ export default function LandingScreen() {
               <View style={styles.featureIcon}>
                 <BookOpen size={28} color="#1e40af" />
               </View>
-              <Text style={styles.featureTitle}>Smart Study Planning</Text>
+              <Text style={styles.featureTitle}>스마트 학습 계획</Text>
               <Text style={styles.featureDescription}>
-                Organize your studies efficiently with AI-powered scheduling
+                AI 기반 스케줄링으로 효율적인 학습 관리
               </Text>
             </View>
             
@@ -60,9 +60,9 @@ export default function LandingScreen() {
               <View style={styles.featureIcon}>
                 <Clock size={28} color="#1e40af" />
               </View>
-              <Text style={styles.featureTitle}>Time Management</Text>
+              <Text style={styles.featureTitle}>시간 관리</Text>
               <Text style={styles.featureDescription}>
-                Track your study sessions and optimize productivity
+                학습 세션을 추적하고 생산성을 최적화
               </Text>
             </View>
             
@@ -70,9 +70,9 @@ export default function LandingScreen() {
               <View style={styles.featureIcon}>
                 <GraduationCap size={28} color="#1e40af" />
               </View>
-              <Text style={styles.featureTitle}>Academic Excellence</Text>
+              <Text style={styles.featureTitle}>학업 성취</Text>
               <Text style={styles.featureDescription}>
-                Monitor your progress and achieve your academic goals
+                진도를 모니터링하고 학업 목표를 달성하세요
               </Text>
             </View>
           </View>
@@ -85,7 +85,7 @@ export default function LandingScreen() {
             onPress={handleGetStarted}
             activeOpacity={0.9}
           >
-            <Text style={styles.getStartedButtonText}>Let&apos;s Get Started</Text>
+            <Text style={styles.getStartedButtonText}>시작하기</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -112,9 +112,9 @@ const styles = StyleSheet.create({
     marginBottom: 50,
   },
   logoContainer: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
     backgroundColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center',
@@ -135,8 +135,8 @@ const styles = StyleSheet.create({
     }),
   },
   logo: {
-    width: 120,
-    height: 120,
+    width: 180,
+    height: 180,
   },
   welcomeText: {
     fontSize: 18,
