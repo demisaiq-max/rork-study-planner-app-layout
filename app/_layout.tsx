@@ -40,7 +40,6 @@ function RootLayoutNav() {
       <Stack.Screen name="question-detail" options={{ title: "Question Detail" }} />
       <Stack.Screen name="group-detail" options={{ title: "Group Detail" }} />
       <Stack.Screen name="oauth-native-callback" options={{ title: "OAuth Callback" }} />
-      <Stack.Screen name="clerk-sync-test" options={{ title: "Clerk Sync Test" }} />
     </Stack>
   );
 }
