@@ -1120,7 +1120,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#E5E5EA",
-    borderStyle: "dashed",
+    ...(Platform.OS !== 'web' && { borderStyle: "dashed" }),
     minHeight: 100,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -1402,7 +1402,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 2,
     borderColor: "#E5E5EA",
-    borderStyle: "dashed",
+    ...(Platform.OS !== 'web' && { borderStyle: "dashed" }),
   },
   noResultsText: {
     fontSize: 12,
@@ -1729,7 +1729,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 2,
     borderColor: "#E5E5EA",
-    borderStyle: "dashed",
+    ...(Platform.OS !== 'web' && { borderStyle: "dashed" }),
   },
   expectedGradeText: {
     fontSize: 12,
