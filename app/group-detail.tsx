@@ -96,7 +96,6 @@ export default function GroupDetailScreen() {
   const [postImage, setPostImage] = useState<string | null>(null);
   const [newComment, setNewComment] = useState("");
   const [refreshing, setRefreshing] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
   const commentInputRef = useRef<TextInput>(null);
   
@@ -208,27 +207,7 @@ export default function GroupDetailScreen() {
     };
   }, [user, groupId, postsQuery]);
 
-  // Handle keyboard events
-  useEffect(() => {
-    const keyboardWillShow = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      (e: KeyboardEvent) => {
-        setKeyboardHeight(e.endCoordinates.height);
-      }
-    );
-    
-    const keyboardWillHide = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => {
-        setKeyboardHeight(0);
-      }
-    );
 
-    return () => {
-      keyboardWillShow.remove();
-      keyboardWillHide.remove();
-    };
-  }, []);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -618,16 +597,12 @@ export default function GroupDetailScreen() {
           </View>
           
           {selectedPost && (
-            <KeyboardAvoidingView 
-              style={styles.modalContent}
-              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-              keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-            >
+            <>
               <ScrollView 
                 ref={scrollViewRef}
                 style={styles.modalScrollContent}
                 keyboardShouldPersistTaps="handled"
-                contentContainerStyle={{ paddingBottom: 80 }}
+                contentContainerStyle={{ paddingBottom: 100 }}
               >
                 <View style={styles.postDetailHeader}>
                   <Image 
@@ -707,35 +682,37 @@ export default function GroupDetailScreen() {
                 </View>
               </ScrollView>
               
-              <View style={[
-                styles.commentInputContainer,
-                { bottom: keyboardHeight > 0 ? 0 : 0 }
-              ]}>
-                <View style={styles.commentInputWrapper}>
-                  <TextInput
-                    ref={commentInputRef}
-                    style={styles.commentInput}
-                    placeholder={language === 'ko' ? '댓글을 입력하세요...' : 'Write a comment...'}
-                    placeholderTextColor="#8E8E93"
-                    value={newComment}
-                    onChangeText={setNewComment}
-                    multiline
-                    maxLength={500}
-                  />
-                  <TouchableOpacity 
-                    style={[styles.sendButton, (!newComment.trim() || addCommentMutation.isPending) && styles.sendButtonDisabled]}
-                    onPress={handleAddComment}
-                    disabled={!newComment.trim() || addCommentMutation.isPending}
-                  >
-                    {addCommentMutation.isPending ? (
-                      <ActivityIndicator size="small" color="#007AFF" />
-                    ) : (
-                      <Send size={20} color={newComment.trim() ? "#007AFF" : "#C7C7CC"} />
-                    )}
-                  </TouchableOpacity>
+              <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'position' : 'height'}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 60 : 0}
+              >
+                <View style={styles.commentInputContainer}>
+                  <View style={styles.commentInputWrapper}>
+                    <TextInput
+                      ref={commentInputRef}
+                      style={styles.commentInput}
+                      placeholder={language === 'ko' ? '댓글을 입력하세요...' : 'Write a comment...'}
+                      placeholderTextColor="#8E8E93"
+                      value={newComment}
+                      onChangeText={setNewComment}
+                      multiline
+                      maxLength={500}
+                    />
+                    <TouchableOpacity 
+                      style={[styles.sendButton, (!newComment.trim() || addCommentMutation.isPending) && styles.sendButtonDisabled]}
+                      onPress={handleAddComment}
+                      disabled={!newComment.trim() || addCommentMutation.isPending}
+                    >
+                      {addCommentMutation.isPending ? (
+                        <ActivityIndicator size="small" color="#007AFF" />
+                      ) : (
+                        <Send size={20} color={newComment.trim() ? "#007AFF" : "#C7C7CC"} />
+                      )}
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              </View>
-            </KeyboardAvoidingView>
+              </KeyboardAvoidingView>
+            </>
           )}
         </View>
       </Modal>
@@ -1017,6 +994,7 @@ const styles = StyleSheet.create({
   modalScrollContent: {
     flex: 1,
     paddingHorizontal: 20,
+    paddingTop: 10,
   },
   postDetailHeader: {
     flexDirection: "row",
@@ -1117,9 +1095,13 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   commentInputContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: Platform.OS === 'ios' ? 12 : 12,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 12,
     borderTopWidth: 1,
     borderTopColor: '#E5E5EA',
     backgroundColor: '#FFFFFF',
