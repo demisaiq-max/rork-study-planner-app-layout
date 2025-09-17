@@ -427,6 +427,16 @@ export default function HomeScreen() {
             <ArrowUpRight size={18} color="#666666" />
           </TouchableOpacity>
           
+          {/* Answer Sheets Button */}
+          <TouchableOpacity 
+            style={styles.answerSheetButton} 
+            activeOpacity={0.7}
+            onPress={() => router.push('/answer-sheets')}
+          >
+            <Text style={styles.answerSheetButtonText}>답안지 작성하기</Text>
+            <ArrowUpRight size={18} color="#007AFF" />
+          </TouchableOpacity>
+          
           <View style={styles.progressSection}>
             <View style={styles.leftTextContainer}>
               <Text style={styles.leftText}>아구몬 님의</Text>
@@ -1801,5 +1811,21 @@ const styles = StyleSheet.create({
   },
   authButtonTextSecondary: {
     color: "#007AFF",
+  },
+  answerSheetButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#E8F3FF",
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 16,
+    position: "relative",
+  },
+  answerSheetButtonText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#007AFF",
+    marginRight: 6,
   },
 });
