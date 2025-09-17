@@ -3,10 +3,9 @@ import { Link, useRouter } from 'expo-router';
 import { Text, TextInput, TouchableOpacity, View, StyleSheet, Alert } from 'react-native';
 import React, { useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 
 export default function SignInScreen() {
-  const { signIn, signInWithGoogle, isLoading } = useAuth();
+  const { signIn, isLoading } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -38,21 +37,7 @@ export default function SignInScreen() {
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    setLoading(true);
-    try {
-      const result = await signInWithGoogle();
-      
-      if (result.error) {
-        Alert.alert('Google Sign In Failed', result.error);
-      }
-    } catch (error) {
-      console.error('❌ Google sign in error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -98,20 +83,7 @@ export default function SignInScreen() {
           </Text>
         </TouchableOpacity>
         
-        <View style={styles.divider}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>or</Text>
-          <View style={styles.dividerLine} />
-        </View>
-        
-        <TouchableOpacity 
-          style={[styles.oauthButton, (loading || isLoading) && styles.buttonDisabled]} 
-          onPress={handleGoogleSignIn}
-          disabled={loading || isLoading}
-        >
-          <Ionicons name="logo-google" size={20} color="#4285F4" />
-          <Text style={styles.oauthButtonText}>Continue with Google</Text>
-        </TouchableOpacity>
+
         
         <View style={styles.linkContainer}>
           <Text style={styles.linkText}>Don&apos;t have an account? </Text>
@@ -194,38 +166,7 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontWeight: '600',
   },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#e1e5e9',
-  },
-  dividerText: {
-    marginHorizontal: 16,
-    fontSize: 14,
-    color: '#666',
-  },
-  oauthButton: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e1e5e9',
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  oauthButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginLeft: 12,
-  },
+
   buttonDisabled: {
     opacity: 0.6,
   },
