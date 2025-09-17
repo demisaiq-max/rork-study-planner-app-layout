@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { Text, TextInput, TouchableOpacity, View, StyleSheet, Alert } from 'react-native';
+import { Text, TextInput, TouchableOpacity, View, StyleSheet, Alert, Image } from 'react-native';
 import { useAuth } from '@/hooks/auth-context';
 import { Link, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 
 export default function SignUpScreen() {
-  const { signUp, signInWithGoogle, isLoading } = useAuth();
+  const { signUp, isLoading } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -53,27 +52,20 @@ export default function SignUpScreen() {
     }
   };
 
-  const handleGoogleSignUp = async () => {
-    setLoading(true);
-    try {
-      const result = await signInWithGoogle();
-      
-      if (result.error) {
-        Alert.alert('Google Sign Up Failed', result.error);
-      }
-    } catch (error) {
-      console.error('❌ Google sign up error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
 
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.content}>
+        <View style={styles.logoContainer}>
+          <Image 
+            source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/hivtfzfo5ab1r4kt3mus0' }}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
         <Text style={styles.title}>Create Account</Text>
         <Text style={styles.subtitle}>Join Study Buddy to track your progress</Text>
         
@@ -115,21 +107,6 @@ export default function SignUpScreen() {
           <Text style={styles.buttonText}>
             {loading ? 'Creating Account...' : 'Create Account'}
           </Text>
-        </TouchableOpacity>
-        
-        <View style={styles.divider}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>or</Text>
-          <View style={styles.dividerLine} />
-        </View>
-        
-        <TouchableOpacity 
-          style={[styles.oauthButton, (loading || isLoading) && styles.buttonDisabled]} 
-          onPress={handleGoogleSignUp}
-          disabled={loading || isLoading}
-        >
-          <Ionicons name="logo-google" size={20} color="#4285F4" />
-          <Text style={styles.oauthButtonText}>Continue with Google</Text>
         </TouchableOpacity>
         
         <View style={styles.linkContainer}>
@@ -204,37 +181,13 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontWeight: '600',
   },
-  divider: {
-    flexDirection: 'row',
+  logoContainer: {
     alignItems: 'center',
-    marginVertical: 24,
+    marginBottom: 32,
   },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#e1e5e9',
-  },
-  dividerText: {
-    marginHorizontal: 16,
-    fontSize: 14,
-    color: '#666',
-  },
-  oauthButton: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e1e5e9',
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  oauthButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginLeft: 12,
+  logo: {
+    width: 120,
+    height: 120,
   },
   buttonDisabled: {
     opacity: 0.6,
