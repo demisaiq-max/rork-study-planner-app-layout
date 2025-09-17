@@ -46,11 +46,15 @@ function RootLayoutNav() {
 
 // Component that provides authenticated tRPC client
 function AuthenticatedTRPCProvider({ children, queryClient }: { children: React.ReactNode; queryClient: QueryClient }) {
-  const { session } = useAuth();
+  const { session, isLoading } = useAuth();
   
   // Create a new tRPC client whenever the session changes
   const trpcClient = useMemo(() => {
-    console.log('🔄 Creating new tRPC client for session:', session ? 'authenticated' : 'unauthenticated');
+    console.log('🔄 Creating new tRPC client for session:', {
+      hasSession: !!session,
+      userEmail: session?.user?.email || 'none',
+      isLoading
+    });
     return createAuthenticatedTRPCClient();
   }, [session]); // Recreate when session changes
 

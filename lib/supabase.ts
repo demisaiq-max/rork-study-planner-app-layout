@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Get Supabase configuration from environment variables
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://bmxtcqpuhfrvnajozzlw.supabase.co';
@@ -26,7 +27,38 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    flowType: 'pkce'
+    flowType: 'pkce',
+    storage: {
+      getItem: async (key: string) => {
+        try {
+          if (!key?.trim()) return null;
+          const value = await AsyncStorage.getItem(key);
+          console.log('🔐 Storage getItem:', key, value ? 'found' : 'not found');
+          return value;
+        } catch (error) {
+          console.error('❌ Storage getItem error:', error);
+          return null;
+        }
+      },
+      setItem: async (key: string, value: string) => {
+        try {
+          if (!key?.trim() || !value) return;
+          await AsyncStorage.setItem(key, value);
+          console.log('🔐 Storage setItem:', key, 'saved');
+        } catch (error) {
+          console.error('❌ Storage setItem error:', error);
+        }
+      },
+      removeItem: async (key: string) => {
+        try {
+          if (!key?.trim()) return;
+          await AsyncStorage.removeItem(key);
+          console.log('🔐 Storage removeItem:', key, 'removed');
+        } catch (error) {
+          console.error('❌ Storage removeItem error:', error);
+        }
+      }
+    }
   },
   global: {
     headers: {

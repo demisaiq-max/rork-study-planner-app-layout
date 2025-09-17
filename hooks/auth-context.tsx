@@ -8,60 +8,98 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Add debug logging for state changes
+  useEffect(() => {
+    console.log('🔐 Auth State Update:', {
+      hasUser: !!user,
+      hasSession: !!session,
+      userEmail: user?.email || 'none',
+      isLoading,
+      timestamp: new Date().toISOString()
+    });
+  }, [user, session, isLoading]);
 
   useEffect(() => {
     let mounted = true;
     
-    // Get initial session with timeout
+    // Get initial session with improved error handling
     const getInitialSession = async () => {
       try {
         console.log('🔐 Getting initial session...');
         
-        // Add timeout to prevent hanging
-        const sessionPromise = supabase.auth.getSession();
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Session timeout')), 5000)
-        );
-        
-        const { data: { session }, error } = await Promise.race([
-          sessionPromise,
-          timeoutPromise
-        ]) as any;
+        // First try to get session from storage directly
+        const { data: { session }, error } = await supabase.auth.getSession();
         
         if (!mounted) return;
         
         if (error) {
           console.error('❌ Error getting initial session:', error);
+          // Don't immediately set to null, let auth state change handle it
         } else {
-          console.log('✅ Initial session:', session ? 'Found' : 'None');
-          setSession(session);
-          setUser(session?.user ?? null);
+          console.log('✅ Initial session:', session ? `Found for user ${session.user?.email}` : 'None');
+          if (session) {
+            setSession(session);
+            setUser(session.user);
+          }
         }
       } catch (error) {
         console.error('❌ Error in getInitialSession:', error);
-        if (mounted) {
-          // Set to null on timeout/error to prevent infinite loading
-          setSession(null);
-          setUser(null);
-        }
+        // Don't set to null here, let the auth state change listener handle it
       } finally {
         if (mounted) {
-          setIsLoading(false);
+          // Only set loading to false after we've tried to get the session
+          setTimeout(() => {
+            if (mounted) {
+              setIsLoading(false);
+            }
+          }, 100);
         }
       }
     };
 
     getInitialSession();
 
-    // Listen for auth changes
+    // Listen for auth changes with better logging
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, sessionData) => {
         if (!mounted) return;
         
-        console.log('🔐 Auth state changed:', event || 'unknown', sessionData ? 'Session exists' : 'No session');
+        console.log('🔐 Auth state changed:', {
+          event: event || 'unknown',
+          hasSession: !!sessionData,
+          userEmail: sessionData?.user?.email || 'none',
+          timestamp: new Date().toISOString()
+        });
         
-        setSession(sessionData);
-        setUser(sessionData?.user ?? null);
+        // Handle different auth events
+        switch (event) {
+          case 'SIGNED_IN':
+            console.log('✅ User signed in successfully');
+            setSession(sessionData);
+            setUser(sessionData?.user ?? null);
+            break;
+          case 'SIGNED_OUT':
+            console.log('👋 User signed out');
+            setSession(null);
+            setUser(null);
+            break;
+          case 'TOKEN_REFRESHED':
+            console.log('🔄 Token refreshed');
+            setSession(sessionData);
+            setUser(sessionData?.user ?? null);
+            break;
+          case 'USER_UPDATED':
+            console.log('👤 User updated');
+            setSession(sessionData);
+            setUser(sessionData?.user ?? null);
+            break;
+          default:
+            // For INITIAL_SESSION and other events
+            setSession(sessionData);
+            setUser(sessionData?.user ?? null);
+        }
+        
         setIsLoading(false);
       }
     );
@@ -236,6 +274,30 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       return { error: 'An unexpected error occurred' };
     }
   }, []);
+  
+  // Add a function to manually refresh the session
+  const refreshSession = useCallback(async () => {
+    try {
+      console.log('🔄 Manually refreshing session...');
+      const { data: { session }, error } = await supabase.auth.refreshSession();
+      
+      if (error) {
+        console.error('❌ Session refresh error:', error);
+        return { error: error.message };
+      }
+      
+      if (session) {
+        console.log('✅ Session refreshed successfully');
+        setSession(session);
+        setUser(session.user);
+      }
+      
+      return { session };
+    } catch (error) {
+      console.error('❌ Session refresh exception:', error);
+      return { error: 'An unexpected error occurred' };
+    }
+  }, []);
 
   return useMemo(() => ({
     user,
@@ -247,7 +309,8 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     signInWithGoogle,
     resetPassword,
     confirmEmail,
-  }), [user, session, isLoading, signIn, signUp, signOut, signInWithGoogle, resetPassword, confirmEmail]);
+    refreshSession,
+  }), [user, session, isLoading, signIn, signUp, signOut, signInWithGoogle, resetPassword, confirmEmail, refreshSession]);
 });
 
 // Helper hook to check if user is signed in
