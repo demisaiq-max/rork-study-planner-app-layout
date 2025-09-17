@@ -1209,21 +1209,13 @@ export default function CommunityScreen() {
           </View>
           
           {selectedPost && (
-            <KeyboardAvoidingView 
-              style={styles.modalContent}
-              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-              keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-            >
+            <View style={styles.modalContent}>
               <ScrollView 
                 ref={scrollViewRef}
                 style={styles.modalScrollContent}
                 keyboardShouldPersistTaps="handled"
-                contentContainerStyle={{ paddingBottom: 80 }}
-                onContentSizeChange={() => {
-                  if (keyboardHeight > 0) {
-                    scrollViewRef.current?.scrollToEnd({ animated: true });
-                  }
-                }}
+                contentContainerStyle={{ paddingBottom: 120 }}
+                showsVerticalScrollIndicator={true}
               >
                 <View style={styles.postDetailHeader}>
                   <Image 
@@ -1300,40 +1292,46 @@ export default function CommunityScreen() {
                 </View>
               </ScrollView>
               
-              <View style={[
-                styles.commentInputContainer,
-                { bottom: keyboardHeight > 0 ? 0 : 0 }
-              ]}>
-                <View style={styles.commentInputWrapper}>
-                  <TextInput
-                    ref={commentInputRef}
-                    style={styles.commentInput}
-                    placeholder={language === 'ko' ? '댓글을 입력하세요...' : 'Write a comment...'}
-                    placeholderTextColor="#8E8E93"
-                    value={newComment}
-                    onChangeText={setNewComment}
-                    multiline
-                    maxLength={500}
-                    onFocus={() => {
-                      setTimeout(() => {
-                        scrollViewRef.current?.scrollToEnd({ animated: true });
-                      }, 300);
-                    }}
-                  />
-                  <TouchableOpacity 
-                    style={[styles.sendButton, (!newComment.trim() || addCommentMutation.isPending) && styles.sendButtonDisabled]}
-                    onPress={handleAddComment}
-                    disabled={!newComment.trim() || addCommentMutation.isPending}
-                  >
-                    {addCommentMutation.isPending ? (
-                      <ActivityIndicator size="small" color="#007AFF" />
-                    ) : (
-                      <Send size={20} color={newComment.trim() ? "#007AFF" : "#C7C7CC"} />
-                    )}
-                  </TouchableOpacity>
+              {/* Comment Input */}
+              <KeyboardAvoidingView 
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+                style={styles.keyboardAvoidingView}
+              >
+                <View style={[styles.commentInputContainer, { 
+                  bottom: keyboardHeight > 0 ? 0 : insets.bottom,
+                  paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 20) : 20
+                }]}>
+                  <View style={styles.commentInputWrapper}>
+                    <View style={styles.inputRow}>
+                      <TextInput
+                        ref={commentInputRef}
+                        style={styles.commentInput}
+                        placeholder={language === 'ko' ? '댓글을 입력하세요...' : 'Write a comment...'}
+                        placeholderTextColor="#8E8E93"
+                        value={newComment}
+                        onChangeText={setNewComment}
+                        multiline
+                        maxLength={500}
+                      />
+                      <TouchableOpacity 
+                        style={[styles.sendButton, {
+                          opacity: newComment.trim() ? 1 : 0.5
+                        }]}
+                        onPress={handleAddComment}
+                        disabled={!newComment.trim() || addCommentMutation.isPending}
+                      >
+                        {addCommentMutation.isPending ? (
+                          <ActivityIndicator size="small" color="#FFFFFF" />
+                        ) : (
+                          <Send size={18} color="#FFFFFF" />
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  </View>
                 </View>
-              </View>
-            </KeyboardAvoidingView>
+              </KeyboardAvoidingView>
+            </View>
           )}
         </View>
       </Modal>
@@ -2128,9 +2126,9 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   commentInputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 8,
+    padding: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
   },
   commentInput: {
     flex: 1,
@@ -2519,5 +2517,16 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5,
+  },
+  keyboardAvoidingView: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 8,
   },
 });
