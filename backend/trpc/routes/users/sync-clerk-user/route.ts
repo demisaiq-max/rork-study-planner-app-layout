@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { publicProcedure } from "@/backend/trpc/create-context";
+import { publicProcedure } from "../../../create-context";
 import { supabase } from "@/lib/supabase";
 
 export const syncClerkUserProcedure = publicProcedure

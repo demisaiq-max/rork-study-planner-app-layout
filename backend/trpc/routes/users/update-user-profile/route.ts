@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { protectedProcedure } from "@/backend/trpc/create-context";
+import { protectedProcedure } from "../../../create-context";
 import { supabase } from "@/lib/supabase";
 
 export const updateUserProfileProcedure = protectedProcedure
