@@ -128,13 +128,35 @@ export const createAuthenticatedTRPCClient = () => {
 };
 
 export const formatTRPCError = (error: unknown): string => {
+  console.log('🔍 Formatting tRPC error:', error);
+  
   if (error instanceof TRPCClientError) {
+    console.log('📝 TRPCClientError details:', {
+      message: error.message,
+      data: error.data,
+      shape: error.shape
+    });
+    
+    // Handle JSON parse errors specifically
+    if (error.message.includes('JSON Parse error') || error.message.includes('Unexpected character')) {
+      return 'Server returned invalid response. Please try again.';
+    }
+    
     return error.message || 'Network request failed';
   }
   
   if (error && typeof error === 'object' && 'message' in error) {
-    return String(error.message);
+    const message = String(error.message);
+    console.log('📝 Generic error message:', message);
+    
+    // Handle JSON parse errors
+    if (message.includes('JSON Parse error') || message.includes('Unexpected character')) {
+      return 'Server returned invalid response. Please try again.';
+    }
+    
+    return message;
   }
   
+  console.log('📝 Unknown error type:', typeof error);
   return 'An unexpected error occurred';
 };
