@@ -52,7 +52,7 @@ export default function LandingScreen() {
               </View>
               <Text style={styles.featureTitle}>스마트 학습 계획</Text>
               <Text style={styles.featureDescription}>
-                AI 기반 스케줄링으로 효율적인 학습 관리
+                체계적인 스케줄링으로 효율적인 학습 관리
               </Text>
             </View>
             
