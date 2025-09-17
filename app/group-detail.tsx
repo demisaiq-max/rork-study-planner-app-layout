@@ -96,6 +96,12 @@ export default function GroupDetailScreen() {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
   const commentInputRef = useRef<TextInput>(null);
+  
+  // Fetch user profile
+  const userProfileQuery = trpc.users.getUserProfile.useQuery(
+    { userId: userId || '' },
+    { enabled: !!userId }
+  );
 
   // Fetch group details
   const groupQuery = trpc.community.groups.getGroups.useQuery({
@@ -303,12 +309,18 @@ export default function GroupDetailScreen() {
         <View style={styles.postHeader}>
           <View style={styles.userInfo}>
             <Image 
-              source={{ uri: `https://i.pravatar.cc/150?u=${post.user_id}` }} 
+              source={{ 
+                uri: post.user_id === userId && userProfileQuery.data?.profilePictureUrl 
+                  ? userProfileQuery.data.profilePictureUrl 
+                  : `https://i.pravatar.cc/150?u=${post.user_id}` 
+              }} 
               style={styles.avatar} 
             />
             <View style={styles.userDetails}>
               <Text style={styles.userName}>
-                {post.user?.name || '익명'}
+                {post.user_id === userId && userProfileQuery.data?.name 
+                  ? userProfileQuery.data.name 
+                  : (post.user?.name || '익명')}
               </Text>
               <Text style={styles.postTime}>{formatTime(post.created_at)}</Text>
             </View>
@@ -503,12 +515,18 @@ export default function GroupDetailScreen() {
               >
                 <View style={styles.postDetailHeader}>
                   <Image 
-                    source={{ uri: `https://i.pravatar.cc/150?u=${selectedPost.user_id}` }} 
+                    source={{ 
+                      uri: selectedPost.user_id === userId && userProfileQuery.data?.profilePictureUrl 
+                        ? userProfileQuery.data.profilePictureUrl 
+                        : `https://i.pravatar.cc/150?u=${selectedPost.user_id}` 
+                    }} 
                     style={styles.detailAvatar} 
                   />
                   <View style={styles.postInfo}>
                     <Text style={styles.authorName}>
-                      {selectedPost.user?.name || 'Anonymous'}
+                      {selectedPost.user_id === userId && userProfileQuery.data?.name 
+                        ? userProfileQuery.data.name 
+                        : (selectedPost.user?.name || 'Anonymous')}
                     </Text>
                     <Text style={styles.detailPostTime}>{formatTime(selectedPost.created_at)}</Text>
                   </View>
@@ -548,13 +566,19 @@ export default function GroupDetailScreen() {
                   {selectedPost.comments?.map((comment) => (
                     <View key={comment.id} style={styles.commentItem}>
                       <Image 
-                        source={{ uri: `https://i.pravatar.cc/150?u=${comment.user?.id}` }} 
+                        source={{ 
+                          uri: comment.user?.id === userId && userProfileQuery.data?.profilePictureUrl 
+                            ? userProfileQuery.data.profilePictureUrl 
+                            : `https://i.pravatar.cc/150?u=${comment.user?.id}` 
+                        }} 
                         style={styles.commentAvatar} 
                       />
                       <View style={styles.commentContent}>
                         <View style={styles.commentHeader}>
                           <Text style={styles.commentAuthor}>
-                            {comment.user?.name || 'Anonymous'}
+                            {comment.user?.id === userId && userProfileQuery.data?.name 
+                              ? userProfileQuery.data.name 
+                              : (comment.user?.name || 'Anonymous')}
                           </Text>
                           <Text style={styles.commentTime}>
                             {formatTime(comment.created_at)}
