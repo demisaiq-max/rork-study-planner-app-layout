@@ -73,6 +73,7 @@ export default function SignUpScreen() {
           style={styles.input}
           value={name}
           placeholder="Enter your name (optional)"
+          placeholderTextColor="#666"
           onChangeText={setName}
           autoComplete="name"
           editable={!loading && !isLoading}
@@ -82,6 +83,7 @@ export default function SignUpScreen() {
           autoCapitalize="none"
           value={email}
           placeholder="Enter email"
+          placeholderTextColor="#666"
           onChangeText={setEmail}
           keyboardType="email-address"
           autoComplete="email"
@@ -91,6 +93,7 @@ export default function SignUpScreen() {
           style={styles.input}
           value={password}
           placeholder="Enter password (min 6 characters)"
+          placeholderTextColor="#666"
           secureTextEntry={true}
           onChangeText={setPassword}
           autoComplete="new-password"
@@ -165,6 +168,7 @@ const styles = StyleSheet.create({
     padding: 16,
     fontSize: 16,
     marginBottom: 16,
+    color: '#1a1a1a',
   },
   button: {
     backgroundColor: '#007AFF',
