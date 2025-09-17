@@ -44,7 +44,7 @@ export default function SignInScreen() {
       <View style={styles.content}>
         <View style={styles.logoContainer}>
           <Image 
-            source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/qple45xqsv6c5466aautm' }}
+            source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/8y90imtoyje3y4gl5lbpx' }}
             style={styles.logo}
             resizeMode="contain"
           />
