@@ -153,13 +153,22 @@ export default function TestDetailScreen() {
         })
       });
 
-      const aiResult = await aiResponse.json();
+      let aiResult: any;
+      try {
+        const { parseJsonResponse } = await import('@/lib/fetchUtils');
+        aiResult = await parseJsonResponse<any>(aiResponse);
+      } catch (err) {
+        console.error('Failed to parse AI response as JSON:', err);
+        // Provide user-friendly error and fallback to raw text parsing below
+        aiResult = { completion: await (async () => { try { return await aiResponse.text(); } catch { return ''; } })() };
+      }
+
       let analysisData;
-      
       try {
         // Try to parse the AI response as JSON
         analysisData = JSON.parse(aiResult.completion);
-      } catch {
+      } catch (parseErr) {
+        console.warn('Failed to JSON.parse(aiResult.completion), falling back to regex extraction. Error:', parseErr);
         // If parsing fails, create default structure with extracted values
         const completion = aiResult.completion;
         
@@ -205,10 +214,10 @@ export default function TestDetailScreen() {
       });
 
       setSelectedImage(null);
-    } catch (error) {
-      console.error('Analysis error:', error);
-      Alert.alert(t('error'), t('analysisError'));
-    } finally {
+      } catch (error) {
+        console.error('Analysis error:', error);
+        Alert.alert(t('error'), t('analysisError'));
+      } finally {
       setIsAnalyzing(false);
     }
   };
