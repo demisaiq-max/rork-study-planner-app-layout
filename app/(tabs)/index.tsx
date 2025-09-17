@@ -10,6 +10,7 @@ import {
   Modal,
   TextInput,
   Alert,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Plus, User, X, Check, Edit2, Trash2, ArrowUpRight, Database } from "lucide-react-native";
@@ -56,7 +57,7 @@ export default function HomeScreen() {
   
   // Fetch exams from database
   const { data: exams, isLoading: isLoadingExams, refetch: refetchExams } = trpc.exams.getUserExams.useQuery(
-    { userId: authUser?.id || '' },
+    undefined,
     { 
       enabled: !!authUser?.id // Only enabled when user is authenticated
     }
@@ -64,7 +65,7 @@ export default function HomeScreen() {
   
   // Fetch graded exams
   const { data: gradedExams, isLoading: isLoadingGradedExams, error: gradedExamsError, refetch: refetchGradedExams } = trpc.tests.getLatestTestResults.useQuery(
-    authUser?.id || '',
+    undefined,
     { 
       enabled: !!authUser?.id, // Only enabled when user is authenticated
       retry: 1
@@ -82,6 +83,15 @@ export default function HomeScreen() {
   
   // Fetch priority tasks from database
   const { data: dbPriorityTasks, isLoading: isLoadingPriorityTasks, refetch: refetchPriorityTasks } = trpc.priorityTasks.getPriorityTasks.useQuery(
+    { userId: authUser?.id || '' },
+    { 
+      enabled: !!authUser?.id, // Only enabled when user is authenticated
+      retry: 1
+    }
+  );
+  
+  // Fetch user profile for profile picture
+  const { data: userProfile, isLoading: isLoadingProfile, refetch: refetchProfile } = trpc.users.getUserProfile.useQuery(
     { userId: authUser?.id || '' },
     { 
       enabled: !!authUser?.id, // Only enabled when user is authenticated
@@ -295,7 +305,6 @@ export default function HomeScreen() {
     }
 
     createExamMutation.mutate({
-      userId: authUser.id,
       title: newExamTitle,
       date: newExamDate,
       subject: 'General',
@@ -368,12 +377,22 @@ export default function HomeScreen() {
             onPress={() => router.push('/settings')}
           >
             <View style={styles.avatar}>
-              <User size={20} color="#8E8E93" />
+              {userProfile?.profilePictureUrl ? (
+                <Image 
+                  source={{ uri: userProfile.profilePictureUrl }}
+                  style={styles.avatarImage}
+                  onError={() => {
+                    console.log('Failed to load profile picture, falling back to icon');
+                  }}
+                />
+              ) : (
+                <User size={20} color="#8E8E93" />
+              )}
             </View>
             <View style={styles.profileInfo}>
               <Text style={styles.examType}>{t('examType')}</Text>
               <Text style={styles.userName} numberOfLines={1} ellipsizeMode="tail">
-                {authUser?.email || user?.name || t('userName')}
+                {userProfile?.name || authUser?.email || user?.name || t('userName')}
               </Text>
             </View>
           </TouchableOpacity>
@@ -443,7 +462,7 @@ export default function HomeScreen() {
               <TouchableOpacity onPress={() => router.push('/all-subjects')}>
                 <Text style={styles.subjectsEditButton}>View All</Text>
               </TouchableOpacity>
-              <ArrowUpRight size={18} color="#8E8E93" style={{ marginLeft: 8 }} />
+              <ArrowUpRight size={18} color="#8E8E93" />
             </View>
           </View>
           
@@ -972,6 +991,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: 10,
+    overflow: "hidden",
+  },
+  avatarImage: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
   },
   profileInfo: {
     justifyContent: "center",
