@@ -393,7 +393,20 @@ export default function AnswerSheetsScreen() {
                     styles.testTypeCard,
                     isExpanded && styles.testTypeCardActive
                   ]}
-                  onPress={() => setSelectedTestType(testType)}
+                  onPress={() => {
+                    if (testType === 'mock') {
+                      router.push({
+                        pathname: '/mock-tests',
+                        params: {
+                          subjectId: selectedSubjectId,
+                          subjectName: selectedSubjectInfo?.name || '',
+                          subjectColor: selectedSubjectInfo?.color || '#4ECDC4'
+                        }
+                      });
+                    } else {
+                      setSelectedTestType(testType);
+                    }
+                  }}
                 >
                   <View style={styles.testTypeHeader}>
                     <Text style={[
@@ -422,8 +435,8 @@ export default function AnswerSheetsScreen() {
                     </Text>
                   )}
 
-                  {/* Expanded Content Inside Card */}
-                  {isExpanded && (
+                  {/* Expanded Content Inside Card - Only for midterm and final */}
+                  {isExpanded && testType !== 'mock' && (
                     <View style={styles.expandedContentInside}>
                       <View style={styles.expandedHeader}>
                         <TouchableOpacity 
