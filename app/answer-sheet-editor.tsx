@@ -8,6 +8,7 @@ import {
   SafeAreaView,
   Alert,
   Dimensions,
+  TextInput,
 } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useLanguage } from '@/hooks/language-context';
@@ -163,7 +164,15 @@ export default function AnswerSheetEditor() {
           <Text style={styles.questionNumberText}>{question.number}</Text>
         </View>
         <View style={styles.textAnswerContainer}>
-          <View style={styles.textAnswerBox} />
+          <TextInput
+            style={styles.textAnswerBox}
+            value={question.textAnswer || ''}
+            onChangeText={(text) => handleTextAnswer(question.number, text)}
+            placeholder="답안을 입력하세요"
+            placeholderTextColor="#8E8E93"
+            multiline={true}
+            textAlignVertical="top"
+          />
         </View>
       </View>
     );
@@ -416,6 +425,10 @@ const styles = StyleSheet.create({
     borderColor: '#000000',
     backgroundColor: '#FFFFFF',
     borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: '#000000',
   },
   submitContainer: {
     padding: 20,
