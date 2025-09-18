@@ -35,14 +35,14 @@ interface SubjectConfig {
 
 const SUBJECT_CONFIGS: Record<string, SubjectConfig> = {
   korean: {
-    name: '국어 학력평가 작은',
+    name: '국어 (Korean)',
     commonQuestions: 34,
     electiveQuestions: 11,
     totalQuestions: 45,
     mcqEnd: 34, // Questions 1-34 are MCQ (Common), 35-45 are text (Elective)
   },
   mathematics: {
-    name: '수학',
+    name: '수학 (Mathematics)',
     commonQuestions: 22,
     electiveQuestions: 8,
     totalQuestions: 30,
@@ -51,14 +51,14 @@ const SUBJECT_CONFIGS: Record<string, SubjectConfig> = {
     multipleSelectionEnd: 22,
   },
   english: {
-    name: '영어',
+    name: '영어 (English)',
     commonQuestions: 45,
     electiveQuestions: 0,
     totalQuestions: 45,
     mcqEnd: 45, // All questions 1-45 are MCQ (Common)
   },
   others: {
-    name: '그외',
+    name: '그외 (Others)',
     commonQuestions: 20,
     electiveQuestions: 0,
     totalQuestions: 20,
@@ -74,29 +74,32 @@ export default function AnswerSheetEditor() {
   
   const config = SUBJECT_CONFIGS[subject] || SUBJECT_CONFIGS.korean;
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [currentSubject, setCurrentSubject] = useState<string>(subject);
+  const [availableSubjects] = useState<string[]>(['korean', 'mathematics', 'english', 'others']);
   
-  // Initialize questions based on subject
+  // Initialize questions when current subject changes
   useEffect(() => {
-    if (!config) return;
+    const currentConfig = SUBJECT_CONFIGS[currentSubject];
+    if (!currentConfig) return;
     
-    console.log(`Initializing ${config.totalQuestions} questions for subject: ${subject}`);
+    console.log(`Initializing ${currentConfig.totalQuestions} questions for subject: ${currentSubject}`);
     
     const initialQuestions: Question[] = [];
-    for (let i = 1; i <= config.totalQuestions; i++) {
+    for (let i = 1; i <= currentConfig.totalQuestions; i++) {
       let questionType: AnswerType = 'mcq';
       
-      if (subject === 'korean') {
+      if (currentSubject === 'korean') {
         // Korean: 1-34 MCQ (Common), 35-45 Text (Elective)
         questionType = i <= 34 ? 'mcq' : 'text';
         console.log(`Korean Question ${i}: ${questionType}`);
-      } else if (subject === 'mathematics') {
+      } else if (currentSubject === 'mathematics') {
         // Mathematics: All questions 1-30 are MCQ (1-22 Common, 23-30 Elective)
         // 16-22 and 29-30 are multiple selection but still MCQ type
         questionType = 'mcq';
-      } else if (subject === 'english') {
+      } else if (currentSubject === 'english') {
         // English: All questions 1-45 are MCQ (Common)
         questionType = 'mcq';
-      } else if (subject === 'others') {
+      } else if (currentSubject === 'others') {
         // Others: All questions 1-20 are MCQ (Common)
         questionType = 'mcq';
       }
@@ -107,10 +110,10 @@ export default function AnswerSheetEditor() {
       });
     }
     
-    console.log(`Created ${initialQuestions.length} questions`);
+    console.log(`Created ${initialQuestions.length} questions for ${currentSubject}`);
     console.log('Question types:', initialQuestions.map(q => `${q.number}:${q.type}`).join(', '));
     setQuestions(initialQuestions);
-  }, [subject, config]);
+  }, [currentSubject]);
 
   const handleMCQSelect = (questionNumber: number, option: MCQOption) => {
     setQuestions(prev => prev.map(q => 
@@ -129,19 +132,21 @@ export default function AnswerSheetEditor() {
   };
 
   const handleSubmit = () => {
-    const answeredQuestions = questions.filter(q => 
+    const currentConfig = SUBJECT_CONFIGS[currentSubject];
+    const currentQuestions = questions.filter(q => q.number <= currentConfig.totalQuestions);
+    const answeredQuestions = currentQuestions.filter(q => 
       q.type === 'mcq' ? q.selectedOption : q.textAnswer?.trim()
     );
     
     Alert.alert(
       '제출 결과 보기',
-      `총 ${config.totalQuestions}문제 중 ${answeredQuestions.length}문제 답변완료\n\n제출하시겠습니까?`,
+      `${currentConfig.name}\n총 ${currentConfig.totalQuestions}문제 중 ${answeredQuestions.length}문제 답변완료\n\n제출하시겠습니까?`,
       [
         { text: '취소', style: 'cancel' },
         {
           text: '제출',
           onPress: () => {
-            Alert.alert('제출 완료', '답안지가 제출되었습니다.');
+            Alert.alert('제출 완료', `${currentConfig.name} 답안지가 제출되었습니다.`);
             router.back();
           }
         }
@@ -203,22 +208,113 @@ export default function AnswerSheetEditor() {
     );
   };
 
-  const renderAllQuestions = () => {
+  const renderSubjectTabs = () => {
+    return (
+      <View style={styles.tabContainer}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabScrollContainer}>
+          {availableSubjects.map((subjectKey) => {
+            const subjectConfig = SUBJECT_CONFIGS[subjectKey];
+            return (
+              <TouchableOpacity
+                key={subjectKey}
+                style={[
+                  styles.tab,
+                  currentSubject === subjectKey && styles.activeTab
+                ]}
+                onPress={() => setCurrentSubject(subjectKey)}
+              >
+                <Text style={[
+                  styles.tabText,
+                  currentSubject === subjectKey && styles.activeTabText
+                ]}>
+                  {subjectConfig.name}
+                </Text>
+                <Text style={[
+                  styles.tabSubtext,
+                  currentSubject === subjectKey && styles.activeTabSubtext
+                ]}>
+                  {subjectConfig.totalQuestions}문제
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+    );
+  };
+
+  const renderCurrentSubjectSheet = () => {
+    const currentConfig = SUBJECT_CONFIGS[currentSubject];
+    const currentQuestions = questions.filter(q => {
+      // Filter questions based on current subject's total questions
+      return q.number <= currentConfig.totalQuestions;
+    });
+
+    // Generate questions for current subject if not already generated
+    if (currentQuestions.length === 0 || currentQuestions.length !== currentConfig.totalQuestions) {
+      const subjectQuestions: Question[] = [];
+      for (let i = 1; i <= currentConfig.totalQuestions; i++) {
+        let questionType: AnswerType = 'mcq';
+        
+        if (currentSubject === 'korean') {
+          // Korean: 1-34 MCQ (Common), 35-45 Text (Elective)
+          questionType = i <= 34 ? 'mcq' : 'text';
+        } else {
+          // All other subjects: All MCQ
+          questionType = 'mcq';
+        }
+        
+        subjectQuestions.push({
+          number: i,
+          type: questionType,
+        });
+      }
+      
+      // Update questions state with current subject questions
+      setQuestions(prev => {
+        const otherSubjectQuestions = prev.filter(q => {
+          // Keep questions from other subjects
+          return false; // For now, we'll regenerate all questions
+        });
+        return [...otherSubjectQuestions, ...subjectQuestions];
+      });
+      
+      return (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading {currentConfig.name}...</Text>
+        </View>
+      );
+    }
+
     return (
       <View style={styles.pageContainer}>
         <View style={styles.pageHeader}>
-          <Text style={styles.pageTitle}>{config.name}</Text>
-          <Text style={styles.pageSubtitle}>총 {config.totalQuestions}문제</Text>
+          <Text style={styles.pageTitle}>{currentConfig.name}</Text>
+          <Text style={styles.pageSubtitle}>
+            Common: {currentConfig.commonQuestions}문제 | 
+            {currentConfig.electiveQuestions > 0 ? `Elective: ${currentConfig.electiveQuestions}문제 | ` : ''}
+            Total: {currentConfig.totalQuestions}문제
+          </Text>
+          {currentSubject === 'korean' && (
+            <Text style={styles.pageDescription}>
+              문제 1-34: 객관식 (Common) | 문제 35-45: 주관식 (Elective)
+            </Text>
+          )}
+          {currentSubject === 'mathematics' && (
+            <Text style={styles.pageDescription}>
+              문제 1-22: 객관식 (Common) | 문제 23-30: 객관식 (Elective)
+              {"\n"}문제 16-22, 29-30: 복수선택 가능
+            </Text>
+          )}
         </View>
         
         <View style={styles.answerGrid}>
           <View style={styles.gridHeader}>
             <Text style={styles.gridHeaderText}>문번</Text>
-            <Text style={styles.gridHeaderText}>답</Text>
-            <Text style={styles.gridHeaderText}>란</Text>
+            <Text style={styles.gridHeaderText}>답안</Text>
           </View>
           
-          {questions.map(question => 
+          {currentQuestions.map(question => 
             question.type === 'mcq' 
               ? renderMCQQuestion(question)
               : renderTextQuestion(question)
@@ -243,12 +339,10 @@ export default function AnswerSheetEditor() {
       
 
 
+      {renderSubjectTabs()}
+      
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {config && questions.length > 0 ? renderAllQuestions() : (
-          <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Loading...</Text>
-          </View>
-        )}
+        {renderCurrentSubjectSheet()}
       </ScrollView>
 
       {/* Submit Button */}
@@ -317,7 +411,57 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#000000',
-    width: 60,
+    flex: 1,
+  },
+  tabContainer: {
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+    paddingVertical: 10,
+  },
+  tabScrollContainer: {
+    paddingHorizontal: 20,
+  },
+  tab: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginRight: 12,
+    borderRadius: 20,
+    backgroundColor: '#F2F2F7',
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    alignItems: 'center',
+    minWidth: 100,
+  },
+  activeTab: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  tabText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#8E8E93',
+    textAlign: 'center',
+  },
+  activeTabText: {
+    color: '#FFFFFF',
+  },
+  tabSubtext: {
+    fontSize: 10,
+    fontWeight: '400',
+    color: '#8E8E93',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  activeTabSubtext: {
+    color: '#FFFFFF',
+  },
+  pageDescription: {
+    fontSize: 12,
+    color: '#666666',
+    textAlign: 'center',
+    marginTop: 8,
+    lineHeight: 16,
   },
   questionRow: {
     flexDirection: 'row',
@@ -383,8 +527,8 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   textAnswerBox: {
-    minHeight: 50,
-    maxHeight: 100,
+    minHeight: 60,
+    maxHeight: 120,
     borderWidth: 2,
     borderColor: '#000000',
     backgroundColor: '#FFFFFF',
