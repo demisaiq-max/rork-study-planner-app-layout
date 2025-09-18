@@ -403,8 +403,24 @@ export default function AnswerSheetsScreen() {
                           subjectColor: selectedSubjectInfo?.color || '#4ECDC4'
                         }
                       });
-                    } else {
-                      setSelectedTestType(testType);
+                    } else if (testType === 'midterm') {
+                      router.push({
+                        pathname: '/midterm-tests',
+                        params: {
+                          subjectId: selectedSubjectId,
+                          subjectName: selectedSubjectInfo?.name || '',
+                          subjectColor: selectedSubjectInfo?.color || '#FF9500'
+                        }
+                      });
+                    } else if (testType === 'final') {
+                      router.push({
+                        pathname: '/final-tests',
+                        params: {
+                          subjectId: selectedSubjectId,
+                          subjectName: selectedSubjectInfo?.name || '',
+                          subjectColor: selectedSubjectInfo?.color || '#AF52DE'
+                        }
+                      });
                     }
                   }}
                 >
@@ -435,78 +451,7 @@ export default function AnswerSheetsScreen() {
                     </Text>
                   )}
 
-                  {/* Expanded Content Inside Card - Only for midterm and final */}
-                  {isExpanded && testType !== 'mock' && (
-                    <View style={styles.expandedContentInside}>
-                      <View style={styles.expandedHeader}>
-                        <TouchableOpacity 
-                          style={[styles.addButton, { backgroundColor: selectedSubjectInfo.color }]}
-                          onPress={() => setShowAddModal(true)}
-                        >
-                          <Plus size={20} color="#FFFFFF" />
-                        </TouchableOpacity>
-                      </View>
 
-                      {typeSheets.length === 0 ? (
-                        <View style={styles.emptyStateInside}>
-                          <FileText size={32} color="#C7C7CC" />
-                          <Text style={styles.emptyTitleInside}>
-                            {language === 'ko' ? '답안지가 없습니다' : 'No Answer Sheets'}
-                          </Text>
-                          <Text style={styles.emptySubtitleInside}>
-                            {language === 'ko' ? '새 답안지를 만들어보세요' : 'Create your first answer sheet'}
-                          </Text>
-                        </View>
-                      ) : (
-                        <View style={styles.sheetsListInside}>
-                          {typeSheets.map((sheet) => (
-                            <View key={sheet.id} style={styles.sheetCardInside}>
-                              <View style={styles.sheetHeaderInside}>
-                                <View style={styles.sheetInfo}>
-                                  <Text style={styles.sheetNameInside}>{sheet.name}</Text>
-                                  <Text style={styles.sheetMetaInside}>
-                                    {sheet.questions} questions • {sheet.createdAt.toLocaleDateString()}
-                                  </Text>
-                                </View>
-                                <View style={styles.sheetActions}>
-                                  <TouchableOpacity 
-                                    style={styles.actionButtonInside}
-                                    onPress={() => handleEditSheet(sheet)}
-                                  >
-                                    <Edit2 size={14} color="#8E8E93" />
-                                  </TouchableOpacity>
-                                  <TouchableOpacity 
-                                    style={styles.actionButtonInside}
-                                    onPress={() => handleDeleteSheet(sheet.id)}
-                                  >
-                                    <Trash2 size={14} color="#FF3B30" />
-                                  </TouchableOpacity>
-                                </View>
-                              </View>
-                              
-                              <TouchableOpacity 
-                                style={[styles.openSheetButtonInside, { backgroundColor: selectedSubjectInfo.color + '20' }]}
-                                onPress={() => {
-                                  router.push({
-                                    pathname: '/answer-sheet-editor',
-                                    params: {
-                                      subject: sheet.subjectId,
-                                      name: sheet.name,
-                                      questions: sheet.questions.toString()
-                                    }
-                                  });
-                                }}
-                              >
-                                <Text style={[styles.openSheetTextInside, { color: selectedSubjectInfo.color }]}>
-                                  {language === 'ko' ? '답안지 열기' : 'Open Answer Sheet'}
-                                </Text>
-                              </TouchableOpacity>
-                            </View>
-                          ))}
-                        </View>
-                      )}
-                    </View>
-                  )}
                 </TouchableOpacity>
 
 
