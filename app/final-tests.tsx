@@ -222,12 +222,23 @@ export default function FinalTestsScreen() {
                 <TouchableOpacity 
                   style={[styles.openSheetButton, { backgroundColor: (params.subjectColor || '#AF52DE') + '20' }]}
                   onPress={() => {
+                    // Navigate to subject-specific answer sheet
+                    let pathname = '/korean-answer-sheet';
+                    
+                    if (params.subjectName?.includes('Korean') || params.subjectName?.includes('국어')) {
+                      pathname = '/korean-answer-sheet';
+                    } else if (params.subjectName?.includes('Mathematics') || params.subjectName?.includes('수학')) {
+                      pathname = '/mathematics-answer-sheet';
+                    } else if (params.subjectName?.includes('English') || params.subjectName?.includes('영어')) {
+                      pathname = '/english-answer-sheet';
+                    } else if (params.subjectName?.includes('Others') || params.subjectName?.includes('그외')) {
+                      pathname = '/others-answer-sheet';
+                    }
+                    
                     router.push({
-                      pathname: '/answer-sheet-editor',
+                      pathname: pathname as any,
                       params: {
-                        subject: sheet.subjectId,
                         name: sheet.name,
-                        questions: sheet.questions.toString()
                       }
                     });
                   }}
