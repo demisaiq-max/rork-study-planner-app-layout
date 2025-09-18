@@ -195,6 +195,8 @@ export default function AnswerSheetEditor() {
             textAlignVertical="top"
             autoCorrect={false}
             autoCapitalize="none"
+            returnKeyType="done"
+            blurOnSubmit={true}
           />
         </View>
       </View>
@@ -328,8 +330,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderBottomWidth: 1,
     borderBottomColor: '#000000',
-    minHeight: 60,
-    alignItems: 'center',
+    minHeight: 80,
+    alignItems: 'stretch',
+    paddingVertical: 10,
   },
   questionNumber: {
     width: 60,
@@ -377,19 +380,21 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 10,
     justifyContent: 'center',
+    paddingVertical: 5,
   },
   textAnswerBox: {
-    minHeight: 40,
-    maxHeight: 80,
-    borderWidth: 1,
+    minHeight: 50,
+    maxHeight: 100,
+    borderWidth: 2,
     borderColor: '#000000',
     backgroundColor: '#FFFFFF',
     borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-    fontSize: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
     color: '#000000',
     textAlignVertical: 'top',
+    fontWeight: '500',
   },
   submitContainer: {
     padding: 20,
