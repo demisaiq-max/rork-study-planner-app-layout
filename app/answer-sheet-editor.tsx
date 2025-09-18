@@ -69,37 +69,33 @@ const SUBJECT_CONFIGS: Record<string, SubjectConfig> = {
 export default function AnswerSheetEditor() {
   const { language } = useLanguage();
   const params = useLocalSearchParams();
-  const subject = params.subject as string || 'korean';
+  const subject = params.subject as string || 'custom';
   const sheetName = params.name as string || 'New Answer Sheet';
+  const mcqQuestions = parseInt(params.mcqQuestions as string) || 20;
+  const textQuestions = parseInt(params.textQuestions as string) || 0;
+  const totalQuestions = parseInt(params.totalQuestions as string) || 20;
+  const subjectName = params.subjectName as string || 'Custom Subject';
   
-  const config = SUBJECT_CONFIGS[subject] || SUBJECT_CONFIGS.korean;
+  // Create dynamic config based on parameters
+  const config: SubjectConfig = {
+    name: subjectName,
+    commonQuestions: mcqQuestions,
+    electiveQuestions: textQuestions,
+    totalQuestions: totalQuestions,
+    mcqEnd: mcqQuestions,
+  };
+  
   const [questions, setQuestions] = useState<Question[]>([]);
   
-  // Initialize questions for the current subject
+  // Initialize questions based on custom configuration
   useEffect(() => {
-    if (!config) return;
-    
-    console.log(`Initializing ${config.totalQuestions} questions for subject: ${subject}`);
+    console.log(`Initializing ${config.totalQuestions} questions for subject: ${config.name}`);
+    console.log(`MCQ: ${mcqQuestions}, Text: ${textQuestions}`);
     
     const initialQuestions: Question[] = [];
     for (let i = 1; i <= config.totalQuestions; i++) {
-      let questionType: AnswerType = 'mcq';
-      
-      if (subject === 'korean') {
-        // Korean: 1-34 MCQ (Common), 35-45 Text (Elective)
-        questionType = i <= 34 ? 'mcq' : 'text';
-        console.log(`Korean Question ${i}: ${questionType}`);
-      } else if (subject === 'mathematics') {
-        // Mathematics: 1-30 all MCQ (Common 1-22, Elective 23-30)
-        questionType = 'mcq';
-        console.log(`Mathematics Question ${i}: ${questionType}`);
-      } else if (subject === 'english') {
-        // English: All questions 1-45 are MCQ (Common)
-        questionType = 'mcq';
-      } else if (subject === 'others') {
-        // Others: All questions 1-20 are MCQ (Common)
-        questionType = 'mcq';
-      }
+      // First mcqQuestions are MCQ, remaining are text
+      const questionType: AnswerType = i <= mcqQuestions ? 'mcq' : 'text';
       
       initialQuestions.push({
         number: i,
@@ -107,10 +103,10 @@ export default function AnswerSheetEditor() {
       });
     }
     
-    console.log(`Created ${initialQuestions.length} questions for ${subject}`);
+    console.log(`Created ${initialQuestions.length} questions`);
     console.log('Question types:', initialQuestions.map(q => `${q.number}:${q.type}`).join(', '));
     setQuestions(initialQuestions);
-  }, [subject, config]);
+  }, [mcqQuestions, textQuestions, config.totalQuestions, config.name]);
 
   const handleMCQSelect = (questionNumber: number, option: MCQOption) => {
     setQuestions(prev => prev.map(q => 
@@ -229,31 +225,15 @@ export default function AnswerSheetEditor() {
         <View style={styles.pageHeader}>
           <Text style={styles.pageTitle}>{config.name}</Text>
           <Text style={styles.pageSubtitle}>
-            Common: {config.commonQuestions}문제 | 
-            {config.electiveQuestions > 0 ? `Elective: ${config.electiveQuestions}문제 | ` : ''}
+            MCQ: {mcqQuestions}문제 | 
+            {textQuestions > 0 ? `Text: ${textQuestions}문제 | ` : ''}
             Total: {config.totalQuestions}문제
           </Text>
-          {subject === 'korean' && (
-            <Text style={styles.pageDescription}>
-              문제 1-34: 객관식 (Common) | 문제 35-45: 주관식 (Elective)
-            </Text>
-          )}
-          {subject === 'mathematics' && (
-            <Text style={styles.pageDescription}>
-              문제 1-22: 객관식 (Common) | 문제 23-30: 객관식 (Elective)
-              {"\n"}문제 16-22, 29-30: 복수선택 가능
-            </Text>
-          )}
-          {subject === 'english' && (
-            <Text style={styles.pageDescription}>
-              문제 1-45: 객관식 (Common)
-            </Text>
-          )}
-          {subject === 'others' && (
-            <Text style={styles.pageDescription}>
-              문제 1-20: 객관식 (Common)
-            </Text>
-          )}
+          <Text style={styles.pageDescription}>
+            {mcqQuestions > 0 && `문제 1-${mcqQuestions}: 객관식 (MCQ)`}
+            {textQuestions > 0 && mcqQuestions > 0 && ' | '}
+            {textQuestions > 0 && `문제 ${mcqQuestions + 1}-${config.totalQuestions}: 주관식 (Text)`}
+          </Text>
         </View>
         
         <View style={styles.answerGrid}>

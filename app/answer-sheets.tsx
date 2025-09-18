@@ -19,6 +19,9 @@ interface Subject {
   name: string;
   color: string;
   createdAt: Date;
+  mcqQuestions?: number;
+  textQuestions?: number;
+  totalQuestions?: number;
 }
 
 interface AnswerSheet {
@@ -48,7 +51,10 @@ export default function AnswerSheetsScreen() {
   const [editingSheet, setEditingSheet] = useState<AnswerSheet | null>(null);
   const [newSubjectName, setNewSubjectName] = useState('');
   const [newSubjectColor, setNewSubjectColor] = useState(DEFAULT_COLORS[0]);
+  const [newSubjectMCQ, setNewSubjectMCQ] = useState('20');
+  const [newSubjectText, setNewSubjectText] = useState('0');
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
+  const [showBubbleSheetConfig, setShowBubbleSheetConfig] = useState(false);
   
   // Mock subjects data - in real app this would come from backend
   const [subjects, setSubjects] = useState<Subject[]>([
@@ -57,24 +63,36 @@ export default function AnswerSheetsScreen() {
       name: 'Korean (국어)',
       color: '#FF6B6B',
       createdAt: new Date('2024-01-01'),
+      mcqQuestions: 34,
+      textQuestions: 11,
+      totalQuestions: 45,
     },
     {
       id: '2', 
       name: 'Mathematics (수학)',
       color: '#4ECDC4',
       createdAt: new Date('2024-01-01'),
+      mcqQuestions: 30,
+      textQuestions: 0,
+      totalQuestions: 30,
     },
     {
       id: '3',
       name: 'English (영어)',
       color: '#45B7D1',
       createdAt: new Date('2024-01-01'),
+      mcqQuestions: 45,
+      textQuestions: 0,
+      totalQuestions: 45,
     },
     {
       id: '4',
       name: 'Others (그외)',
       color: '#96CEB4',
       createdAt: new Date('2024-01-01'),
+      mcqQuestions: 20,
+      textQuestions: 0,
+      totalQuestions: 20,
     },
   ]);
   
@@ -246,11 +264,28 @@ export default function AnswerSheetsScreen() {
       return;
     }
 
+    const mcqCount = parseInt(newSubjectMCQ) || 0;
+    const textCount = parseInt(newSubjectText) || 0;
+    const totalCount = mcqCount + textCount;
+
+    if (totalCount === 0) {
+      Alert.alert('Error', 'Total questions must be greater than 0');
+      return;
+    }
+
+    if (totalCount > 200) {
+      Alert.alert('Error', 'Total questions cannot exceed 200');
+      return;
+    }
+
     const newSubject: Subject = {
       id: Date.now().toString(),
       name: newSubjectName,
       color: newSubjectColor,
       createdAt: new Date(),
+      mcqQuestions: mcqCount,
+      textQuestions: textCount,
+      totalQuestions: totalCount,
     };
 
     setSubjects(prev => [...prev, newSubject]);
@@ -262,6 +297,8 @@ export default function AnswerSheetsScreen() {
     setEditingSubject(subject);
     setNewSubjectName(subject.name);
     setNewSubjectColor(subject.color);
+    setNewSubjectMCQ((subject.mcqQuestions || 0).toString());
+    setNewSubjectText((subject.textQuestions || 0).toString());
     setShowSubjectModal(true);
   };
 
@@ -271,9 +308,30 @@ export default function AnswerSheetsScreen() {
       return;
     }
 
+    const mcqCount = parseInt(newSubjectMCQ) || 0;
+    const textCount = parseInt(newSubjectText) || 0;
+    const totalCount = mcqCount + textCount;
+
+    if (totalCount === 0) {
+      Alert.alert('Error', 'Total questions must be greater than 0');
+      return;
+    }
+
+    if (totalCount > 200) {
+      Alert.alert('Error', 'Total questions cannot exceed 200');
+      return;
+    }
+
     setSubjects(prev => prev.map(subject => 
       subject.id === editingSubject.id 
-        ? { ...subject, name: newSubjectName, color: newSubjectColor }
+        ? { 
+            ...subject, 
+            name: newSubjectName, 
+            color: newSubjectColor,
+            mcqQuestions: mcqCount,
+            textQuestions: textCount,
+            totalQuestions: totalCount,
+          }
         : subject
     ));
     
@@ -325,6 +383,9 @@ export default function AnswerSheetsScreen() {
     setEditingSubject(null);
     setNewSubjectName('');
     setNewSubjectColor(DEFAULT_COLORS[0]);
+    setNewSubjectMCQ('20');
+    setNewSubjectText('0');
+    setShowBubbleSheetConfig(false);
   };
 
   return (
@@ -400,7 +461,10 @@ export default function AnswerSheetsScreen() {
                         params: {
                           subjectId: selectedSubjectId,
                           subjectName: selectedSubjectInfo?.name || '',
-                          subjectColor: selectedSubjectInfo?.color || '#4ECDC4'
+                          subjectColor: selectedSubjectInfo?.color || '#4ECDC4',
+                          mcqQuestions: selectedSubjectInfo?.mcqQuestions || 20,
+                          textQuestions: selectedSubjectInfo?.textQuestions || 0,
+                          totalQuestions: selectedSubjectInfo?.totalQuestions || 20,
                         }
                       });
                     } else if (testType === 'midterm') {
@@ -409,7 +473,10 @@ export default function AnswerSheetsScreen() {
                         params: {
                           subjectId: selectedSubjectId,
                           subjectName: selectedSubjectInfo?.name || '',
-                          subjectColor: selectedSubjectInfo?.color || '#FF9500'
+                          subjectColor: selectedSubjectInfo?.color || '#FF9500',
+                          mcqQuestions: selectedSubjectInfo?.mcqQuestions || 20,
+                          textQuestions: selectedSubjectInfo?.textQuestions || 0,
+                          totalQuestions: selectedSubjectInfo?.totalQuestions || 20,
                         }
                       });
                     } else if (testType === 'final') {
@@ -418,7 +485,10 @@ export default function AnswerSheetsScreen() {
                         params: {
                           subjectId: selectedSubjectId,
                           subjectName: selectedSubjectInfo?.name || '',
-                          subjectColor: selectedSubjectInfo?.color || '#AF52DE'
+                          subjectColor: selectedSubjectInfo?.color || '#AF52DE',
+                          mcqQuestions: selectedSubjectInfo?.mcqQuestions || 20,
+                          textQuestions: selectedSubjectInfo?.textQuestions || 0,
+                          totalQuestions: selectedSubjectInfo?.totalQuestions || 20,
                         }
                       });
                     }
@@ -633,6 +703,74 @@ export default function AnswerSheetsScreen() {
                     ))}
                   </View>
                 </View>
+
+                <View style={styles.inputGroup}>
+                  <TouchableOpacity 
+                    style={styles.bubbleSheetConfigButton}
+                    onPress={() => setShowBubbleSheetConfig(!showBubbleSheetConfig)}
+                  >
+                    <Text style={styles.bubbleSheetConfigButtonText}>
+                      {language === 'ko' ? '답안지 구성 설정' : 'Bubble Sheet Configuration'}
+                    </Text>
+                    <Text style={styles.bubbleSheetConfigArrow}>
+                      {showBubbleSheetConfig ? '▼' : '▶'}
+                    </Text>
+                  </TouchableOpacity>
+                  
+                  {showBubbleSheetConfig && (
+                    <View style={styles.bubbleSheetConfig}>
+                      <View style={styles.questionTypeRow}>
+                        <View style={styles.questionTypeItem}>
+                          <Text style={styles.questionTypeLabel}>
+                            {language === 'ko' ? 'MCQ 문제 수' : 'MCQ Questions'}
+                          </Text>
+                          <TextInput
+                            style={styles.questionCountInput}
+                            value={newSubjectMCQ}
+                            onChangeText={setNewSubjectMCQ}
+                            placeholder="20"
+                            placeholderTextColor="#8E8E93"
+                            keyboardType="numeric"
+                          />
+                        </View>
+                        
+                        <View style={styles.questionTypeItem}>
+                          <Text style={styles.questionTypeLabel}>
+                            {language === 'ko' ? '주관식 문제 수' : 'Text Questions'}
+                          </Text>
+                          <TextInput
+                            style={styles.questionCountInput}
+                            value={newSubjectText}
+                            onChangeText={setNewSubjectText}
+                            placeholder="0"
+                            placeholderTextColor="#8E8E93"
+                            keyboardType="numeric"
+                          />
+                        </View>
+                      </View>
+                      
+                      <View style={styles.totalQuestionsContainer}>
+                        <Text style={styles.totalQuestionsText}>
+                          {language === 'ko' ? '총 문제 수' : 'Total Questions'}: {(parseInt(newSubjectMCQ) || 0) + (parseInt(newSubjectText) || 0)}
+                        </Text>
+                      </View>
+                      
+                      <View style={styles.configPreview}>
+                        <Text style={styles.configPreviewTitle}>
+                          {language === 'ko' ? '답안지 미리보기' : 'Answer Sheet Preview'}:
+                        </Text>
+                        <Text style={styles.configPreviewText}>
+                          • MCQ (객관식): 1-{parseInt(newSubjectMCQ) || 0}번
+                        </Text>
+                        {(parseInt(newSubjectText) || 0) > 0 && (
+                          <Text style={styles.configPreviewText}>
+                            • Text (주관식): {(parseInt(newSubjectMCQ) || 0) + 1}-{(parseInt(newSubjectMCQ) || 0) + (parseInt(newSubjectText) || 0)}번
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+                  )}
+                </View>
               </>
             ) : (
               <>
@@ -669,6 +807,74 @@ export default function AnswerSheetsScreen() {
                 </View>
 
                 <View style={styles.inputGroup}>
+                  <TouchableOpacity 
+                    style={styles.bubbleSheetConfigButton}
+                    onPress={() => setShowBubbleSheetConfig(!showBubbleSheetConfig)}
+                  >
+                    <Text style={styles.bubbleSheetConfigButtonText}>
+                      {language === 'ko' ? '답안지 구성 설정' : 'Bubble Sheet Configuration'}
+                    </Text>
+                    <Text style={styles.bubbleSheetConfigArrow}>
+                      {showBubbleSheetConfig ? '▼' : '▶'}
+                    </Text>
+                  </TouchableOpacity>
+                  
+                  {showBubbleSheetConfig && (
+                    <View style={styles.bubbleSheetConfig}>
+                      <View style={styles.questionTypeRow}>
+                        <View style={styles.questionTypeItem}>
+                          <Text style={styles.questionTypeLabel}>
+                            {language === 'ko' ? 'MCQ 문제 수' : 'MCQ Questions'}
+                          </Text>
+                          <TextInput
+                            style={styles.questionCountInput}
+                            value={newSubjectMCQ}
+                            onChangeText={setNewSubjectMCQ}
+                            placeholder="20"
+                            placeholderTextColor="#8E8E93"
+                            keyboardType="numeric"
+                          />
+                        </View>
+                        
+                        <View style={styles.questionTypeItem}>
+                          <Text style={styles.questionTypeLabel}>
+                            {language === 'ko' ? '주관식 문제 수' : 'Text Questions'}
+                          </Text>
+                          <TextInput
+                            style={styles.questionCountInput}
+                            value={newSubjectText}
+                            onChangeText={setNewSubjectText}
+                            placeholder="0"
+                            placeholderTextColor="#8E8E93"
+                            keyboardType="numeric"
+                          />
+                        </View>
+                      </View>
+                      
+                      <View style={styles.totalQuestionsContainer}>
+                        <Text style={styles.totalQuestionsText}>
+                          {language === 'ko' ? '총 문제 수' : 'Total Questions'}: {(parseInt(newSubjectMCQ) || 0) + (parseInt(newSubjectText) || 0)}
+                        </Text>
+                      </View>
+                      
+                      <View style={styles.configPreview}>
+                        <Text style={styles.configPreviewTitle}>
+                          {language === 'ko' ? '답안지 미리보기' : 'Answer Sheet Preview'}:
+                        </Text>
+                        <Text style={styles.configPreviewText}>
+                          • MCQ (객관식): 1-{parseInt(newSubjectMCQ) || 0}번
+                        </Text>
+                        {(parseInt(newSubjectText) || 0) > 0 && (
+                          <Text style={styles.configPreviewText}>
+                            • Text (주관식): {(parseInt(newSubjectMCQ) || 0) + 1}-{(parseInt(newSubjectMCQ) || 0) + (parseInt(newSubjectText) || 0)}번
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+                  )}
+                </View>
+
+                <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>
                     {language === 'ko' ? '기존 과목' : 'Existing Subjects'}
                   </Text>
@@ -683,6 +889,9 @@ export default function AnswerSheetsScreen() {
                               <Text style={styles.subjectItemName}>{subject.name}</Text>
                               <Text style={styles.subjectItemCount}>
                                 {sheetCount} {language === 'ko' ? '개 답안지' : 'answer sheets'}
+                              </Text>
+                              <Text style={styles.subjectItemConfig}>
+                                MCQ: {subject.mcqQuestions || 0} | Text: {subject.textQuestions || 0} | Total: {subject.totalQuestions || 0}
                               </Text>
                             </View>
                           </View>
@@ -1171,5 +1380,89 @@ const styles = StyleSheet.create({
   },
   testTypeSubtitleActive: {
     color: '#34C759',
+  },
+  subjectItemConfig: {
+    fontSize: 10,
+    color: '#666666',
+    marginTop: 2,
+  },
+  bubbleSheetConfigButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+  },
+  bubbleSheetConfigButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#000000',
+  },
+  bubbleSheetConfigArrow: {
+    fontSize: 12,
+    color: '#8E8E93',
+  },
+  bubbleSheetConfig: {
+    marginTop: 12,
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+  },
+  questionTypeRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  questionTypeItem: {
+    flex: 1,
+  },
+  questionTypeLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#666666',
+    marginBottom: 6,
+  },
+  questionCountInput: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 6,
+    padding: 10,
+    fontSize: 14,
+    color: '#000000',
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    textAlign: 'center',
+  },
+  totalQuestionsContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingVertical: 8,
+    backgroundColor: '#F0F9FF',
+    borderRadius: 6,
+  },
+  totalQuestionsText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0066CC',
+  },
+  configPreview: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 6,
+    padding: 12,
+  },
+  configPreviewTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#333333',
+    marginBottom: 6,
+  },
+  configPreviewText: {
+    fontSize: 11,
+    color: '#666666',
+    marginBottom: 2,
   },
 });
