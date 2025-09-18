@@ -11,75 +11,118 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
-import { Plus, X, Edit2, Trash2, FileText } from 'lucide-react-native';
+import { Plus, X, Edit2, Trash2, FileText, Settings } from 'lucide-react-native';
 import { useLanguage } from '@/hooks/language-context';
 
-type Subject = 'korean' | 'mathematics' | 'english' | 'others';
+interface Subject {
+  id: string;
+  name: string;
+  color: string;
+  createdAt: Date;
+}
 
 interface AnswerSheet {
   id: string;
   name: string;
-  subject: Subject;
+  subjectId: string;
   createdAt: Date;
   questions: number;
 }
 
-const SUBJECTS: { key: Subject; label: string; color: string }[] = [
-  { key: 'korean', label: 'Korean (국어)', color: '#FF6B6B' },
-  { key: 'mathematics', label: 'Mathematics (수학)', color: '#4ECDC4' },
-  { key: 'english', label: 'English (영어)', color: '#45B7D1' },
-  { key: 'others', label: 'Others (그외)', color: '#96CEB4' },
+const DEFAULT_COLORS = [
+  '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', 
+  '#FFA726', '#AB47BC', '#26A69A', '#66BB6A',
+  '#EF5350', '#42A5F5', '#FFCA28', '#8D6E63'
 ];
 
 export default function AnswerSheetsScreen() {
   const { t, language } = useLanguage();
-  const [selectedSubject, setSelectedSubject] = useState<Subject>('korean');
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string>('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showSubjectModal, setShowSubjectModal] = useState(false);
   const [newSheetName, setNewSheetName] = useState('');
   const [newSheetQuestions, setNewSheetQuestions] = useState('20');
   const [editingSheet, setEditingSheet] = useState<AnswerSheet | null>(null);
+  const [newSubjectName, setNewSubjectName] = useState('');
+  const [newSubjectColor, setNewSubjectColor] = useState(DEFAULT_COLORS[0]);
+  const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
+  
+  // Mock subjects data - in real app this would come from backend
+  const [subjects, setSubjects] = useState<Subject[]>([
+    {
+      id: '1',
+      name: 'Korean (국어)',
+      color: '#FF6B6B',
+      createdAt: new Date('2024-01-01'),
+    },
+    {
+      id: '2', 
+      name: 'Mathematics (수학)',
+      color: '#4ECDC4',
+      createdAt: new Date('2024-01-01'),
+    },
+    {
+      id: '3',
+      name: 'English (영어)',
+      color: '#45B7D1',
+      createdAt: new Date('2024-01-01'),
+    },
+    {
+      id: '4',
+      name: 'Others (그외)',
+      color: '#96CEB4',
+      createdAt: new Date('2024-01-01'),
+    },
+  ]);
   
   // Mock data - in real app this would come from backend
   const [answerSheets, setAnswerSheets] = useState<AnswerSheet[]>([
     {
       id: '1',
       name: '2024 수능 모의고사 1회',
-      subject: 'korean',
+      subjectId: '1',
       createdAt: new Date('2024-01-15'),
       questions: 45,
     },
     {
       id: '2', 
       name: '중간고사 대비 문제',
-      subject: 'korean',
+      subjectId: '1',
       createdAt: new Date('2024-01-10'),
       questions: 30,
     },
     {
       id: '3',
       name: '미적분 단원평가',
-      subject: 'mathematics',
+      subjectId: '2',
       createdAt: new Date('2024-01-12'),
       questions: 25,
     },
     {
       id: '4',
       name: 'TOEIC Practice Test',
-      subject: 'english',
+      subjectId: '3',
       createdAt: new Date('2024-01-08'),
       questions: 100,
     },
     {
       id: '5',
       name: '한국사 능력검정시험',
-      subject: 'others',
+      subjectId: '4',
       createdAt: new Date('2024-01-05'),
       questions: 50,
     },
   ]);
+  
+  // Set initial selected subject
+  React.useEffect(() => {
+    if (subjects.length > 0 && !selectedSubjectId) {
+      setSelectedSubjectId(subjects[0].id);
+    }
+  }, [subjects, selectedSubjectId]);
 
-  const filteredSheets = answerSheets.filter(sheet => sheet.subject === selectedSubject);
-  const selectedSubjectInfo = SUBJECTS.find(s => s.key === selectedSubject)!;
+  const filteredSheets = answerSheets.filter(sheet => sheet.subjectId === selectedSubjectId);
+  const selectedSubjectInfo = subjects.find(s => s.id === selectedSubjectId);
 
   const handleAddSheet = () => {
     if (!newSheetName.trim()) {
@@ -96,7 +139,7 @@ export default function AnswerSheetsScreen() {
     const newSheet: AnswerSheet = {
       id: Date.now().toString(),
       name: newSheetName,
-      subject: selectedSubject,
+      subjectId: selectedSubjectId,
       createdAt: new Date(),
       questions: questionsNum,
     };
@@ -155,11 +198,90 @@ export default function AnswerSheetsScreen() {
     );
   };
 
+  const handleAddSubject = () => {
+    if (!newSubjectName.trim()) {
+      Alert.alert('Error', 'Please enter a subject name');
+      return;
+    }
+
+    const newSubject: Subject = {
+      id: Date.now().toString(),
+      name: newSubjectName,
+      color: newSubjectColor,
+      createdAt: new Date(),
+    };
+
+    setSubjects(prev => [...prev, newSubject]);
+    setSelectedSubjectId(newSubject.id);
+    closeSubjectModal();
+  };
+
+  const handleEditSubject = (subject: Subject) => {
+    setEditingSubject(subject);
+    setNewSubjectName(subject.name);
+    setNewSubjectColor(subject.color);
+    setShowSubjectModal(true);
+  };
+
+  const handleUpdateSubject = () => {
+    if (!editingSubject || !newSubjectName.trim()) {
+      Alert.alert('Error', 'Please enter a subject name');
+      return;
+    }
+
+    setSubjects(prev => prev.map(subject => 
+      subject.id === editingSubject.id 
+        ? { ...subject, name: newSubjectName, color: newSubjectColor }
+        : subject
+    ));
+    
+    closeSubjectModal();
+  };
+
+  const handleDeleteSubject = (subjectId: string) => {
+    const sheetsInSubject = answerSheets.filter(sheet => sheet.subjectId === subjectId);
+    
+    if (sheetsInSubject.length > 0) {
+      Alert.alert(
+        'Cannot Delete Subject',
+        `This subject contains ${sheetsInSubject.length} answer sheet(s). Please delete all answer sheets first.`,
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    Alert.alert(
+      'Delete Subject',
+      'Are you sure you want to delete this subject?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            setSubjects(prev => prev.filter(subject => subject.id !== subjectId));
+            if (selectedSubjectId === subjectId && subjects.length > 1) {
+              const remainingSubjects = subjects.filter(s => s.id !== subjectId);
+              setSelectedSubjectId(remainingSubjects[0]?.id || '');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const closeModal = () => {
     setShowAddModal(false);
     setEditingSheet(null);
     setNewSheetName('');
     setNewSheetQuestions('20');
+  };
+
+  const closeSubjectModal = () => {
+    setShowSubjectModal(false);
+    setEditingSubject(null);
+    setNewSubjectName('');
+    setNewSubjectColor(DEFAULT_COLORS[0]);
   };
 
   return (
@@ -180,44 +302,60 @@ export default function AnswerSheetsScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.tabsContainer}
         >
-          {SUBJECTS.map((subject) => (
+          {subjects.map((subject) => (
             <TouchableOpacity
-              key={subject.key}
+              key={subject.id}
               style={[
                 styles.subjectTab,
-                selectedSubject === subject.key && {
+                selectedSubjectId === subject.id && {
                   backgroundColor: subject.color,
                   ...styles.subjectTabActive
                 }
               ]}
-              onPress={() => setSelectedSubject(subject.key)}
+              onPress={() => setSelectedSubjectId(subject.id)}
             >
               <Text style={[
                 styles.subjectTabText,
-                selectedSubject === subject.key && styles.subjectTabTextActive
+                selectedSubjectId === subject.id && styles.subjectTabTextActive
               ]}>
-                {subject.label}
+                {subject.name}
               </Text>
             </TouchableOpacity>
           ))}
+          <TouchableOpacity
+            style={styles.manageSubjectsTab}
+            onPress={() => setShowSubjectModal(true)}
+          >
+            <Settings size={16} color="#8E8E93" />
+          </TouchableOpacity>
         </ScrollView>
       </View>
 
       {/* Answer Sheets List */}
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <View style={[styles.subjectIndicator, { backgroundColor: selectedSubjectInfo.color }]} />
-            <Text style={styles.headerTitle}>{selectedSubjectInfo.label}</Text>
-            <Text style={styles.sheetCount}>({filteredSheets.length})</Text>
+        {selectedSubjectInfo && (
+          <View style={styles.header}>
+            <View style={styles.headerLeft}>
+              <View style={[styles.subjectIndicator, { backgroundColor: selectedSubjectInfo.color }]} />
+              <Text style={styles.headerTitle}>{selectedSubjectInfo.name}</Text>
+              <Text style={styles.sheetCount}>({filteredSheets.length})</Text>
+            </View>
+            <View style={styles.headerActions}>
+              <TouchableOpacity 
+                style={styles.editSubjectButton}
+                onPress={() => handleEditSubject(selectedSubjectInfo)}
+              >
+                <Edit2 size={16} color="#8E8E93" />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.addButton, { backgroundColor: selectedSubjectInfo.color }]}
+                onPress={() => setShowAddModal(true)}
+              >
+                <Plus size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
           </View>
-          <TouchableOpacity 
-            style={[styles.addButton, { backgroundColor: selectedSubjectInfo.color }]}
-            onPress={() => setShowAddModal(true)}
-          >
-            <Plus size={20} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
+        )}
 
         {filteredSheets.length === 0 ? (
           <View style={styles.emptyState}>
@@ -256,23 +394,25 @@ export default function AnswerSheetsScreen() {
                   </View>
                 </View>
                 
-                <TouchableOpacity 
-                  style={[styles.openSheetButton, { backgroundColor: selectedSubjectInfo.color + '20' }]}
-                  onPress={() => {
-                    router.push({
-                      pathname: '/answer-sheet-editor',
-                      params: {
-                        subject: sheet.subject,
-                        name: sheet.name,
-                        questions: sheet.questions.toString()
-                      }
-                    });
-                  }}
-                >
-                  <Text style={[styles.openSheetText, { color: selectedSubjectInfo.color }]}>
-                    {language === 'ko' ? '답안지 열기' : 'Open Answer Sheet'}
-                  </Text>
-                </TouchableOpacity>
+                {selectedSubjectInfo && (
+                  <TouchableOpacity 
+                    style={[styles.openSheetButton, { backgroundColor: selectedSubjectInfo.color + '20' }]}
+                    onPress={() => {
+                      router.push({
+                        pathname: '/answer-sheet-editor',
+                        params: {
+                          subject: sheet.subjectId,
+                          name: sheet.name,
+                          questions: sheet.questions.toString()
+                        }
+                      });
+                    }}
+                  >
+                    <Text style={[styles.openSheetText, { color: selectedSubjectInfo.color }]}>
+                      {language === 'ko' ? '답안지 열기' : 'Open Answer Sheet'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
             ))}
           </View>
@@ -337,28 +477,173 @@ export default function AnswerSheetsScreen() {
                 {language === 'ko' ? '과목' : 'Subject'}
               </Text>
               <View style={styles.subjectSelector}>
-                {SUBJECTS.map((subject) => (
+                {subjects.map((subject) => (
                   <TouchableOpacity
-                    key={subject.key}
+                    key={subject.id}
                     style={[
                       styles.subjectOption,
-                      selectedSubject === subject.key && {
+                      selectedSubjectId === subject.id && {
                         backgroundColor: subject.color,
                         ...styles.subjectOptionSelected
                       }
                     ]}
-                    onPress={() => setSelectedSubject(subject.key)}
+                    onPress={() => setSelectedSubjectId(subject.id)}
                   >
                     <Text style={[
                       styles.subjectOptionText,
-                      selectedSubject === subject.key && styles.subjectOptionTextSelected
+                      selectedSubjectId === subject.id && styles.subjectOptionTextSelected
                     ]}>
-                      {subject.label}
+                      {subject.name}
                     </Text>
                   </TouchableOpacity>
                 ))}
               </View>
             </View>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      {/* Subject Management Modal */}
+      <Modal
+        visible={showSubjectModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={closeSubjectModal}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={closeSubjectModal}>
+              <X size={24} color="#8E8E93" />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>
+              {editingSubject 
+                ? (language === 'ko' ? '과목 수정' : 'Edit Subject')
+                : (language === 'ko' ? '과목 관리' : 'Manage Subjects')
+              }
+            </Text>
+            {editingSubject ? (
+              <TouchableOpacity onPress={handleUpdateSubject}>
+                <Text style={styles.saveButton}>
+                  {language === 'ko' ? '저장' : 'Save'}
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity onPress={handleAddSubject}>
+                <Text style={styles.saveButton}>
+                  {language === 'ko' ? '추가' : 'Add'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <ScrollView style={styles.modalContent}>
+            {editingSubject ? (
+              <>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>
+                    {language === 'ko' ? '과목 이름' : 'Subject Name'}
+                  </Text>
+                  <TextInput
+                    style={styles.textInput}
+                    value={newSubjectName}
+                    onChangeText={setNewSubjectName}
+                    placeholder={language === 'ko' ? '과목 이름을 입력하세요' : 'Enter subject name'}
+                    placeholderTextColor="#8E8E93"
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>
+                    {language === 'ko' ? '색상' : 'Color'}
+                  </Text>
+                  <View style={styles.colorSelector}>
+                    {DEFAULT_COLORS.map((color) => (
+                      <TouchableOpacity
+                        key={color}
+                        style={[
+                          styles.colorOption,
+                          { backgroundColor: color },
+                          newSubjectColor === color && styles.colorOptionSelected
+                        ]}
+                        onPress={() => setNewSubjectColor(color)}
+                      />
+                    ))}
+                  </View>
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>
+                    {language === 'ko' ? '새 과목 추가' : 'Add New Subject'}
+                  </Text>
+                  <TextInput
+                    style={styles.textInput}
+                    value={newSubjectName}
+                    onChangeText={setNewSubjectName}
+                    placeholder={language === 'ko' ? '과목 이름을 입력하세요' : 'Enter subject name'}
+                    placeholderTextColor="#8E8E93"
+                  />
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>
+                    {language === 'ko' ? '색상' : 'Color'}
+                  </Text>
+                  <View style={styles.colorSelector}>
+                    {DEFAULT_COLORS.map((color) => (
+                      <TouchableOpacity
+                        key={color}
+                        style={[
+                          styles.colorOption,
+                          { backgroundColor: color },
+                          newSubjectColor === color && styles.colorOptionSelected
+                        ]}
+                        onPress={() => setNewSubjectColor(color)}
+                      />
+                    ))}
+                  </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>
+                    {language === 'ko' ? '기존 과목' : 'Existing Subjects'}
+                  </Text>
+                  <View style={styles.subjectsList}>
+                    {subjects.map((subject) => {
+                      const sheetCount = answerSheets.filter(sheet => sheet.subjectId === subject.id).length;
+                      return (
+                        <View key={subject.id} style={styles.subjectItem}>
+                          <View style={styles.subjectItemLeft}>
+                            <View style={[styles.subjectColorIndicator, { backgroundColor: subject.color }]} />
+                            <View>
+                              <Text style={styles.subjectItemName}>{subject.name}</Text>
+                              <Text style={styles.subjectItemCount}>
+                                {sheetCount} {language === 'ko' ? '개 답안지' : 'answer sheets'}
+                              </Text>
+                            </View>
+                          </View>
+                          <View style={styles.subjectItemActions}>
+                            <TouchableOpacity 
+                              style={styles.subjectActionButton}
+                              onPress={() => handleEditSubject(subject)}
+                            >
+                              <Edit2 size={16} color="#8E8E93" />
+                            </TouchableOpacity>
+                            <TouchableOpacity 
+                              style={styles.subjectActionButton}
+                              onPress={() => handleDeleteSubject(subject.id)}
+                            >
+                              <Trash2 size={16} color="#FF3B30" />
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </View>
+                </View>
+              </>
+            )}
           </ScrollView>
         </SafeAreaView>
       </Modal>
@@ -596,5 +881,88 @@ const styles = StyleSheet.create({
   subjectOptionTextSelected: {
     color: '#FFFFFF',
     fontWeight: '600',
+  },
+  manageSubjectsTab: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F2F2F7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  editSubjectButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F2F2F7',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  colorSelector: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  colorOption: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 3,
+    borderColor: 'transparent',
+  },
+  colorOptionSelected: {
+    borderColor: '#000000',
+  },
+  subjectsList: {
+    gap: 12,
+  },
+  subjectItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+  },
+  subjectItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  subjectColorIndicator: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 12,
+  },
+  subjectItemName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 2,
+  },
+  subjectItemCount: {
+    fontSize: 12,
+    color: '#8E8E93',
+  },
+  subjectItemActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  subjectActionButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F2F2F7',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
