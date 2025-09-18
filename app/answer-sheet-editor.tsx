@@ -231,7 +231,9 @@ export default function AnswerSheetEditor() {
     
     if (subject === 'korean') {
       return [
-        { start: 1, end: 34, title: 'Common (1-34)' },
+        { start: 1, end: 15, title: 'Common (1-15)' },
+        { start: 16, end: 22, title: 'Common (16-22)' },
+        { start: 23, end: 34, title: 'Common (23-34)' },
         { start: 35, end: 45, title: 'Elective (35-45)' }
       ];
     } else if (subject === 'mathematics') {
