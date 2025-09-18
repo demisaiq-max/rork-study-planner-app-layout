@@ -46,7 +46,7 @@ const SUBJECT_CONFIGS: Record<string, SubjectConfig> = {
     commonQuestions: 22,
     electiveQuestions: 8,
     totalQuestions: 30,
-    mcqEnd: 15, // Questions 1-15 are MCQ, 16-22 multiple selection (Common), 23-30 (Elective with 29-30 multiple selection)
+    mcqEnd: 30, // All questions are MCQ, with multiple selection for 16-22 and 29-30
     multipleSelectionStart: 16,
     multipleSelectionEnd: 22,
   },
@@ -80,6 +80,8 @@ export default function AnswerSheetEditor() {
   useEffect(() => {
     if (!config) return;
     
+    console.log(`Initializing ${config.totalQuestions} questions for subject: ${subject}`);
+    
     const initialQuestions: Question[] = [];
     for (let i = 1; i <= config.totalQuestions; i++) {
       let questionType: AnswerType = 'mcq';
@@ -88,10 +90,14 @@ export default function AnswerSheetEditor() {
         // Korean: 1-34 MCQ (Common), 35-45 Text (Elective)
         questionType = i <= 34 ? 'mcq' : 'text';
       } else if (subject === 'mathematics') {
-        // Mathematics: 1-15 MCQ, 16-22 MCQ (multiple selection), 23-28 MCQ, 29-30 MCQ (multiple selection)
-        questionType = 'mcq'; // All are MCQ type for now
-      } else {
-        // English and Others: All MCQ
+        // Mathematics: All questions 1-30 are MCQ (1-22 Common, 23-30 Elective)
+        // 16-22 and 29-30 are multiple selection but still MCQ type
+        questionType = 'mcq';
+      } else if (subject === 'english') {
+        // English: All questions 1-45 are MCQ (Common)
+        questionType = 'mcq';
+      } else if (subject === 'others') {
+        // Others: All questions 1-20 are MCQ (Common)
         questionType = 'mcq';
       }
       
@@ -100,6 +106,8 @@ export default function AnswerSheetEditor() {
         type: questionType,
       });
     }
+    
+    console.log(`Created ${initialQuestions.length} questions`);
     setQuestions(initialQuestions);
   }, [subject, config]);
 
