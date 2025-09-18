@@ -386,7 +386,21 @@ export default function AnswerSheetsScreen() {
                   styles.testTypeCard,
                   selectedTestType === testType && styles.testTypeCardActive
                 ]}
-                onPress={() => setSelectedTestType(testType)}
+                onPress={() => {
+                  if (testType === 'mock') {
+                    // Navigate to answer sheet editor for mock tests
+                    router.push({
+                      pathname: '/answer-sheet-editor',
+                      params: {
+                        subject: selectedSubjectId,
+                        name: 'New Mock Test',
+                        questions: '45'
+                      }
+                    });
+                  } else {
+                    setSelectedTestType(testType);
+                  }
+                }}
               >
                 <View style={styles.testTypeHeader}>
                   <Text style={[
@@ -420,89 +434,91 @@ export default function AnswerSheetsScreen() {
         </View>
       )}
 
-      {/* Answer Sheets List */}
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {selectedSubjectInfo && (
-          <View style={styles.header}>
-            <View style={styles.headerLeft}>
-              <View style={[styles.subjectIndicator, { backgroundColor: selectedSubjectInfo.color }]} />
-              <Text style={styles.headerTitle}>
-                {getTestTypeInfo(selectedTestType).title}
-              </Text>
-              <Text style={styles.sheetCount}>({filteredSheets.length})</Text>
-            </View>
-            <View style={styles.headerActions}>
-              <TouchableOpacity 
-                style={[styles.addButton, { backgroundColor: selectedSubjectInfo.color }]}
-                onPress={() => setShowAddModal(true)}
-              >
-                <Plus size={20} color="#FFFFFF" />
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        {filteredSheets.length === 0 ? (
-          <View style={styles.emptyState}>
-            <FileText size={48} color="#C7C7CC" />
-            <Text style={styles.emptyTitle}>
-              {language === 'ko' ? '답안지가 없습니다' : 'No Answer Sheets'}
-            </Text>
-            <Text style={styles.emptySubtitle}>
-              {language === 'ko' ? '새 답안지를 만들어보세요' : 'Create your first answer sheet'}
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.sheetsList}>
-            {filteredSheets.map((sheet) => (
-              <View key={sheet.id} style={styles.sheetCard}>
-                <View style={styles.sheetHeader}>
-                  <View style={styles.sheetInfo}>
-                    <Text style={styles.sheetName}>{sheet.name}</Text>
-                    <Text style={styles.sheetMeta}>
-                      {sheet.questions} questions • {sheet.createdAt.toLocaleDateString()}
-                    </Text>
-                  </View>
-                  <View style={styles.sheetActions}>
-                    <TouchableOpacity 
-                      style={styles.actionButton}
-                      onPress={() => handleEditSheet(sheet)}
-                    >
-                      <Edit2 size={16} color="#8E8E93" />
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={styles.actionButton}
-                      onPress={() => handleDeleteSheet(sheet.id)}
-                    >
-                      <Trash2 size={16} color="#FF3B30" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-                
-                {selectedSubjectInfo && (
-                  <TouchableOpacity 
-                    style={[styles.openSheetButton, { backgroundColor: selectedSubjectInfo.color + '20' }]}
-                    onPress={() => {
-                      router.push({
-                        pathname: '/answer-sheet-editor',
-                        params: {
-                          subject: sheet.subjectId,
-                          name: sheet.name,
-                          questions: sheet.questions.toString()
-                        }
-                      });
-                    }}
-                  >
-                    <Text style={[styles.openSheetText, { color: selectedSubjectInfo.color }]}>
-                      {language === 'ko' ? '답안지 열기' : 'Open Answer Sheet'}
-                    </Text>
-                  </TouchableOpacity>
-                )}
+      {/* Answer Sheets List - Only show for non-mock test types */}
+      {selectedTestType !== 'mock' && (
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+          {selectedSubjectInfo && (
+            <View style={styles.header}>
+              <View style={styles.headerLeft}>
+                <View style={[styles.subjectIndicator, { backgroundColor: selectedSubjectInfo.color }]} />
+                <Text style={styles.headerTitle}>
+                  {getTestTypeInfo(selectedTestType).title}
+                </Text>
+                <Text style={styles.sheetCount}>({filteredSheets.length})</Text>
               </View>
-            ))}
-          </View>
-        )}
-      </ScrollView>
+              <View style={styles.headerActions}>
+                <TouchableOpacity 
+                  style={[styles.addButton, { backgroundColor: selectedSubjectInfo.color }]}
+                  onPress={() => setShowAddModal(true)}
+                >
+                  <Plus size={20} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {filteredSheets.length === 0 ? (
+            <View style={styles.emptyState}>
+              <FileText size={48} color="#C7C7CC" />
+              <Text style={styles.emptyTitle}>
+                {language === 'ko' ? '답안지가 없습니다' : 'No Answer Sheets'}
+              </Text>
+              <Text style={styles.emptySubtitle}>
+                {language === 'ko' ? '새 답안지를 만들어보세요' : 'Create your first answer sheet'}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.sheetsList}>
+              {filteredSheets.map((sheet) => (
+                <View key={sheet.id} style={styles.sheetCard}>
+                  <View style={styles.sheetHeader}>
+                    <View style={styles.sheetInfo}>
+                      <Text style={styles.sheetName}>{sheet.name}</Text>
+                      <Text style={styles.sheetMeta}>
+                        {sheet.questions} questions • {sheet.createdAt.toLocaleDateString()}
+                      </Text>
+                    </View>
+                    <View style={styles.sheetActions}>
+                      <TouchableOpacity 
+                        style={styles.actionButton}
+                        onPress={() => handleEditSheet(sheet)}
+                      >
+                        <Edit2 size={16} color="#8E8E93" />
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={styles.actionButton}
+                        onPress={() => handleDeleteSheet(sheet.id)}
+                      >
+                        <Trash2 size={16} color="#FF3B30" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                  
+                  {selectedSubjectInfo && (
+                    <TouchableOpacity 
+                      style={[styles.openSheetButton, { backgroundColor: selectedSubjectInfo.color + '20' }]}
+                      onPress={() => {
+                        router.push({
+                          pathname: '/answer-sheet-editor',
+                          params: {
+                            subject: sheet.subjectId,
+                            name: sheet.name,
+                            questions: sheet.questions.toString()
+                          }
+                        });
+                      }}
+                    >
+                      <Text style={[styles.openSheetText, { color: selectedSubjectInfo.color }]}>
+                        {language === 'ko' ? '답안지 열기' : 'Open Answer Sheet'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))}
+            </View>
+          )}
+        </ScrollView>
+      )}
 
       {/* Add/Edit Modal */}
       <Modal
