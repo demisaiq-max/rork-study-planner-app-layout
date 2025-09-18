@@ -25,6 +25,7 @@ interface AnswerSheet {
   id: string;
   name: string;
   subjectId: string;
+  testType: 'mock' | 'midterm' | 'final';
   createdAt: Date;
   questions: number;
 }
@@ -38,10 +39,12 @@ const DEFAULT_COLORS = [
 export default function AnswerSheetsScreen() {
   const { t, language } = useLanguage();
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('');
+  const [selectedTestType, setSelectedTestType] = useState<'mock' | 'midterm' | 'final'>('mock');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showSubjectModal, setShowSubjectModal] = useState(false);
   const [newSheetName, setNewSheetName] = useState('');
   const [newSheetQuestions, setNewSheetQuestions] = useState('20');
+  const [newTestType, setNewTestType] = useState<'mock' | 'midterm' | 'final'>('mock');
   const [editingSheet, setEditingSheet] = useState<AnswerSheet | null>(null);
   const [newSubjectName, setNewSubjectName] = useState('');
   const [newSubjectColor, setNewSubjectColor] = useState(DEFAULT_COLORS[0]);
@@ -81,6 +84,7 @@ export default function AnswerSheetsScreen() {
       id: '1',
       name: '2024 수능 모의고사 1회',
       subjectId: '1',
+      testType: 'mock',
       createdAt: new Date('2024-01-15'),
       questions: 45,
     },
@@ -88,6 +92,7 @@ export default function AnswerSheetsScreen() {
       id: '2', 
       name: '중간고사 대비 문제',
       subjectId: '1',
+      testType: 'midterm',
       createdAt: new Date('2024-01-10'),
       questions: 30,
     },
@@ -95,6 +100,7 @@ export default function AnswerSheetsScreen() {
       id: '3',
       name: '미적분 단원평가',
       subjectId: '2',
+      testType: 'mock',
       createdAt: new Date('2024-01-12'),
       questions: 25,
     },
@@ -102,6 +108,7 @@ export default function AnswerSheetsScreen() {
       id: '4',
       name: 'TOEIC Practice Test',
       subjectId: '3',
+      testType: 'final',
       createdAt: new Date('2024-01-08'),
       questions: 100,
     },
@@ -109,6 +116,7 @@ export default function AnswerSheetsScreen() {
       id: '5',
       name: '한국사 능력검정시험',
       subjectId: '4',
+      testType: 'mock',
       createdAt: new Date('2024-01-05'),
       questions: 50,
     },
@@ -121,8 +129,40 @@ export default function AnswerSheetsScreen() {
     }
   }, [subjects, selectedSubjectId]);
 
-  const filteredSheets = answerSheets.filter(sheet => sheet.subjectId === selectedSubjectId);
+  const filteredSheets = answerSheets.filter(sheet => 
+    sheet.subjectId === selectedSubjectId && sheet.testType === selectedTestType
+  );
   const selectedSubjectInfo = subjects.find(s => s.id === selectedSubjectId);
+  
+  const getTestTypeInfo = (type: 'mock' | 'midterm' | 'final') => {
+    const count = answerSheets.filter(sheet => 
+      sheet.subjectId === selectedSubjectId && sheet.testType === type
+    ).length;
+    
+    switch (type) {
+      case 'mock':
+        return {
+          title: language === 'ko' ? 'Mock Tests' : 'Mock Tests',
+          subtitle: language === 'ko' ? `최근 성적: 2등급 (95%)` : `Recent Score: Grade 2 (95%)`,
+          count: `${count} ${language === 'ko' ? '시험' : 'tests'}`,
+          color: '#4ECDC4'
+        };
+      case 'midterm':
+        return {
+          title: language === 'ko' ? 'Mid Term Tests' : 'Mid Term Tests',
+          subtitle: '',
+          count: `${count} ${language === 'ko' ? '시험' : 'tests'}`,
+          color: '#FF6B6B'
+        };
+      case 'final':
+        return {
+          title: language === 'ko' ? 'Final Tests' : 'Final Tests',
+          subtitle: '',
+          count: `${count} ${language === 'ko' ? '시험' : 'tests'}`,
+          color: '#45B7D1'
+        };
+    }
+  };
 
   const handleAddSheet = () => {
     if (!newSheetName.trim()) {
@@ -140,6 +180,7 @@ export default function AnswerSheetsScreen() {
       id: Date.now().toString(),
       name: newSheetName,
       subjectId: selectedSubjectId,
+      testType: newTestType,
       createdAt: new Date(),
       questions: questionsNum,
     };
@@ -154,6 +195,7 @@ export default function AnswerSheetsScreen() {
     setEditingSheet(sheet);
     setNewSheetName(sheet.name);
     setNewSheetQuestions(sheet.questions.toString());
+    setNewTestType(sheet.testType);
     setShowAddModal(true);
   };
 
@@ -171,7 +213,7 @@ export default function AnswerSheetsScreen() {
 
     setAnswerSheets(prev => prev.map(sheet => 
       sheet.id === editingSheet.id 
-        ? { ...sheet, name: newSheetName, questions: questionsNum }
+        ? { ...sheet, name: newSheetName, questions: questionsNum, testType: newTestType }
         : sheet
     ));
     
@@ -275,6 +317,7 @@ export default function AnswerSheetsScreen() {
     setEditingSheet(null);
     setNewSheetName('');
     setNewSheetQuestions('20');
+    setNewTestType('mock');
   };
 
   const closeSubjectModal = () => {
@@ -331,22 +374,64 @@ export default function AnswerSheetsScreen() {
         </ScrollView>
       </View>
 
+      {/* Test Type Selection */}
+      {selectedSubjectInfo && (
+        <View style={styles.testTypeContainer}>
+          {(['mock', 'midterm', 'final'] as const).map((testType) => {
+            const typeInfo = getTestTypeInfo(testType);
+            return (
+              <TouchableOpacity
+                key={testType}
+                style={[
+                  styles.testTypeCard,
+                  selectedTestType === testType && styles.testTypeCardActive
+                ]}
+                onPress={() => setSelectedTestType(testType)}
+              >
+                <View style={styles.testTypeHeader}>
+                  <Text style={[
+                    styles.testTypeTitle,
+                    selectedTestType === testType && styles.testTypeTitleActive
+                  ]}>
+                    {typeInfo.title}
+                  </Text>
+                  <View style={[
+                    styles.testTypeIndicator,
+                    selectedTestType === testType && { opacity: 1 }
+                  ]} />
+                </View>
+                <Text style={[
+                  styles.testTypeCount,
+                  selectedTestType === testType && styles.testTypeCountActive
+                ]}>
+                  {typeInfo.count}
+                </Text>
+                {typeInfo.subtitle && (
+                  <Text style={[
+                    styles.testTypeSubtitle,
+                    selectedTestType === testType && styles.testTypeSubtitleActive
+                  ]}>
+                    {typeInfo.subtitle}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
+
       {/* Answer Sheets List */}
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {selectedSubjectInfo && (
           <View style={styles.header}>
             <View style={styles.headerLeft}>
               <View style={[styles.subjectIndicator, { backgroundColor: selectedSubjectInfo.color }]} />
-              <Text style={styles.headerTitle}>{selectedSubjectInfo.name}</Text>
+              <Text style={styles.headerTitle}>
+                {getTestTypeInfo(selectedTestType).title}
+              </Text>
               <Text style={styles.sheetCount}>({filteredSheets.length})</Text>
             </View>
             <View style={styles.headerActions}>
-              <TouchableOpacity 
-                style={styles.editSubjectButton}
-                onPress={() => handleEditSubject(selectedSubjectInfo)}
-              >
-                <Edit2 size={16} color="#8E8E93" />
-              </TouchableOpacity>
               <TouchableOpacity 
                 style={[styles.addButton, { backgroundColor: selectedSubjectInfo.color }]}
                 onPress={() => setShowAddModal(true)}
@@ -470,6 +555,37 @@ export default function AnswerSheetsScreen() {
                 placeholderTextColor="#8E8E93"
                 keyboardType="numeric"
               />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>
+                {language === 'ko' ? '시험 유형' : 'Test Type'}
+              </Text>
+              <View style={styles.subjectSelector}>
+                {(['mock', 'midterm', 'final'] as const).map((testType) => {
+                  const typeInfo = getTestTypeInfo(testType);
+                  return (
+                    <TouchableOpacity
+                      key={testType}
+                      style={[
+                        styles.subjectOption,
+                        newTestType === testType && {
+                          backgroundColor: typeInfo.color,
+                          ...styles.subjectOptionSelected
+                        }
+                      ]}
+                      onPress={() => setNewTestType(testType)}
+                    >
+                      <Text style={[
+                        styles.subjectOptionText,
+                        newTestType === testType && styles.subjectOptionTextSelected
+                      ]}>
+                        {typeInfo.title}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </View>
 
             <View style={styles.inputGroup}>
@@ -964,5 +1080,68 @@ const styles = StyleSheet.create({
     backgroundColor: '#F2F2F7',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  testTypeContainer: {
+    backgroundColor: '#F2F2F7',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    gap: 12,
+  },
+  testTypeCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: '#E5E5EA',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  testTypeCardActive: {
+    borderColor: '#007AFF',
+    backgroundColor: '#F0F8FF',
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  testTypeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  testTypeTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+  },
+  testTypeTitleActive: {
+    color: '#007AFF',
+  },
+  testTypeIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#007AFF',
+    opacity: 0,
+  },
+  testTypeCount: {
+    fontSize: 14,
+    color: '#8E8E93',
+    marginBottom: 2,
+  },
+  testTypeCountActive: {
+    color: '#007AFF',
+    fontWeight: '500',
+  },
+  testTypeSubtitle: {
+    fontSize: 12,
+    color: '#34C759',
+    fontWeight: '500',
+  },
+  testTypeSubtitleActive: {
+    color: '#34C759',
   },
 });
