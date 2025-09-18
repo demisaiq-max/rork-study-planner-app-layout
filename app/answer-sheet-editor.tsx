@@ -74,7 +74,6 @@ export default function AnswerSheetEditor() {
   
   const config = SUBJECT_CONFIGS[subject] || SUBJECT_CONFIGS.korean;
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [currentPage, setCurrentPage] = useState(0);
   
   // Initialize questions based on subject
   useEffect(() => {
@@ -198,15 +197,12 @@ export default function AnswerSheetEditor() {
     );
   };
 
-  const renderQuestionsPage = (startQuestion: number, endQuestion: number) => {
-    const pageQuestions = questions.filter(q => 
-      q.number >= startQuestion && q.number <= endQuestion
-    );
-
+  const renderAllQuestions = () => {
     return (
       <View style={styles.pageContainer}>
         <View style={styles.pageHeader}>
           <Text style={styles.pageTitle}>{config.name}</Text>
+          <Text style={styles.pageSubtitle}>총 {config.totalQuestions}문제</Text>
         </View>
         
         <View style={styles.answerGrid}>
@@ -216,7 +212,7 @@ export default function AnswerSheetEditor() {
             <Text style={styles.gridHeaderText}>란</Text>
           </View>
           
-          {pageQuestions.map(question => 
+          {questions.map(question => 
             question.type === 'mcq' 
               ? renderMCQQuestion(question)
               : renderTextQuestion(question)
@@ -226,34 +222,7 @@ export default function AnswerSheetEditor() {
     );
   };
 
-  const getPageInfo = () => {
-    if (!config) return [{ start: 1, end: 1, title: 'Loading...' }];
-    
-    if (subject === 'korean') {
-      return [
-        { start: 1, end: 15, title: 'Common (1-15)' },
-        { start: 16, end: 22, title: 'Common (16-22)' },
-        { start: 23, end: 34, title: 'Common (23-34)' },
-        { start: 35, end: 45, title: 'Elective (35-45)' }
-      ];
-    } else if (subject === 'mathematics') {
-      return [
-        { start: 1, end: 22, title: 'Common (1-22)' },
-        { start: 23, end: 30, title: 'Elective (23-30)' }
-      ];
-    } else if (subject === 'english') {
-      return [
-        { start: 1, end: 45, title: 'Common (1-45)' }
-      ];
-    } else {
-      return [
-        { start: 1, end: 20, title: 'Common (1-20)' }
-      ];
-    }
-  };
 
-  const pages = getPageInfo();
-  const currentPageInfo = pages[currentPage] || pages[0];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -266,31 +235,10 @@ export default function AnswerSheetEditor() {
         }} 
       />
       
-      {/* Page Navigation */}
-      {pages.length > 1 && (
-        <View style={styles.pageNavigation}>
-          {pages.map((page, index) => (
-            <TouchableOpacity
-              key={index}
-              style={[
-                styles.pageTab,
-                currentPage === index && styles.pageTabActive
-              ]}
-              onPress={() => setCurrentPage(index)}
-            >
-              <Text style={[
-                styles.pageTabText,
-                currentPage === index && styles.pageTabTextActive
-              ]}>
-                {page.start}-{page.end}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
+
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {config && currentPageInfo ? renderQuestionsPage(currentPageInfo.start, currentPageInfo.end) : (
+        {config && questions.length > 0 ? renderAllQuestions() : (
           <View style={styles.loadingContainer}>
             <Text style={styles.loadingText}>Loading...</Text>
           </View>
@@ -312,33 +260,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F2F2F7',
   },
-  pageNavigation: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
-  },
-  pageTab: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 16,
-    backgroundColor: '#F2F2F7',
-    marginRight: 12,
-  },
-  pageTabActive: {
-    backgroundColor: '#007AFF',
-  },
-  pageTabText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#8E8E93',
-  },
-  pageTabTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
+
   scrollView: {
     flex: 1,
   },
@@ -366,6 +288,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#000000',
+  },
+  pageSubtitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666666',
+    marginTop: 4,
   },
   answerGrid: {
     borderWidth: 2,
