@@ -431,10 +431,7 @@ export default function AnswerSheetsScreen() {
                     ]}>
                       {typeInfo.title}
                     </Text>
-                    <View style={[
-                      styles.testTypeIndicator,
-                      isExpanded && { opacity: 1 }
-                    ]} />
+
                   </View>
                   <Text style={[
                     styles.testTypeCount,
