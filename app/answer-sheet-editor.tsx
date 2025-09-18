@@ -138,14 +138,14 @@ export default function AnswerSheetEditor() {
             <TouchableOpacity
               key={option}
               style={[
-                styles.optionButton,
-                question.selectedOption === option && styles.optionButtonSelected
+                styles.optionBubble,
+                question.selectedOption === option && styles.optionBubbleSelected
               ]}
               onPress={() => handleMCQSelect(question.number, option as MCQOption)}
             >
               <Text style={[
-                styles.optionText,
-                question.selectedOption === option && styles.optionTextSelected
+                styles.optionBubbleText,
+                question.selectedOption === option && styles.optionBubbleTextSelected
               ]}>
                 {option}
               </Text>
@@ -339,24 +339,23 @@ const styles = StyleSheet.create({
   gridHeader: {
     flexDirection: 'row',
     backgroundColor: '#F8F8F8',
-    borderBottomWidth: 2,
+    borderBottomWidth: 1,
     borderBottomColor: '#000000',
+    paddingVertical: 8,
   },
   gridHeaderText: {
-    flex: 1,
     textAlign: 'center',
-    paddingVertical: 8,
     fontSize: 14,
     fontWeight: '600',
     color: '#000000',
-    borderRightWidth: 1,
-    borderRightColor: '#000000',
+    width: 60,
   },
   questionRow: {
     flexDirection: 'row',
     borderBottomWidth: 1,
     borderBottomColor: '#000000',
-    minHeight: 50,
+    minHeight: 60,
+    alignItems: 'center',
   },
   textQuestionRow: {
     flexDirection: 'row',
@@ -371,6 +370,7 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     borderRightColor: '#000000',
     backgroundColor: '#F8F8F8',
+    height: '100%',
   },
   questionNumberText: {
     fontSize: 16,
@@ -381,30 +381,28 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 5,
-    justifyContent: 'space-evenly',
+    paddingHorizontal: 10,
+    justifyContent: 'space-around',
   },
-  optionButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 2,
+  optionBubble: {
+    width: 32,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1,
     borderColor: '#000000',
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 2,
     backgroundColor: '#FFFFFF',
-    flex: 0,
   },
-  optionButtonSelected: {
+  optionBubbleSelected: {
     backgroundColor: '#000000',
   },
-  optionText: {
-    fontSize: 16,
-    fontWeight: '600',
+  optionBubbleText: {
+    fontSize: 12,
+    fontWeight: '500',
     color: '#000000',
   },
-  optionTextSelected: {
+  optionBubbleTextSelected: {
     color: '#FFFFFF',
   },
   textAnswerContainer: {
