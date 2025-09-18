@@ -421,80 +421,82 @@ export default function AnswerSheetsScreen() {
                       {typeInfo.subtitle}
                     </Text>
                   )}
+
+                  {/* Expanded Content Inside Card */}
+                  {isExpanded && (
+                    <View style={styles.expandedContentInside}>
+                      <View style={styles.expandedHeader}>
+                        <TouchableOpacity 
+                          style={[styles.addButton, { backgroundColor: selectedSubjectInfo.color }]}
+                          onPress={() => setShowAddModal(true)}
+                        >
+                          <Plus size={20} color="#FFFFFF" />
+                        </TouchableOpacity>
+                      </View>
+
+                      {typeSheets.length === 0 ? (
+                        <View style={styles.emptyStateInside}>
+                          <FileText size={32} color="#C7C7CC" />
+                          <Text style={styles.emptyTitleInside}>
+                            {language === 'ko' ? '답안지가 없습니다' : 'No Answer Sheets'}
+                          </Text>
+                          <Text style={styles.emptySubtitleInside}>
+                            {language === 'ko' ? '새 답안지를 만들어보세요' : 'Create your first answer sheet'}
+                          </Text>
+                        </View>
+                      ) : (
+                        <View style={styles.sheetsListInside}>
+                          {typeSheets.map((sheet) => (
+                            <View key={sheet.id} style={styles.sheetCardInside}>
+                              <View style={styles.sheetHeaderInside}>
+                                <View style={styles.sheetInfo}>
+                                  <Text style={styles.sheetNameInside}>{sheet.name}</Text>
+                                  <Text style={styles.sheetMetaInside}>
+                                    {sheet.questions} questions • {sheet.createdAt.toLocaleDateString()}
+                                  </Text>
+                                </View>
+                                <View style={styles.sheetActions}>
+                                  <TouchableOpacity 
+                                    style={styles.actionButtonInside}
+                                    onPress={() => handleEditSheet(sheet)}
+                                  >
+                                    <Edit2 size={14} color="#8E8E93" />
+                                  </TouchableOpacity>
+                                  <TouchableOpacity 
+                                    style={styles.actionButtonInside}
+                                    onPress={() => handleDeleteSheet(sheet.id)}
+                                  >
+                                    <Trash2 size={14} color="#FF3B30" />
+                                  </TouchableOpacity>
+                                </View>
+                              </View>
+                              
+                              <TouchableOpacity 
+                                style={[styles.openSheetButtonInside, { backgroundColor: selectedSubjectInfo.color + '20' }]}
+                                onPress={() => {
+                                  router.push({
+                                    pathname: '/answer-sheet-editor',
+                                    params: {
+                                      subject: sheet.subjectId,
+                                      name: sheet.name,
+                                      questions: sheet.questions.toString()
+                                    }
+                                  });
+                                }}
+                              >
+                                <Text style={[styles.openSheetTextInside, { color: selectedSubjectInfo.color }]}>
+                                  {language === 'ko' ? '답안지 열기' : 'Open Answer Sheet'}
+                                </Text>
+                              </TouchableOpacity>
+                            </View>
+                          ))}
+                        </View>
+                      )}
+                    </View>
+                  )}
                 </TouchableOpacity>
 
-                {/* Expanded Content */}
-                {isExpanded && (
-                  <View style={styles.expandedContent}>
-                    <View style={styles.expandedHeader}>
-                      <TouchableOpacity 
-                        style={[styles.addButton, { backgroundColor: selectedSubjectInfo.color }]}
-                        onPress={() => setShowAddModal(true)}
-                      >
-                        <Plus size={20} color="#FFFFFF" />
-                      </TouchableOpacity>
-                    </View>
 
-                    {typeSheets.length === 0 ? (
-                      <View style={styles.emptyState}>
-                        <FileText size={48} color="#C7C7CC" />
-                        <Text style={styles.emptyTitle}>
-                          {language === 'ko' ? '답안지가 없습니다' : 'No Answer Sheets'}
-                        </Text>
-                        <Text style={styles.emptySubtitle}>
-                          {language === 'ko' ? '새 답안지를 만들어보세요' : 'Create your first answer sheet'}
-                        </Text>
-                      </View>
-                    ) : (
-                      <View style={styles.sheetsList}>
-                        {typeSheets.map((sheet) => (
-                          <View key={sheet.id} style={styles.sheetCard}>
-                            <View style={styles.sheetHeader}>
-                              <View style={styles.sheetInfo}>
-                                <Text style={styles.sheetName}>{sheet.name}</Text>
-                                <Text style={styles.sheetMeta}>
-                                  {sheet.questions} questions • {sheet.createdAt.toLocaleDateString()}
-                                </Text>
-                              </View>
-                              <View style={styles.sheetActions}>
-                                <TouchableOpacity 
-                                  style={styles.actionButton}
-                                  onPress={() => handleEditSheet(sheet)}
-                                >
-                                  <Edit2 size={16} color="#8E8E93" />
-                                </TouchableOpacity>
-                                <TouchableOpacity 
-                                  style={styles.actionButton}
-                                  onPress={() => handleDeleteSheet(sheet.id)}
-                                >
-                                  <Trash2 size={16} color="#FF3B30" />
-                                </TouchableOpacity>
-                              </View>
-                            </View>
-                            
-                            <TouchableOpacity 
-                              style={[styles.openSheetButton, { backgroundColor: selectedSubjectInfo.color + '20' }]}
-                              onPress={() => {
-                                router.push({
-                                  pathname: '/answer-sheet-editor',
-                                  params: {
-                                    subject: sheet.subjectId,
-                                    name: sheet.name,
-                                    questions: sheet.questions.toString()
-                                  }
-                                });
-                              }}
-                            >
-                              <Text style={[styles.openSheetText, { color: selectedSubjectInfo.color }]}>
-                                {language === 'ko' ? '답안지 열기' : 'Open Answer Sheet'}
-                              </Text>
-                            </TouchableOpacity>
-                          </View>
-                        ))}
-                      </View>
-                    )}
-                  </View>
-                )}
               </View>
             );
           })}
@@ -1091,6 +1093,73 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,
+  },
+  expandedContentInside: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5EA',
+  },
+  emptyStateInside: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  emptyTitleInside: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#8E8E93',
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  emptySubtitleInside: {
+    fontSize: 12,
+    color: '#C7C7CC',
+    textAlign: 'center',
+  },
+  sheetsListInside: {
+    gap: 12,
+  },
+  sheetCardInside: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+  },
+  sheetHeaderInside: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  sheetNameInside: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 2,
+  },
+  sheetMetaInside: {
+    fontSize: 11,
+    color: '#8E8E93',
+  },
+  actionButtonInside: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  openSheetButtonInside: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  openSheetTextInside: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   expandedHeader: {
     flexDirection: 'row',
