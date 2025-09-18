@@ -374,137 +374,132 @@ export default function AnswerSheetsScreen() {
         </ScrollView>
       </View>
 
-      {/* Test Type Selection */}
+
+
+      {/* Test Type Cards with Integrated Content */}
       {selectedSubjectInfo && (
-        <View style={styles.testTypeContainer}>
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
           {(['mock', 'midterm', 'final'] as const).map((testType) => {
             const typeInfo = getTestTypeInfo(testType);
+            const typeSheets = answerSheets.filter(sheet => 
+              sheet.subjectId === selectedSubjectId && sheet.testType === testType
+            );
+            const isExpanded = selectedTestType === testType;
+            
             return (
-              <TouchableOpacity
-                key={testType}
-                style={[
-                  styles.testTypeCard,
-                  selectedTestType === testType && styles.testTypeCardActive
-                ]}
-                onPress={() => setSelectedTestType(testType)}
-              >
-                <View style={styles.testTypeHeader}>
+              <View key={testType} style={styles.testTypeSection}>
+                <TouchableOpacity
+                  style={[
+                    styles.testTypeCard,
+                    isExpanded && styles.testTypeCardActive
+                  ]}
+                  onPress={() => setSelectedTestType(testType)}
+                >
+                  <View style={styles.testTypeHeader}>
+                    <Text style={[
+                      styles.testTypeTitle,
+                      isExpanded && styles.testTypeTitleActive
+                    ]}>
+                      {typeInfo.title}
+                    </Text>
+                    <View style={[
+                      styles.testTypeIndicator,
+                      isExpanded && { opacity: 1 }
+                    ]} />
+                  </View>
                   <Text style={[
-                    styles.testTypeTitle,
-                    selectedTestType === testType && styles.testTypeTitleActive
+                    styles.testTypeCount,
+                    isExpanded && styles.testTypeCountActive
                   ]}>
-                    {typeInfo.title}
+                    {typeInfo.count}
                   </Text>
-                  <View style={[
-                    styles.testTypeIndicator,
-                    selectedTestType === testType && { opacity: 1 }
-                  ]} />
-                </View>
-                <Text style={[
-                  styles.testTypeCount,
-                  selectedTestType === testType && styles.testTypeCountActive
-                ]}>
-                  {typeInfo.count}
-                </Text>
-                {typeInfo.subtitle && (
-                  <Text style={[
-                    styles.testTypeSubtitle,
-                    selectedTestType === testType && styles.testTypeSubtitleActive
-                  ]}>
-                    {typeInfo.subtitle}
-                  </Text>
+                  {typeInfo.subtitle && (
+                    <Text style={[
+                      styles.testTypeSubtitle,
+                      isExpanded && styles.testTypeSubtitleActive
+                    ]}>
+                      {typeInfo.subtitle}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+
+                {/* Expanded Content */}
+                {isExpanded && (
+                  <View style={styles.expandedContent}>
+                    <View style={styles.expandedHeader}>
+                      <TouchableOpacity 
+                        style={[styles.addButton, { backgroundColor: selectedSubjectInfo.color }]}
+                        onPress={() => setShowAddModal(true)}
+                      >
+                        <Plus size={20} color="#FFFFFF" />
+                      </TouchableOpacity>
+                    </View>
+
+                    {typeSheets.length === 0 ? (
+                      <View style={styles.emptyState}>
+                        <FileText size={48} color="#C7C7CC" />
+                        <Text style={styles.emptyTitle}>
+                          {language === 'ko' ? '답안지가 없습니다' : 'No Answer Sheets'}
+                        </Text>
+                        <Text style={styles.emptySubtitle}>
+                          {language === 'ko' ? '새 답안지를 만들어보세요' : 'Create your first answer sheet'}
+                        </Text>
+                      </View>
+                    ) : (
+                      <View style={styles.sheetsList}>
+                        {typeSheets.map((sheet) => (
+                          <View key={sheet.id} style={styles.sheetCard}>
+                            <View style={styles.sheetHeader}>
+                              <View style={styles.sheetInfo}>
+                                <Text style={styles.sheetName}>{sheet.name}</Text>
+                                <Text style={styles.sheetMeta}>
+                                  {sheet.questions} questions • {sheet.createdAt.toLocaleDateString()}
+                                </Text>
+                              </View>
+                              <View style={styles.sheetActions}>
+                                <TouchableOpacity 
+                                  style={styles.actionButton}
+                                  onPress={() => handleEditSheet(sheet)}
+                                >
+                                  <Edit2 size={16} color="#8E8E93" />
+                                </TouchableOpacity>
+                                <TouchableOpacity 
+                                  style={styles.actionButton}
+                                  onPress={() => handleDeleteSheet(sheet.id)}
+                                >
+                                  <Trash2 size={16} color="#FF3B30" />
+                                </TouchableOpacity>
+                              </View>
+                            </View>
+                            
+                            <TouchableOpacity 
+                              style={[styles.openSheetButton, { backgroundColor: selectedSubjectInfo.color + '20' }]}
+                              onPress={() => {
+                                router.push({
+                                  pathname: '/answer-sheet-editor',
+                                  params: {
+                                    subject: sheet.subjectId,
+                                    name: sheet.name,
+                                    questions: sheet.questions.toString()
+                                  }
+                                });
+                              }}
+                            >
+                              <Text style={[styles.openSheetText, { color: selectedSubjectInfo.color }]}>
+                                {language === 'ko' ? '답안지 열기' : 'Open Answer Sheet'}
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </View>
                 )}
-              </TouchableOpacity>
+              </View>
             );
           })}
-        </View>
-      )}
-
-      {/* Answer Sheets List - Show for all selected test types */}
-      {
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-          {selectedSubjectInfo && (
-            <View style={styles.header}>
-              <View style={styles.headerLeft}>
-                <View style={[styles.subjectIndicator, { backgroundColor: selectedSubjectInfo.color }]} />
-                <Text style={styles.headerTitle}>
-                  {getTestTypeInfo(selectedTestType).title}
-                </Text>
-                <Text style={styles.sheetCount}>({filteredSheets.length})</Text>
-              </View>
-              <View style={styles.headerActions}>
-                <TouchableOpacity 
-                  style={[styles.addButton, { backgroundColor: selectedSubjectInfo.color }]}
-                  onPress={() => setShowAddModal(true)}
-                >
-                  <Plus size={20} color="#FFFFFF" />
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-
-          {filteredSheets.length === 0 ? (
-            <View style={styles.emptyState}>
-              <FileText size={48} color="#C7C7CC" />
-              <Text style={styles.emptyTitle}>
-                {language === 'ko' ? '답안지가 없습니다' : 'No Answer Sheets'}
-              </Text>
-              <Text style={styles.emptySubtitle}>
-                {language === 'ko' ? '새 답안지를 만들어보세요' : 'Create your first answer sheet'}
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.sheetsList}>
-              {filteredSheets.map((sheet) => (
-                <View key={sheet.id} style={styles.sheetCard}>
-                  <View style={styles.sheetHeader}>
-                    <View style={styles.sheetInfo}>
-                      <Text style={styles.sheetName}>{sheet.name}</Text>
-                      <Text style={styles.sheetMeta}>
-                        {sheet.questions} questions • {sheet.createdAt.toLocaleDateString()}
-                      </Text>
-                    </View>
-                    <View style={styles.sheetActions}>
-                      <TouchableOpacity 
-                        style={styles.actionButton}
-                        onPress={() => handleEditSheet(sheet)}
-                      >
-                        <Edit2 size={16} color="#8E8E93" />
-                      </TouchableOpacity>
-                      <TouchableOpacity 
-                        style={styles.actionButton}
-                        onPress={() => handleDeleteSheet(sheet.id)}
-                      >
-                        <Trash2 size={16} color="#FF3B30" />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                  
-                  {selectedSubjectInfo && (
-                    <TouchableOpacity 
-                      style={[styles.openSheetButton, { backgroundColor: selectedSubjectInfo.color + '20' }]}
-                      onPress={() => {
-                        router.push({
-                          pathname: '/answer-sheet-editor',
-                          params: {
-                            subject: sheet.subjectId,
-                            name: sheet.name,
-                            questions: sheet.questions.toString()
-                          }
-                        });
-                      }}
-                    >
-                      <Text style={[styles.openSheetText, { color: selectedSubjectInfo.color }]}>
-                        {language === 'ko' ? '답안지 열기' : 'Open Answer Sheet'}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              ))}
-            </View>
-          )}
         </ScrollView>
-      }
+      )}
 
       {/* Add/Edit Modal */}
       <Modal
@@ -1083,11 +1078,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  testTypeContainer: {
-    backgroundColor: '#F2F2F7',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    gap: 12,
+  testTypeSection: {
+    marginBottom: 16,
+  },
+  expandedContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    marginTop: 8,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  expandedHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   testTypeCard: {
     backgroundColor: '#FFFFFF',
