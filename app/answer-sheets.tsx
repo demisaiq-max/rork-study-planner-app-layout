@@ -143,22 +143,22 @@ export default function AnswerSheetsScreen() {
       case 'mock':
         return {
           title: language === 'ko' ? 'Mock Tests' : 'Mock Tests',
-          subtitle: language === 'ko' ? `최근 성적: 2등급 (95%)` : `Recent Score: Grade 2 (95%)`,
-          count: `${count} ${language === 'ko' ? '시험' : 'tests'}`,
+          subtitle: '',
+          count: `${count} ${language === 'ko' ? '시험' : 'sheets'}`,
           color: '#4ECDC4'
         };
       case 'midterm':
         return {
           title: language === 'ko' ? 'Mid Term Tests' : 'Mid Term Tests',
           subtitle: '',
-          count: `${count} ${language === 'ko' ? '시험' : 'tests'}`,
+          count: `${count} ${language === 'ko' ? '시험' : 'sheets'}`,
           color: '#FF6B6B'
         };
       case 'final':
         return {
           title: language === 'ko' ? 'Final Tests' : 'Final Tests',
           subtitle: '',
-          count: `${count} ${language === 'ko' ? '시험' : 'tests'}`,
+          count: `${count} ${language === 'ko' ? '시험' : 'sheets'}`,
           color: '#45B7D1'
         };
     }
@@ -442,14 +442,7 @@ export default function AnswerSheetsScreen() {
                   ]}>
                     {typeInfo.count}
                   </Text>
-                  {typeInfo.subtitle && (
-                    <Text style={[
-                      styles.testTypeSubtitle,
-                      isExpanded && styles.testTypeSubtitleActive
-                    ]}>
-                      {typeInfo.subtitle}
-                    </Text>
-                  )}
+
 
 
                 </TouchableOpacity>
@@ -1129,7 +1122,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: '#E5E5EA',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -1138,8 +1131,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   testTypeCardActive: {
-    borderColor: '#007AFF',
-    backgroundColor: '#F0F8FF',
+    borderColor: '#E5E5EA',
+    backgroundColor: '#FFFFFF',
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
@@ -1156,7 +1149,7 @@ const styles = StyleSheet.create({
     color: '#000000',
   },
   testTypeTitleActive: {
-    color: '#007AFF',
+    color: '#000000',
   },
   testTypeIndicator: {
     width: 8,
@@ -1171,7 +1164,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   testTypeCountActive: {
-    color: '#007AFF',
+    color: '#8E8E93',
     fontWeight: '500',
   },
   testTypeSubtitle: {
