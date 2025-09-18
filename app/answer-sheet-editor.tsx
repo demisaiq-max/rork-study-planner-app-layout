@@ -88,6 +88,7 @@ export default function AnswerSheetEditor() {
       if (subject === 'korean') {
         // Korean: 1-34 MCQ (Common), 35-45 Text (Elective)
         questionType = i <= 34 ? 'mcq' : 'text';
+        console.log(`Korean Question ${i}: ${questionType}`);
       } else if (subject === 'mathematics') {
         // Mathematics: All questions 1-30 are MCQ (1-22 Common, 23-30 Elective)
         // 16-22 and 29-30 are multiple selection but still MCQ type
@@ -107,6 +108,7 @@ export default function AnswerSheetEditor() {
     }
     
     console.log(`Created ${initialQuestions.length} questions`);
+    console.log('Question types:', initialQuestions.map(q => `${q.number}:${q.type}`).join(', '));
     setQuestions(initialQuestions);
   }, [subject, config]);
 
@@ -191,6 +193,8 @@ export default function AnswerSheetEditor() {
             placeholderTextColor="#8E8E93"
             multiline={true}
             textAlignVertical="top"
+            autoCorrect={false}
+            autoCapitalize="none"
           />
         </View>
       </View>
@@ -325,6 +329,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#000000',
     minHeight: 60,
+    alignItems: 'center',
   },
   questionNumber: {
     width: 60,
@@ -374,7 +379,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   textAnswerBox: {
-    height: 40,
+    minHeight: 40,
+    maxHeight: 80,
     borderWidth: 1,
     borderColor: '#000000',
     backgroundColor: '#FFFFFF',
@@ -383,6 +389,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     fontSize: 14,
     color: '#000000',
+    textAlignVertical: 'top',
   },
   submitContainer: {
     padding: 20,
