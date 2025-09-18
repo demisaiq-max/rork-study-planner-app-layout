@@ -386,21 +386,7 @@ export default function AnswerSheetsScreen() {
                   styles.testTypeCard,
                   selectedTestType === testType && styles.testTypeCardActive
                 ]}
-                onPress={() => {
-                  if (testType === 'mock') {
-                    // Navigate to answer sheet editor for mock tests
-                    router.push({
-                      pathname: '/answer-sheet-editor',
-                      params: {
-                        subject: selectedSubjectId,
-                        name: 'New Mock Test',
-                        questions: '45'
-                      }
-                    });
-                  } else {
-                    setSelectedTestType(testType);
-                  }
-                }}
+                onPress={() => setSelectedTestType(testType)}
               >
                 <View style={styles.testTypeHeader}>
                   <Text style={[
@@ -434,8 +420,8 @@ export default function AnswerSheetsScreen() {
         </View>
       )}
 
-      {/* Answer Sheets List - Only show for non-mock test types */}
-      {selectedTestType !== 'mock' && (
+      {/* Answer Sheets List - Show for all selected test types */}
+      {
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
           {selectedSubjectInfo && (
             <View style={styles.header}>
@@ -518,7 +504,7 @@ export default function AnswerSheetsScreen() {
             </View>
           )}
         </ScrollView>
-      )}
+      }
 
       {/* Add/Edit Modal */}
       <Modal
