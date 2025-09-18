@@ -90,9 +90,6 @@ export default function MathematicsAnswerSheet() {
       <View key={question.number} style={styles.questionRow}>
         <View style={styles.questionNumber}>
           <Text style={styles.questionNumberText}>{question.number}</Text>
-          {question.isMultipleSelection && (
-            <Text style={styles.multipleSelectionIndicator}>복수</Text>
-          )}
         </View>
         <View style={styles.optionsContainer}>
           {[1, 2, 3, 4, 5].map((option) => (
@@ -122,10 +119,6 @@ export default function MathematicsAnswerSheet() {
       <View key={question.number} style={styles.questionRow}>
         <View style={styles.questionNumber}>
           <Text style={styles.questionNumberText}>{question.number}</Text>
-          {question.isMultipleSelection && (
-            <Text style={styles.multipleSelectionIndicator}>복수</Text>
-          )}
-          <Text style={styles.electiveIndicator}>주관식</Text>
         </View>
         <View style={styles.textInputContainer}>
           <TextInput
@@ -155,17 +148,6 @@ export default function MathematicsAnswerSheet() {
       
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.pageContainer}>
-          <View style={styles.pageHeader}>
-            <Text style={styles.pageTitle}>Mathematics (수학)</Text>
-            <Text style={styles.pageSubtitle}>
-              Common: 22문제 | Elective: 8문제 | Total: 30문제
-            </Text>
-            <Text style={styles.pageDescription}>
-              문제 1-22: 객관식 (Common) | 문제 23-30: 주관식 (Elective)
-              {"\n"}문제 16-22, 29-30: 복수선택 가능
-            </Text>
-          </View>
-          
           <View style={styles.answerGrid}>
             <View style={styles.gridHeader}>
               <Text style={styles.gridHeaderText}>문번</Text>
@@ -211,31 +193,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  pageHeader: {
-    alignItems: 'center',
-    marginBottom: 20,
-    paddingBottom: 15,
-    borderBottomWidth: 2,
-    borderBottomColor: '#000000',
-  },
-  pageTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#000000',
-  },
-  pageSubtitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#666666',
-    marginTop: 4,
-  },
-  pageDescription: {
-    fontSize: 12,
-    color: '#666666',
-    textAlign: 'center',
-    marginTop: 8,
-    lineHeight: 16,
-  },
+
   answerGrid: {
     borderWidth: 2,
     borderColor: '#000000',
@@ -276,12 +234,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#000000',
   },
-  multipleSelectionIndicator: {
-    fontSize: 8,
-    fontWeight: '500',
-    color: '#FF6B6B',
-    marginTop: 2,
-  },
+
   optionsContainer: {
     flex: 1,
     flexDirection: 'row',
@@ -310,12 +263,7 @@ const styles = StyleSheet.create({
   optionBubbleTextSelected: {
     color: '#FFFFFF',
   },
-  electiveIndicator: {
-    fontSize: 8,
-    fontWeight: '500',
-    color: '#4CAF50',
-    marginTop: 2,
-  },
+
   textInputContainer: {
     flex: 1,
     paddingHorizontal: 10,
