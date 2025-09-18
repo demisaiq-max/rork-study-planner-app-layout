@@ -46,7 +46,7 @@ const SUBJECT_CONFIGS: Record<string, SubjectConfig> = {
     commonQuestions: 22,
     electiveQuestions: 8,
     totalQuestions: 30,
-    mcqEnd: 22, // Questions 1-22 are MCQ (Common), 23-30 are text (Elective)
+    mcqEnd: 30, // Questions 1-30 are all MCQ (Common 1-22, Elective 23-30)
     multipleSelectionStart: 16,
     multipleSelectionEnd: 22,
   },
@@ -90,8 +90,8 @@ export default function AnswerSheetEditor() {
         questionType = i <= 34 ? 'mcq' : 'text';
         console.log(`Korean Question ${i}: ${questionType}`);
       } else if (subject === 'mathematics') {
-        // Mathematics: 1-22 MCQ (Common), 23-30 Text (Elective)
-        questionType = i <= 22 ? 'mcq' : 'text';
+        // Mathematics: 1-30 all MCQ (Common 1-22, Elective 23-30)
+        questionType = 'mcq';
         console.log(`Mathematics Question ${i}: ${questionType}`);
       } else if (subject === 'english') {
         // English: All questions 1-45 are MCQ (Common)
@@ -240,8 +240,8 @@ export default function AnswerSheetEditor() {
           )}
           {subject === 'mathematics' && (
             <Text style={styles.pageDescription}>
-              문제 1-22: 객관식 (Common) | 문제 23-30: 주관식 (Elective)
-              {"\n"}문제 16-22: 복수선택 가능
+              문제 1-22: 객관식 (Common) | 문제 23-30: 객관식 (Elective)
+              {"\n"}문제 16-22, 29-30: 복수선택 가능
             </Text>
           )}
           {subject === 'english' && (
