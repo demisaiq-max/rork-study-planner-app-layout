@@ -71,12 +71,14 @@ export default function AnswerSheetEditor() {
   const subject = params.subject as string || 'korean';
   const sheetName = params.name as string || 'New Answer Sheet';
   
-  const config = SUBJECT_CONFIGS[subject];
+  const config = SUBJECT_CONFIGS[subject] || SUBJECT_CONFIGS.korean;
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
   
   // Initialize questions based on subject
   useEffect(() => {
+    if (!config) return;
+    
     const initialQuestions: Question[] = [];
     for (let i = 1; i <= config.totalQuestions; i++) {
       const isMCQ = config.mcqEnd ? i <= config.mcqEnd : true;
@@ -86,7 +88,7 @@ export default function AnswerSheetEditor() {
       });
     }
     setQuestions(initialQuestions);
-  }, [subject]);
+  }, [subject, config]);
 
   const handleMCQSelect = (questionNumber: number, option: MCQOption) => {
     setQuestions(prev => prev.map(q => 
@@ -196,6 +198,8 @@ export default function AnswerSheetEditor() {
   };
 
   const getPageInfo = () => {
+    if (!config) return [{ start: 1, end: 1, title: 'Loading...' }];
+    
     if (subject === 'korean') {
       return [
         { start: 1, end: 15, title: 'MCQ Questions 1-15' },
@@ -214,7 +218,7 @@ export default function AnswerSheetEditor() {
   };
 
   const pages = getPageInfo();
-  const currentPageInfo = pages[currentPage];
+  const currentPageInfo = pages[currentPage] || pages[0];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -251,7 +255,11 @@ export default function AnswerSheetEditor() {
       )}
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {renderQuestionsPage(currentPageInfo.start, currentPageInfo.end)}
+        {config && currentPageInfo ? renderQuestionsPage(currentPageInfo.start, currentPageInfo.end) : (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Loading...</Text>
+          </View>
+        )}
       </ScrollView>
 
       {/* Submit Button */}
@@ -427,5 +435,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#000000',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#8E8E93',
   },
 });
