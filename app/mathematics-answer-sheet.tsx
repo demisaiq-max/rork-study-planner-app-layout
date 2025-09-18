@@ -7,15 +7,19 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Alert,
+  TextInput,
 } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useLanguage } from '@/hooks/language-context';
 
 type MCQOption = 1 | 2 | 3 | 4 | 5;
+type AnswerType = 'mcq' | 'text';
 
 interface Question {
   number: number;
+  type: AnswerType;
   selectedOption?: MCQOption;
+  textAnswer?: string;
   isMultipleSelection?: boolean;
 }
 
@@ -26,14 +30,18 @@ export default function MathematicsAnswerSheet() {
   
   const [questions, setQuestions] = useState<Question[]>([]);
   
-  // Initialize Mathematics questions: 1-30 all MCQ (Common 1-22, Elective 23-30)
-  // Multiple selection for questions 16-22 and 29-30
+  // Initialize Mathematics questions:
+  // 1-22: MCQ (Common) with multiple selection for 16-22
+  // 23-30: Text input (Elective) with multiple selection for 29-30
   useEffect(() => {
     const initialQuestions: Question[] = [];
     for (let i = 1; i <= 30; i++) {
+      const isElective = i >= 23;
       const isMultipleSelection = (i >= 16 && i <= 22) || (i >= 29 && i <= 30);
+      
       initialQuestions.push({
         number: i,
+        type: isElective ? 'text' : 'mcq',
         isMultipleSelection,
       });
     }
@@ -48,8 +56,18 @@ export default function MathematicsAnswerSheet() {
     ));
   };
 
+  const handleTextChange = (questionNumber: number, text: string) => {
+    setQuestions(prev => prev.map(q => 
+      q.number === questionNumber 
+        ? { ...q, textAnswer: text }
+        : q
+    ));
+  };
+
   const handleSubmit = () => {
-    const answeredQuestions = questions.filter(q => q.selectedOption);
+    const answeredQuestions = questions.filter(q => 
+      q.type === 'mcq' ? q.selectedOption : q.textAnswer?.trim()
+    );
     
     Alert.alert(
       '제출 결과 보기',
@@ -99,6 +117,31 @@ export default function MathematicsAnswerSheet() {
     );
   };
 
+  const renderTextQuestion = (question: Question) => {
+    return (
+      <View key={question.number} style={styles.questionRow}>
+        <View style={styles.questionNumber}>
+          <Text style={styles.questionNumberText}>{question.number}</Text>
+          {question.isMultipleSelection && (
+            <Text style={styles.multipleSelectionIndicator}>복수</Text>
+          )}
+          <Text style={styles.electiveIndicator}>주관식</Text>
+        </View>
+        <View style={styles.textInputContainer}>
+          <TextInput
+            style={styles.textInput}
+            value={question.textAnswer || ''}
+            onChangeText={(text) => handleTextChange(question.number, text)}
+            placeholder="답안을 입력하세요"
+            placeholderTextColor="#999999"
+            multiline
+            textAlignVertical="top"
+          />
+        </View>
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <Stack.Screen 
@@ -118,7 +161,7 @@ export default function MathematicsAnswerSheet() {
               Common: 22문제 | Elective: 8문제 | Total: 30문제
             </Text>
             <Text style={styles.pageDescription}>
-              문제 1-22: 객관식 (Common) | 문제 23-30: 객관식 (Elective)
+              문제 1-22: 객관식 (Common) | 문제 23-30: 주관식 (Elective)
               {"\n"}문제 16-22, 29-30: 복수선택 가능
             </Text>
           </View>
@@ -129,7 +172,11 @@ export default function MathematicsAnswerSheet() {
               <Text style={styles.gridHeaderText}>답안</Text>
             </View>
             
-            {questions.map(question => renderMCQQuestion(question))}
+            {questions.map(question => 
+              question.type === 'mcq' 
+                ? renderMCQQuestion(question)
+                : renderTextQuestion(question)
+            )}
           </View>
         </View>
       </ScrollView>
@@ -262,6 +309,28 @@ const styles = StyleSheet.create({
   },
   optionBubbleTextSelected: {
     color: '#FFFFFF',
+  },
+  electiveIndicator: {
+    fontSize: 8,
+    fontWeight: '500',
+    color: '#4CAF50',
+    marginTop: 2,
+  },
+  textInputContainer: {
+    flex: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: '#CCCCCC',
+    borderRadius: 6,
+    padding: 8,
+    fontSize: 14,
+    color: '#000000',
+    backgroundColor: '#FFFFFF',
+    minHeight: 40,
+    textAlignVertical: 'top',
   },
   submitContainer: {
     padding: 20,
