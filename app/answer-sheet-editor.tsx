@@ -16,6 +16,11 @@ import { useLanguage } from '@/hooks/language-context';
 type AnswerType = 'mcq' | 'text';
 type MCQOption = 1 | 2 | 3 | 4 | 5;
 
+interface QuestionConfig {
+  number: number;
+  type: 'mcq' | 'text';
+}
+
 interface Question {
   number: number;
   type: AnswerType;
@@ -75,6 +80,17 @@ export default function AnswerSheetEditor() {
   const textQuestions = parseInt(params.textQuestions as string) || 0;
   const totalQuestions = parseInt(params.totalQuestions as string) || 20;
   const subjectName = params.subjectName as string || 'Custom Subject';
+  const questionConfigParam = params.questionConfig as string;
+  
+  // Parse dynamic question configuration if provided
+  let dynamicQuestionConfig: QuestionConfig[] | undefined;
+  try {
+    if (questionConfigParam) {
+      dynamicQuestionConfig = JSON.parse(questionConfigParam);
+    }
+  } catch (error) {
+    console.warn('Failed to parse questionConfig:', error);
+  }
   
   // Create dynamic config based on parameters
   const config: SubjectConfig = {
@@ -93,20 +109,32 @@ export default function AnswerSheetEditor() {
     console.log(`MCQ: ${mcqQuestions}, Text: ${textQuestions}`);
     
     const initialQuestions: Question[] = [];
-    for (let i = 1; i <= config.totalQuestions; i++) {
-      // First mcqQuestions are MCQ, remaining are text
-      const questionType: AnswerType = i <= mcqQuestions ? 'mcq' : 'text';
-      
-      initialQuestions.push({
-        number: i,
-        type: questionType,
-      });
+    
+    if (dynamicQuestionConfig && dynamicQuestionConfig.length > 0) {
+      // Use dynamic configuration if available
+      console.log('Using dynamic question configuration:', dynamicQuestionConfig);
+      for (const questionConfig of dynamicQuestionConfig) {
+        initialQuestions.push({
+          number: questionConfig.number,
+          type: questionConfig.type,
+        });
+      }
+    } else {
+      // Fallback to default configuration (MCQ first, then text)
+      for (let i = 1; i <= config.totalQuestions; i++) {
+        const questionType: AnswerType = i <= mcqQuestions ? 'mcq' : 'text';
+        
+        initialQuestions.push({
+          number: i,
+          type: questionType,
+        });
+      }
     }
     
     console.log(`Created ${initialQuestions.length} questions`);
     console.log('Question types:', initialQuestions.map(q => `${q.number}:${q.type}`).join(', '));
     setQuestions(initialQuestions);
-  }, [mcqQuestions, textQuestions, config.totalQuestions, config.name]);
+  }, [mcqQuestions, textQuestions, config.totalQuestions, config.name, dynamicQuestionConfig]);
 
   const handleMCQSelect = (questionNumber: number, option: MCQOption) => {
     setQuestions(prev => prev.map(q => 
@@ -225,15 +253,21 @@ export default function AnswerSheetEditor() {
         <View style={styles.pageHeader}>
           <Text style={styles.pageTitle}>{config.name}</Text>
           <Text style={styles.pageSubtitle}>
-            MCQ: {mcqQuestions}문제 | 
-            {textQuestions > 0 ? `Text: ${textQuestions}문제 | ` : ''}
+            MCQ: {questions.filter(q => q.type === 'mcq').length}문제 | 
+            Text: {questions.filter(q => q.type === 'text').length}문제 | 
             Total: {config.totalQuestions}문제
           </Text>
-          <Text style={styles.pageDescription}>
-            {mcqQuestions > 0 && `문제 1-${mcqQuestions}: 객관식 (MCQ)`}
-            {textQuestions > 0 && mcqQuestions > 0 && ' | '}
-            {textQuestions > 0 && `문제 ${mcqQuestions + 1}-${config.totalQuestions}: 주관식 (Text)`}
-          </Text>
+          {dynamicQuestionConfig ? (
+            <Text style={styles.pageDescription}>
+              동적 구성: 각 문제 유형이 개별적으로 설정됨
+            </Text>
+          ) : (
+            <Text style={styles.pageDescription}>
+              {mcqQuestions > 0 && `문제 1-${mcqQuestions}: 객관식 (MCQ)`}
+              {textQuestions > 0 && mcqQuestions > 0 && ' | '}
+              {textQuestions > 0 && `문제 ${mcqQuestions + 1}-${config.totalQuestions}: 주관식 (Text)`}
+            </Text>
+          )}
         </View>
         
         <View style={styles.answerGrid}>

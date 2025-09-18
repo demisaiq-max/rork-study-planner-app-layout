@@ -32,6 +32,7 @@ export default function MockTestsScreen() {
     mcqQuestions?: string;
     textQuestions?: string;
     totalQuestions?: string;
+    questionConfig?: string;
   }>();
   
   const [showAddModal, setShowAddModal] = useState(false);
@@ -236,6 +237,7 @@ export default function MockTestsScreen() {
                         mcqQuestions: params.mcqQuestions || '20',
                         textQuestions: params.textQuestions || '0',
                         totalQuestions: params.totalQuestions || '20',
+                        questionConfig: params.questionConfig,
                       }
                     });
                   }}

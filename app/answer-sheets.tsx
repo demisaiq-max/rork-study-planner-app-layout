@@ -14,6 +14,11 @@ import { Stack, router } from 'expo-router';
 import { Plus, X, Edit2, Trash2, FileText, Settings } from 'lucide-react-native';
 import { useLanguage } from '@/hooks/language-context';
 
+interface QuestionConfig {
+  number: number;
+  type: 'mcq' | 'text';
+}
+
 interface Subject {
   id: string;
   name: string;
@@ -22,6 +27,7 @@ interface Subject {
   mcqQuestions?: number;
   textQuestions?: number;
   totalQuestions?: number;
+  questionConfig?: QuestionConfig[]; // Dynamic question configuration
 }
 
 interface AnswerSheet {
@@ -55,6 +61,8 @@ export default function AnswerSheetsScreen() {
   const [newSubjectText, setNewSubjectText] = useState('0');
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
   const [showBubbleSheetConfig, setShowBubbleSheetConfig] = useState(false);
+  const [questionConfig, setQuestionConfig] = useState<QuestionConfig[]>([]);
+  const [showDynamicConfig, setShowDynamicConfig] = useState(false);
   
   // Mock subjects data - in real app this would come from backend
   const [subjects, setSubjects] = useState<Subject[]>([
@@ -286,6 +294,7 @@ export default function AnswerSheetsScreen() {
       mcqQuestions: mcqCount,
       textQuestions: textCount,
       totalQuestions: totalCount,
+      questionConfig: showDynamicConfig ? questionConfig : undefined,
     };
 
     setSubjects(prev => [...prev, newSubject]);
@@ -331,6 +340,7 @@ export default function AnswerSheetsScreen() {
             mcqQuestions: mcqCount,
             textQuestions: textCount,
             totalQuestions: totalCount,
+            questionConfig: showDynamicConfig ? questionConfig : undefined,
           }
         : subject
     ));
@@ -386,7 +396,101 @@ export default function AnswerSheetsScreen() {
     setNewSubjectMCQ('20');
     setNewSubjectText('0');
     setShowBubbleSheetConfig(false);
+    setQuestionConfig([]);
+    setShowDynamicConfig(false);
   };
+
+  const initializeQuestionConfig = (mcq: number, text: number) => {
+    const config: QuestionConfig[] = [];
+    // Default: MCQ first, then text
+    for (let i = 1; i <= mcq; i++) {
+      config.push({ number: i, type: 'mcq' });
+    }
+    for (let i = mcq + 1; i <= mcq + text; i++) {
+      config.push({ number: i, type: 'text' });
+    }
+    setQuestionConfig(config);
+  };
+
+  const handleQuestionTypeChange = (questionNumber: number, newType: 'mcq' | 'text') => {
+    setQuestionConfig(prev => 
+      prev.map(q => 
+        q.number === questionNumber ? { ...q, type: newType } : q
+      )
+    );
+  };
+
+  const updateQuestionConfig = () => {
+    const mcqCount = parseInt(newSubjectMCQ) || 0;
+    const textCount = parseInt(newSubjectText) || 0;
+    const totalCount = mcqCount + textCount;
+    
+    if (totalCount === 0) return;
+    
+    // If we have fewer questions configured than total, add new ones
+    const newConfig = [...questionConfig];
+    
+    // Remove excess questions if total decreased
+    if (newConfig.length > totalCount) {
+      newConfig.splice(totalCount);
+    }
+    
+    // Add new questions if total increased
+    for (let i = newConfig.length + 1; i <= totalCount; i++) {
+      newConfig.push({ number: i, type: 'mcq' });
+    }
+    
+    // Update question numbers to be sequential
+    newConfig.forEach((q, index) => {
+      q.number = index + 1;
+    });
+    
+    // Ensure we have the right balance of MCQ vs text
+    const currentMcqCount = newConfig.filter(q => q.type === 'mcq').length;
+    const currentTextCount = newConfig.filter(q => q.type === 'text').length;
+    
+    // If we need more MCQs, convert some text to MCQ
+    if (currentMcqCount < mcqCount) {
+      const textQuestions = newConfig.filter(q => q.type === 'text');
+      const toConvert = Math.min(textQuestions.length, mcqCount - currentMcqCount);
+      for (let i = 0; i < toConvert; i++) {
+        textQuestions[i].type = 'mcq';
+      }
+    }
+    
+    // If we need more text questions, convert some MCQ to text
+    if (currentTextCount < textCount) {
+      const mcqQuestions = newConfig.filter(q => q.type === 'mcq');
+      const toConvert = Math.min(mcqQuestions.length, textCount - currentTextCount);
+      for (let i = mcqQuestions.length - toConvert; i < mcqQuestions.length; i++) {
+        mcqQuestions[i].type = 'text';
+      }
+    }
+    
+    setQuestionConfig(newConfig);
+  };
+
+  // Update question config when MCQ/Text counts change
+  React.useEffect(() => {
+    if (showDynamicConfig) {
+      updateQuestionConfig();
+    }
+  }, [newSubjectMCQ, newSubjectText, showDynamicConfig]);
+
+  // Initialize config when editing a subject
+  React.useEffect(() => {
+    if (editingSubject && showBubbleSheetConfig) {
+      if (editingSubject.questionConfig) {
+        setQuestionConfig(editingSubject.questionConfig);
+        setShowDynamicConfig(true);
+      } else {
+        initializeQuestionConfig(
+          editingSubject.mcqQuestions || 0,
+          editingSubject.textQuestions || 0
+        );
+      }
+    }
+  }, [editingSubject, showBubbleSheetConfig]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -465,6 +569,7 @@ export default function AnswerSheetsScreen() {
                           mcqQuestions: selectedSubjectInfo?.mcqQuestions || 20,
                           textQuestions: selectedSubjectInfo?.textQuestions || 0,
                           totalQuestions: selectedSubjectInfo?.totalQuestions || 20,
+                          questionConfig: selectedSubjectInfo?.questionConfig ? JSON.stringify(selectedSubjectInfo.questionConfig) : undefined,
                         }
                       });
                     } else if (testType === 'midterm') {
@@ -477,6 +582,7 @@ export default function AnswerSheetsScreen() {
                           mcqQuestions: selectedSubjectInfo?.mcqQuestions || 20,
                           textQuestions: selectedSubjectInfo?.textQuestions || 0,
                           totalQuestions: selectedSubjectInfo?.totalQuestions || 20,
+                          questionConfig: selectedSubjectInfo?.questionConfig ? JSON.stringify(selectedSubjectInfo.questionConfig) : undefined,
                         }
                       });
                     } else if (testType === 'final') {
@@ -489,6 +595,7 @@ export default function AnswerSheetsScreen() {
                           mcqQuestions: selectedSubjectInfo?.mcqQuestions || 20,
                           textQuestions: selectedSubjectInfo?.textQuestions || 0,
                           totalQuestions: selectedSubjectInfo?.totalQuestions || 20,
+                          questionConfig: selectedSubjectInfo?.questionConfig ? JSON.stringify(selectedSubjectInfo.questionConfig) : undefined,
                         }
                       });
                     }
@@ -1464,5 +1571,113 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#666666',
     marginBottom: 2,
+  },
+  configModeSelector: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    backgroundColor: '#F0F0F0',
+    borderRadius: 8,
+    padding: 2,
+  },
+  configModeButton: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  configModeButtonActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  configModeButtonText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#666666',
+  },
+  configModeButtonTextActive: {
+    color: '#000000',
+    fontWeight: '600',
+  },
+  dynamicConfig: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+    padding: 12,
+  },
+  dynamicConfigTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 4,
+  },
+  dynamicConfigSubtitle: {
+    fontSize: 11,
+    color: '#666666',
+    marginBottom: 12,
+  },
+  questionConfigList: {
+    maxHeight: 200,
+    marginBottom: 12,
+  },
+  questionConfigContent: {
+    gap: 8,
+  },
+  questionConfigItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 6,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+  },
+  questionConfigNumber: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#000000',
+    width: 30,
+    textAlign: 'center',
+  },
+  questionTypeSelector: {
+    flexDirection: 'row',
+    flex: 1,
+    marginLeft: 12,
+    backgroundColor: '#F0F0F0',
+    borderRadius: 4,
+    padding: 2,
+  },
+  questionTypeOption: {
+    flex: 1,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 2,
+    alignItems: 'center',
+  },
+  questionTypeOptionActive: {
+    backgroundColor: '#007AFF',
+  },
+  questionTypeOptionText: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: '#666666',
+  },
+  questionTypeOptionTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  configSummary: {
+    alignItems: 'center',
+    paddingVertical: 8,
+    backgroundColor: '#E3F2FD',
+    borderRadius: 6,
+  },
+  configSummaryText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1976D2',
   },
 });

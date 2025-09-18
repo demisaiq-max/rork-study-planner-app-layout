@@ -29,6 +29,10 @@ export default function FinalTestsScreen() {
     subjectId: string;
     subjectName: string;
     subjectColor: string;
+    mcqQuestions?: string;
+    textQuestions?: string;
+    totalQuestions?: string;
+    questionConfig?: string;
   }>();
   
   const [showAddModal, setShowAddModal] = useState(false);
@@ -222,23 +226,18 @@ export default function FinalTestsScreen() {
                 <TouchableOpacity 
                   style={[styles.openSheetButton, { backgroundColor: (params.subjectColor || '#AF52DE') + '20' }]}
                   onPress={() => {
-                    // Navigate to subject-specific answer sheet
-                    let pathname = '/korean-answer-sheet';
-                    
-                    if (params.subjectName?.includes('Korean') || params.subjectName?.includes('국어')) {
-                      pathname = '/korean-answer-sheet';
-                    } else if (params.subjectName?.includes('Mathematics') || params.subjectName?.includes('수학')) {
-                      pathname = '/mathematics-answer-sheet';
-                    } else if (params.subjectName?.includes('English') || params.subjectName?.includes('영어')) {
-                      pathname = '/english-answer-sheet';
-                    } else if (params.subjectName?.includes('Others') || params.subjectName?.includes('그외')) {
-                      pathname = '/others-answer-sheet';
-                    }
-                    
+                    // Navigate to dynamic answer sheet editor with custom configuration
                     router.push({
-                      pathname: pathname as any,
+                      pathname: '/answer-sheet-editor',
                       params: {
                         name: sheet.name,
+                        subjectId: params.subjectId,
+                        subjectName: params.subjectName,
+                        subjectColor: params.subjectColor,
+                        mcqQuestions: params.mcqQuestions || '20',
+                        textQuestions: params.textQuestions || '0',
+                        totalQuestions: params.totalQuestions || '20',
+                        questionConfig: params.questionConfig,
                       }
                     });
                   }}
