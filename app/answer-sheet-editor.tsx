@@ -133,6 +133,8 @@ export default function AnswerSheetEditor() {
 
   const handleSubmit = () => {
     const currentConfig = SUBJECT_CONFIGS[currentSubject];
+    if (!currentConfig) return;
+    
     const currentQuestions = questions.filter(q => q.number <= currentConfig.totalQuestions);
     const answeredQuestions = currentQuestions.filter(q => 
       q.type === 'mcq' ? q.selectedOption : q.textAnswer?.trim()
@@ -245,6 +247,16 @@ export default function AnswerSheetEditor() {
 
   const renderCurrentSubjectSheet = () => {
     const currentConfig = SUBJECT_CONFIGS[currentSubject];
+    
+    // Add null check for currentConfig
+    if (!currentConfig) {
+      return (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Invalid subject configuration</Text>
+        </View>
+      );
+    }
+    
     const currentQuestions = questions.filter(q => {
       // Filter questions based on current subject's total questions
       return q.number <= currentConfig.totalQuestions;
