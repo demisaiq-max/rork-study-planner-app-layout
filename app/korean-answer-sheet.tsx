@@ -146,22 +146,7 @@ export default function KoreanAnswerSheet() {
       
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.pageContainer}>
-          <View style={styles.pageHeader}>
-            <Text style={styles.pageTitle}>Korean (국어)</Text>
-            <Text style={styles.pageSubtitle}>
-              Common: 34문제 | Elective: 11문제 | Total: 45문제
-            </Text>
-            <Text style={styles.pageDescription}>
-              문제 1-34: 객관식 (Common) | 문제 35-45: 주관식 (Elective)
-            </Text>
-          </View>
-          
           <View style={styles.answerGrid}>
-            <View style={styles.gridHeader}>
-              <Text style={styles.gridHeaderText}>문번</Text>
-              <Text style={styles.gridHeaderText}>답안</Text>
-            </View>
-            
             {questions.map(question => 
               question.type === 'mcq' 
                 ? renderMCQQuestion(question)
@@ -201,49 +186,12 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  pageHeader: {
-    alignItems: 'center',
-    marginBottom: 20,
-    paddingBottom: 15,
-    borderBottomWidth: 2,
-    borderBottomColor: '#000000',
-  },
-  pageTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#000000',
-  },
-  pageSubtitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#666666',
-    marginTop: 4,
-  },
-  pageDescription: {
-    fontSize: 12,
-    color: '#666666',
-    textAlign: 'center',
-    marginTop: 8,
-    lineHeight: 16,
-  },
+
   answerGrid: {
     borderWidth: 2,
     borderColor: '#000000',
   },
-  gridHeader: {
-    flexDirection: 'row',
-    backgroundColor: '#F8F8F8',
-    borderBottomWidth: 1,
-    borderBottomColor: '#000000',
-    paddingVertical: 8,
-  },
-  gridHeaderText: {
-    textAlign: 'center',
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000000',
-    flex: 1,
-  },
+
   questionRow: {
     flexDirection: 'row',
     borderBottomWidth: 1,
