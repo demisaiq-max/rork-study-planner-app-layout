@@ -39,14 +39,14 @@ const SUBJECT_CONFIGS: Record<string, SubjectConfig> = {
     commonQuestions: 34,
     electiveQuestions: 11,
     totalQuestions: 45,
-    mcqEnd: 15, // Questions 1-15 are MCQ, 16+ are text
+    mcqEnd: 34, // Questions 1-34 are MCQ (Common), 35-45 are text (Elective)
   },
   mathematics: {
     name: '수학',
     commonQuestions: 22,
     electiveQuestions: 8,
     totalQuestions: 30,
-    mcqEnd: 15, // Questions 1-15 are MCQ
+    mcqEnd: 15, // Questions 1-15 are MCQ, 16-22 multiple selection (Common), 23-30 (Elective with 29-30 multiple selection)
     multipleSelectionStart: 16,
     multipleSelectionEnd: 22,
   },
@@ -55,14 +55,14 @@ const SUBJECT_CONFIGS: Record<string, SubjectConfig> = {
     commonQuestions: 45,
     electiveQuestions: 0,
     totalQuestions: 45,
-    mcqEnd: 45, // All questions are MCQ
+    mcqEnd: 45, // All questions 1-45 are MCQ (Common)
   },
   others: {
     name: '그외',
     commonQuestions: 20,
     electiveQuestions: 0,
     totalQuestions: 20,
-    mcqEnd: 20, // All questions are MCQ
+    mcqEnd: 20, // All questions 1-20 are MCQ (Common)
   },
 };
 
@@ -82,10 +82,22 @@ export default function AnswerSheetEditor() {
     
     const initialQuestions: Question[] = [];
     for (let i = 1; i <= config.totalQuestions; i++) {
-      const isMCQ = config.mcqEnd ? i <= config.mcqEnd : true;
+      let questionType: AnswerType = 'mcq';
+      
+      if (subject === 'korean') {
+        // Korean: 1-34 MCQ (Common), 35-45 Text (Elective)
+        questionType = i <= 34 ? 'mcq' : 'text';
+      } else if (subject === 'mathematics') {
+        // Mathematics: 1-15 MCQ, 16-22 MCQ (multiple selection), 23-28 MCQ, 29-30 MCQ (multiple selection)
+        questionType = 'mcq'; // All are MCQ type for now
+      } else {
+        // English and Others: All MCQ
+        questionType = 'mcq';
+      }
+      
       initialQuestions.push({
         number: i,
-        type: isMCQ ? 'mcq' : 'text',
+        type: questionType,
       });
     }
     setQuestions(initialQuestions);
@@ -211,17 +223,21 @@ export default function AnswerSheetEditor() {
     
     if (subject === 'korean') {
       return [
-        { start: 1, end: 15, title: 'MCQ Questions 1-15' },
-        { start: 16, end: 45, title: 'Text Questions 16-45' }
+        { start: 1, end: 34, title: 'Common (1-34)' },
+        { start: 35, end: 45, title: 'Elective (35-45)' }
       ];
     } else if (subject === 'mathematics') {
       return [
-        { start: 1, end: 15, title: 'MCQ Questions 1-15' },
-        { start: 16, end: 30, title: 'Text Questions 16-30' }
+        { start: 1, end: 22, title: 'Common (1-22)' },
+        { start: 23, end: 30, title: 'Elective (23-30)' }
+      ];
+    } else if (subject === 'english') {
+      return [
+        { start: 1, end: 45, title: 'Common (1-45)' }
       ];
     } else {
       return [
-        { start: 1, end: config.totalQuestions, title: 'All Questions' }
+        { start: 1, end: 20, title: 'Common (1-20)' }
       ];
     }
   };
