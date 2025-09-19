@@ -63,6 +63,7 @@ export default function AnswerSheetsScreen() {
   const [showBubbleSheetConfig, setShowBubbleSheetConfig] = useState(false);
   const [questionConfig, setQuestionConfig] = useState<QuestionConfig[]>([]);
   const [showDynamicConfig, setShowDynamicConfig] = useState(false);
+  const [dynamicTotalQuestions, setDynamicTotalQuestions] = useState('20');
   
   // Mock subjects data - in real app this would come from backend
   const [subjects, setSubjects] = useState<Subject[]>([
@@ -398,6 +399,7 @@ export default function AnswerSheetsScreen() {
     setShowBubbleSheetConfig(false);
     setQuestionConfig([]);
     setShowDynamicConfig(false);
+    setDynamicTotalQuestions('20');
   };
 
   const initializeQuestionConfig = (mcq: number, text: number) => {
@@ -937,12 +939,27 @@ export default function AnswerSheetsScreen() {
                                 </Text>
                                 <TextInput
                                   style={styles.questionCountInput}
-                                  value={((parseInt(newSubjectMCQ) || 0) + (parseInt(newSubjectText) || 0)).toString()}
+                                  value={dynamicTotalQuestions}
                                   onChangeText={(value) => {
-                                    const total = parseInt(value) || 0;
-                                    const currentMcq = parseInt(newSubjectMCQ) || 0;
-                                    const newText = Math.max(0, total - currentMcq);
-                                    setNewSubjectText(newText.toString());
+                                    // Only allow numeric input
+                                    const numericValue = value.replace(/[^0-9]/g, '');
+                                    setDynamicTotalQuestions(numericValue);
+                                    
+                                    const total = parseInt(numericValue) || 0;
+                                    if (total > 0) {
+                                      // Update question config to match new total
+                                      const newConfig: QuestionConfig[] = [];
+                                      for (let i = 1; i <= total; i++) {
+                                        const existingQuestion = questionConfig.find(q => q.number === i);
+                                        newConfig.push({
+                                          number: i,
+                                          type: existingQuestion?.type || 'mcq'
+                                        });
+                                      }
+                                      setQuestionConfig(newConfig);
+                                    } else {
+                                      setQuestionConfig([]);
+                                    }
                                   }}
                                   placeholder="20"
                                   placeholderTextColor="#8E8E93"
@@ -1178,12 +1195,27 @@ export default function AnswerSheetsScreen() {
                                 </Text>
                                 <TextInput
                                   style={styles.questionCountInput}
-                                  value={((parseInt(newSubjectMCQ) || 0) + (parseInt(newSubjectText) || 0)).toString()}
+                                  value={dynamicTotalQuestions}
                                   onChangeText={(value) => {
-                                    const total = parseInt(value) || 0;
-                                    const currentMcq = parseInt(newSubjectMCQ) || 0;
-                                    const newText = Math.max(0, total - currentMcq);
-                                    setNewSubjectText(newText.toString());
+                                    // Only allow numeric input
+                                    const numericValue = value.replace(/[^0-9]/g, '');
+                                    setDynamicTotalQuestions(numericValue);
+                                    
+                                    const total = parseInt(numericValue) || 0;
+                                    if (total > 0) {
+                                      // Update question config to match new total
+                                      const newConfig: QuestionConfig[] = [];
+                                      for (let i = 1; i <= total; i++) {
+                                        const existingQuestion = questionConfig.find(q => q.number === i);
+                                        newConfig.push({
+                                          number: i,
+                                          type: existingQuestion?.type || 'mcq'
+                                        });
+                                      }
+                                      setQuestionConfig(newConfig);
+                                    } else {
+                                      setQuestionConfig([]);
+                                    }
                                   }}
                                   placeholder="20"
                                   placeholderTextColor="#8E8E93"
