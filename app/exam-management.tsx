@@ -313,8 +313,6 @@ export default function ExamManagementScreen() {
               </View>
             )}
           </View>
-          
-
         </ScrollView>
       </View>
 
