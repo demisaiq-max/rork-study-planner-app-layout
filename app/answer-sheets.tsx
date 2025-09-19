@@ -402,6 +402,13 @@ export default function AnswerSheetsScreen() {
 
   const initializeQuestionConfig = (mcq: number, text: number) => {
     const config: QuestionConfig[] = [];
+    const total = mcq + text;
+    
+    // If we already have a config with the same total, keep it
+    if (questionConfig.length === total) {
+      return;
+    }
+    
     // Default: MCQ first, then text
     for (let i = 1; i <= mcq; i++) {
       config.push({ number: i, type: 'mcq' });
@@ -445,28 +452,6 @@ export default function AnswerSheetsScreen() {
       q.number = index + 1;
     });
     
-    // Ensure we have the right balance of MCQ vs text
-    const currentMcqCount = newConfig.filter(q => q.type === 'mcq').length;
-    const currentTextCount = newConfig.filter(q => q.type === 'text').length;
-    
-    // If we need more MCQs, convert some text to MCQ
-    if (currentMcqCount < mcqCount) {
-      const textQuestions = newConfig.filter(q => q.type === 'text');
-      const toConvert = Math.min(textQuestions.length, mcqCount - currentMcqCount);
-      for (let i = 0; i < toConvert; i++) {
-        textQuestions[i].type = 'mcq';
-      }
-    }
-    
-    // If we need more text questions, convert some MCQ to text
-    if (currentTextCount < textCount) {
-      const mcqQuestions = newConfig.filter(q => q.type === 'mcq');
-      const toConvert = Math.min(mcqQuestions.length, textCount - currentTextCount);
-      for (let i = mcqQuestions.length - toConvert; i < mcqQuestions.length; i++) {
-        mcqQuestions[i].type = 'text';
-      }
-    }
-    
     setQuestionConfig(newConfig);
   };
 
@@ -474,6 +459,14 @@ export default function AnswerSheetsScreen() {
   React.useEffect(() => {
     if (showDynamicConfig) {
       updateQuestionConfig();
+    } else {
+      // In basic mode, update the counts based on current config
+      const mcqCount = questionConfig.filter(q => q.type === 'mcq').length;
+      const textCount = questionConfig.filter(q => q.type === 'text').length;
+      if (mcqCount > 0 || textCount > 0) {
+        setNewSubjectMCQ(mcqCount.toString());
+        setNewSubjectText(textCount.toString());
+      }
     }
   }, [newSubjectMCQ, newSubjectText, showDynamicConfig]);
 
@@ -826,55 +819,194 @@ export default function AnswerSheetsScreen() {
                   
                   {showBubbleSheetConfig && (
                     <View style={styles.bubbleSheetConfig}>
-                      <View style={styles.questionTypeRow}>
-                        <View style={styles.questionTypeItem}>
-                          <Text style={styles.questionTypeLabel}>
-                            {language === 'ko' ? 'MCQ 문제 수' : 'MCQ Questions'}
+                      {/* Configuration Mode Selector */}
+                      <View style={styles.configModeSelector}>
+                        <TouchableOpacity
+                          style={[
+                            styles.configModeButton,
+                            !showDynamicConfig && styles.configModeButtonActive
+                          ]}
+                          onPress={() => {
+                            setShowDynamicConfig(false);
+                            initializeQuestionConfig(
+                              parseInt(newSubjectMCQ) || 0,
+                              parseInt(newSubjectText) || 0
+                            );
+                          }}
+                        >
+                          <Text style={[
+                            styles.configModeButtonText,
+                            !showDynamicConfig && styles.configModeButtonTextActive
+                          ]}>
+                            {language === 'ko' ? '기본 모드' : 'Basic Mode'}
                           </Text>
-                          <TextInput
-                            style={styles.questionCountInput}
-                            value={newSubjectMCQ}
-                            onChangeText={setNewSubjectMCQ}
-                            placeholder="20"
-                            placeholderTextColor="#8E8E93"
-                            keyboardType="numeric"
-                          />
-                        </View>
-                        
-                        <View style={styles.questionTypeItem}>
-                          <Text style={styles.questionTypeLabel}>
-                            {language === 'ko' ? '주관식 문제 수' : 'Text Questions'}
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[
+                            styles.configModeButton,
+                            showDynamicConfig && styles.configModeButtonActive
+                          ]}
+                          onPress={() => {
+                            setShowDynamicConfig(true);
+                            if (questionConfig.length === 0) {
+                              initializeQuestionConfig(
+                                parseInt(newSubjectMCQ) || 0,
+                                parseInt(newSubjectText) || 0
+                              );
+                            }
+                          }}
+                        >
+                          <Text style={[
+                            styles.configModeButtonText,
+                            showDynamicConfig && styles.configModeButtonTextActive
+                          ]}>
+                            {language === 'ko' ? '동적 모드' : 'Dynamic Mode'}
                           </Text>
-                          <TextInput
-                            style={styles.questionCountInput}
-                            value={newSubjectText}
-                            onChangeText={setNewSubjectText}
-                            placeholder="0"
-                            placeholderTextColor="#8E8E93"
-                            keyboardType="numeric"
-                          />
-                        </View>
+                        </TouchableOpacity>
                       </View>
-                      
-                      <View style={styles.totalQuestionsContainer}>
-                        <Text style={styles.totalQuestionsText}>
-                          {language === 'ko' ? '총 문제 수' : 'Total Questions'}: {(parseInt(newSubjectMCQ) || 0) + (parseInt(newSubjectText) || 0)}
-                        </Text>
-                      </View>
-                      
-                      <View style={styles.configPreview}>
-                        <Text style={styles.configPreviewTitle}>
-                          {language === 'ko' ? '답안지 미리보기' : 'Answer Sheet Preview'}:
-                        </Text>
-                        <Text style={styles.configPreviewText}>
-                          • MCQ (객관식): 1-{parseInt(newSubjectMCQ) || 0}번
-                        </Text>
-                        {(parseInt(newSubjectText) || 0) > 0 && (
-                          <Text style={styles.configPreviewText}>
-                            • Text (주관식): {(parseInt(newSubjectMCQ) || 0) + 1}-{(parseInt(newSubjectMCQ) || 0) + (parseInt(newSubjectText) || 0)}번
-                          </Text>
-                        )}
-                      </View>
+
+                      {!showDynamicConfig ? (
+                        <>
+                          {/* Basic Mode - Simple MCQ/Text count */}
+                          <View style={styles.questionTypeRow}>
+                            <View style={styles.questionTypeItem}>
+                              <Text style={styles.questionTypeLabel}>
+                                {language === 'ko' ? 'MCQ 문제 수' : 'MCQ Questions'}
+                              </Text>
+                              <TextInput
+                                style={styles.questionCountInput}
+                                value={newSubjectMCQ}
+                                onChangeText={setNewSubjectMCQ}
+                                placeholder="20"
+                                placeholderTextColor="#8E8E93"
+                                keyboardType="numeric"
+                              />
+                            </View>
+                            
+                            <View style={styles.questionTypeItem}>
+                              <Text style={styles.questionTypeLabel}>
+                                {language === 'ko' ? '주관식 문제 수' : 'Text Questions'}
+                              </Text>
+                              <TextInput
+                                style={styles.questionCountInput}
+                                value={newSubjectText}
+                                onChangeText={setNewSubjectText}
+                                placeholder="0"
+                                placeholderTextColor="#8E8E93"
+                                keyboardType="numeric"
+                              />
+                            </View>
+                          </View>
+                          
+                          <View style={styles.totalQuestionsContainer}>
+                            <Text style={styles.totalQuestionsText}>
+                              {language === 'ko' ? '총 문제 수' : 'Total Questions'}: {(parseInt(newSubjectMCQ) || 0) + (parseInt(newSubjectText) || 0)}
+                            </Text>
+                          </View>
+                          
+                          <View style={styles.configPreview}>
+                            <Text style={styles.configPreviewTitle}>
+                              {language === 'ko' ? '답안지 미리보기' : 'Answer Sheet Preview'}:
+                            </Text>
+                            <Text style={styles.configPreviewText}>
+                              • MCQ (객관식): 1-{parseInt(newSubjectMCQ) || 0}번
+                            </Text>
+                            {(parseInt(newSubjectText) || 0) > 0 && (
+                              <Text style={styles.configPreviewText}>
+                                • Text (주관식): {(parseInt(newSubjectMCQ) || 0) + 1}-{(parseInt(newSubjectMCQ) || 0) + (parseInt(newSubjectText) || 0)}번
+                              </Text>
+                            )}
+                          </View>
+                        </>
+                      ) : (
+                        <>
+                          {/* Dynamic Mode - Individual question configuration */}
+                          <View style={styles.dynamicConfig}>
+                            <Text style={styles.dynamicConfigTitle}>
+                              {language === 'ko' ? '개별 문제 설정' : 'Individual Question Setup'}
+                            </Text>
+                            <Text style={styles.dynamicConfigSubtitle}>
+                              {language === 'ko' ? '각 문제의 유형을 개별적으로 설정할 수 있습니다' : 'Configure each question type individually'}
+                            </Text>
+                            
+                            {/* Quick Setup Row */}
+                            <View style={styles.questionTypeRow}>
+                              <View style={styles.questionTypeItem}>
+                                <Text style={styles.questionTypeLabel}>
+                                  {language === 'ko' ? '총 문제 수' : 'Total Questions'}
+                                </Text>
+                                <TextInput
+                                  style={styles.questionCountInput}
+                                  value={((parseInt(newSubjectMCQ) || 0) + (parseInt(newSubjectText) || 0)).toString()}
+                                  onChangeText={(value) => {
+                                    const total = parseInt(value) || 0;
+                                    const currentMcq = parseInt(newSubjectMCQ) || 0;
+                                    const newText = Math.max(0, total - currentMcq);
+                                    setNewSubjectText(newText.toString());
+                                  }}
+                                  placeholder="20"
+                                  placeholderTextColor="#8E8E93"
+                                  keyboardType="numeric"
+                                />
+                              </View>
+                            </View>
+                            
+                            {/* Individual Question Configuration */}
+                            {questionConfig.length > 0 && (
+                              <ScrollView style={styles.questionConfigList} nestedScrollEnabled>
+                                <View style={styles.questionConfigContent}>
+                                  {questionConfig.map((question) => (
+                                    <View key={question.number} style={styles.questionConfigItem}>
+                                      <Text style={styles.questionConfigNumber}>
+                                        {question.number}
+                                      </Text>
+                                      <View style={styles.questionTypeSelector}>
+                                        <TouchableOpacity
+                                          style={[
+                                            styles.questionTypeOption,
+                                            question.type === 'mcq' && styles.questionTypeOptionActive
+                                          ]}
+                                          onPress={() => handleQuestionTypeChange(question.number, 'mcq')}
+                                        >
+                                          <Text style={[
+                                            styles.questionTypeOptionText,
+                                            question.type === 'mcq' && styles.questionTypeOptionTextActive
+                                          ]}>
+                                            MCQ
+                                          </Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                          style={[
+                                            styles.questionTypeOption,
+                                            question.type === 'text' && styles.questionTypeOptionActive
+                                          ]}
+                                          onPress={() => handleQuestionTypeChange(question.number, 'text')}
+                                        >
+                                          <Text style={[
+                                            styles.questionTypeOptionText,
+                                            question.type === 'text' && styles.questionTypeOptionTextActive
+                                          ]}>
+                                            Text
+                                          </Text>
+                                        </TouchableOpacity>
+                                      </View>
+                                    </View>
+                                  ))}
+                                </View>
+                              </ScrollView>
+                            )}
+                            
+                            {/* Summary */}
+                            <View style={styles.configSummary}>
+                              <Text style={styles.configSummaryText}>
+                                MCQ: {questionConfig.filter(q => q.type === 'mcq').length} | 
+                                Text: {questionConfig.filter(q => q.type === 'text').length} | 
+                                Total: {questionConfig.length}
+                              </Text>
+                            </View>
+                          </View>
+                        </>
+                      )}
                     </View>
                   )}
                 </View>
@@ -928,55 +1060,194 @@ export default function AnswerSheetsScreen() {
                   
                   {showBubbleSheetConfig && (
                     <View style={styles.bubbleSheetConfig}>
-                      <View style={styles.questionTypeRow}>
-                        <View style={styles.questionTypeItem}>
-                          <Text style={styles.questionTypeLabel}>
-                            {language === 'ko' ? 'MCQ 문제 수' : 'MCQ Questions'}
+                      {/* Configuration Mode Selector */}
+                      <View style={styles.configModeSelector}>
+                        <TouchableOpacity
+                          style={[
+                            styles.configModeButton,
+                            !showDynamicConfig && styles.configModeButtonActive
+                          ]}
+                          onPress={() => {
+                            setShowDynamicConfig(false);
+                            initializeQuestionConfig(
+                              parseInt(newSubjectMCQ) || 0,
+                              parseInt(newSubjectText) || 0
+                            );
+                          }}
+                        >
+                          <Text style={[
+                            styles.configModeButtonText,
+                            !showDynamicConfig && styles.configModeButtonTextActive
+                          ]}>
+                            {language === 'ko' ? '기본 모드' : 'Basic Mode'}
                           </Text>
-                          <TextInput
-                            style={styles.questionCountInput}
-                            value={newSubjectMCQ}
-                            onChangeText={setNewSubjectMCQ}
-                            placeholder="20"
-                            placeholderTextColor="#8E8E93"
-                            keyboardType="numeric"
-                          />
-                        </View>
-                        
-                        <View style={styles.questionTypeItem}>
-                          <Text style={styles.questionTypeLabel}>
-                            {language === 'ko' ? '주관식 문제 수' : 'Text Questions'}
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[
+                            styles.configModeButton,
+                            showDynamicConfig && styles.configModeButtonActive
+                          ]}
+                          onPress={() => {
+                            setShowDynamicConfig(true);
+                            if (questionConfig.length === 0) {
+                              initializeQuestionConfig(
+                                parseInt(newSubjectMCQ) || 0,
+                                parseInt(newSubjectText) || 0
+                              );
+                            }
+                          }}
+                        >
+                          <Text style={[
+                            styles.configModeButtonText,
+                            showDynamicConfig && styles.configModeButtonTextActive
+                          ]}>
+                            {language === 'ko' ? '동적 모드' : 'Dynamic Mode'}
                           </Text>
-                          <TextInput
-                            style={styles.questionCountInput}
-                            value={newSubjectText}
-                            onChangeText={setNewSubjectText}
-                            placeholder="0"
-                            placeholderTextColor="#8E8E93"
-                            keyboardType="numeric"
-                          />
-                        </View>
+                        </TouchableOpacity>
                       </View>
-                      
-                      <View style={styles.totalQuestionsContainer}>
-                        <Text style={styles.totalQuestionsText}>
-                          {language === 'ko' ? '총 문제 수' : 'Total Questions'}: {(parseInt(newSubjectMCQ) || 0) + (parseInt(newSubjectText) || 0)}
-                        </Text>
-                      </View>
-                      
-                      <View style={styles.configPreview}>
-                        <Text style={styles.configPreviewTitle}>
-                          {language === 'ko' ? '답안지 미리보기' : 'Answer Sheet Preview'}:
-                        </Text>
-                        <Text style={styles.configPreviewText}>
-                          • MCQ (객관식): 1-{parseInt(newSubjectMCQ) || 0}번
-                        </Text>
-                        {(parseInt(newSubjectText) || 0) > 0 && (
-                          <Text style={styles.configPreviewText}>
-                            • Text (주관식): {(parseInt(newSubjectMCQ) || 0) + 1}-{(parseInt(newSubjectMCQ) || 0) + (parseInt(newSubjectText) || 0)}번
-                          </Text>
-                        )}
-                      </View>
+
+                      {!showDynamicConfig ? (
+                        <>
+                          {/* Basic Mode - Simple MCQ/Text count */}
+                          <View style={styles.questionTypeRow}>
+                            <View style={styles.questionTypeItem}>
+                              <Text style={styles.questionTypeLabel}>
+                                {language === 'ko' ? 'MCQ 문제 수' : 'MCQ Questions'}
+                              </Text>
+                              <TextInput
+                                style={styles.questionCountInput}
+                                value={newSubjectMCQ}
+                                onChangeText={setNewSubjectMCQ}
+                                placeholder="20"
+                                placeholderTextColor="#8E8E93"
+                                keyboardType="numeric"
+                              />
+                            </View>
+                            
+                            <View style={styles.questionTypeItem}>
+                              <Text style={styles.questionTypeLabel}>
+                                {language === 'ko' ? '주관식 문제 수' : 'Text Questions'}
+                              </Text>
+                              <TextInput
+                                style={styles.questionCountInput}
+                                value={newSubjectText}
+                                onChangeText={setNewSubjectText}
+                                placeholder="0"
+                                placeholderTextColor="#8E8E93"
+                                keyboardType="numeric"
+                              />
+                            </View>
+                          </View>
+                          
+                          <View style={styles.totalQuestionsContainer}>
+                            <Text style={styles.totalQuestionsText}>
+                              {language === 'ko' ? '총 문제 수' : 'Total Questions'}: {(parseInt(newSubjectMCQ) || 0) + (parseInt(newSubjectText) || 0)}
+                            </Text>
+                          </View>
+                          
+                          <View style={styles.configPreview}>
+                            <Text style={styles.configPreviewTitle}>
+                              {language === 'ko' ? '답안지 미리보기' : 'Answer Sheet Preview'}:
+                            </Text>
+                            <Text style={styles.configPreviewText}>
+                              • MCQ (객관식): 1-{parseInt(newSubjectMCQ) || 0}번
+                            </Text>
+                            {(parseInt(newSubjectText) || 0) > 0 && (
+                              <Text style={styles.configPreviewText}>
+                                • Text (주관식): {(parseInt(newSubjectMCQ) || 0) + 1}-{(parseInt(newSubjectMCQ) || 0) + (parseInt(newSubjectText) || 0)}번
+                              </Text>
+                            )}
+                          </View>
+                        </>
+                      ) : (
+                        <>
+                          {/* Dynamic Mode - Individual question configuration */}
+                          <View style={styles.dynamicConfig}>
+                            <Text style={styles.dynamicConfigTitle}>
+                              {language === 'ko' ? '개별 문제 설정' : 'Individual Question Setup'}
+                            </Text>
+                            <Text style={styles.dynamicConfigSubtitle}>
+                              {language === 'ko' ? '각 문제의 유형을 개별적으로 설정할 수 있습니다' : 'Configure each question type individually'}
+                            </Text>
+                            
+                            {/* Quick Setup Row */}
+                            <View style={styles.questionTypeRow}>
+                              <View style={styles.questionTypeItem}>
+                                <Text style={styles.questionTypeLabel}>
+                                  {language === 'ko' ? '총 문제 수' : 'Total Questions'}
+                                </Text>
+                                <TextInput
+                                  style={styles.questionCountInput}
+                                  value={((parseInt(newSubjectMCQ) || 0) + (parseInt(newSubjectText) || 0)).toString()}
+                                  onChangeText={(value) => {
+                                    const total = parseInt(value) || 0;
+                                    const currentMcq = parseInt(newSubjectMCQ) || 0;
+                                    const newText = Math.max(0, total - currentMcq);
+                                    setNewSubjectText(newText.toString());
+                                  }}
+                                  placeholder="20"
+                                  placeholderTextColor="#8E8E93"
+                                  keyboardType="numeric"
+                                />
+                              </View>
+                            </View>
+                            
+                            {/* Individual Question Configuration */}
+                            {questionConfig.length > 0 && (
+                              <ScrollView style={styles.questionConfigList} nestedScrollEnabled>
+                                <View style={styles.questionConfigContent}>
+                                  {questionConfig.map((question) => (
+                                    <View key={question.number} style={styles.questionConfigItem}>
+                                      <Text style={styles.questionConfigNumber}>
+                                        {question.number}
+                                      </Text>
+                                      <View style={styles.questionTypeSelector}>
+                                        <TouchableOpacity
+                                          style={[
+                                            styles.questionTypeOption,
+                                            question.type === 'mcq' && styles.questionTypeOptionActive
+                                          ]}
+                                          onPress={() => handleQuestionTypeChange(question.number, 'mcq')}
+                                        >
+                                          <Text style={[
+                                            styles.questionTypeOptionText,
+                                            question.type === 'mcq' && styles.questionTypeOptionTextActive
+                                          ]}>
+                                            MCQ
+                                          </Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                          style={[
+                                            styles.questionTypeOption,
+                                            question.type === 'text' && styles.questionTypeOptionActive
+                                          ]}
+                                          onPress={() => handleQuestionTypeChange(question.number, 'text')}
+                                        >
+                                          <Text style={[
+                                            styles.questionTypeOptionText,
+                                            question.type === 'text' && styles.questionTypeOptionTextActive
+                                          ]}>
+                                            Text
+                                          </Text>
+                                        </TouchableOpacity>
+                                      </View>
+                                    </View>
+                                  ))}
+                                </View>
+                              </ScrollView>
+                            )}
+                            
+                            {/* Summary */}
+                            <View style={styles.configSummary}>
+                              <Text style={styles.configSummaryText}>
+                                MCQ: {questionConfig.filter(q => q.type === 'mcq').length} | 
+                                Text: {questionConfig.filter(q => q.type === 'text').length} | 
+                                Total: {questionConfig.length}
+                              </Text>
+                            </View>
+                          </View>
+                        </>
+                      )}
                     </View>
                   )}
                 </View>
