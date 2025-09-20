@@ -147,6 +147,11 @@ export default function KoreanAnswerSheet() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.pageContainer}>
           <View style={styles.answerGrid}>
+            <View style={styles.gridHeader}>
+              <Text style={styles.gridHeaderText}>문번</Text>
+              <Text style={styles.gridHeaderText}>답안</Text>
+            </View>
+            
             {questions.map(question => 
               question.type === 'mcq' 
                 ? renderMCQQuestion(question)
@@ -190,6 +195,20 @@ const styles = StyleSheet.create({
   answerGrid: {
     borderWidth: 2,
     borderColor: '#000000',
+  },
+  gridHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#F8F8F8',
+    borderBottomWidth: 1,
+    borderBottomColor: '#000000',
+    paddingVertical: 8,
+  },
+  gridHeaderText: {
+    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#000000',
+    flex: 1,
   },
 
   questionRow: {
