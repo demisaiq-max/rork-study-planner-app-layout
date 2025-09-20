@@ -243,9 +243,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
   },
   optionBubble: {
-    width: 32,
-    height: 20,
-    borderRadius: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: '#000000',
     justifyContent: 'center',
@@ -256,8 +256,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000',
   },
   optionBubbleText: {
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#000000',
   },
   optionBubbleTextSelected: {
