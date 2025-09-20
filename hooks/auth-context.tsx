@@ -23,19 +23,26 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   useEffect(() => {
     let mounted = true;
     
-    // Get initial session with improved error handling
+    // Get initial session with timeout to prevent hydration issues
     const getInitialSession = async () => {
       try {
         console.log('🔐 Getting initial session...');
         
-        // First try to get session from storage directly
-        const { data: { session }, error } = await supabase.auth.getSession();
+        // Add timeout to prevent hanging during hydration
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Session timeout')), 2000)
+        );
+        
+        const { data: { session }, error } = await Promise.race([
+          sessionPromise,
+          timeoutPromise
+        ]) as any;
         
         if (!mounted) return;
         
         if (error) {
           console.error('❌ Error getting initial session:', error);
-          // Don't immediately set to null, let auth state change handle it
         } else {
           console.log('✅ Initial session:', session ? `Found for user ${session.user?.email}` : 'None');
           if (session) {
@@ -45,20 +52,21 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         }
       } catch (error) {
         console.error('❌ Error in getInitialSession:', error);
-        // Don't set to null here, let the auth state change listener handle it
+        // Continue without session rather than blocking
       } finally {
         if (mounted) {
-          // Only set loading to false after we've tried to get the session
-          setTimeout(() => {
-            if (mounted) {
-              setIsLoading(false);
-            }
-          }, 100);
+          // Reduce loading time to prevent hydration timeout
+          setIsLoading(false);
         }
       }
     };
 
-    getInitialSession();
+    // Delay initial session check to allow hydration to complete
+    const timer = setTimeout(() => {
+      if (mounted) {
+        getInitialSession();
+      }
+    }, 100);
 
     // Listen for auth changes with better logging
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -106,6 +114,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
     return () => {
       mounted = false;
+      clearTimeout(timer);
       subscription.unsubscribe();
     };
   }, []);

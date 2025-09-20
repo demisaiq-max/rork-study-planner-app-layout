@@ -56,64 +56,70 @@ export default function HomeScreen() {
   console.log('🏠 Home Screen - Auth Status:', { authLoading, isSignedIn, hasAuthUser: !!authUser });
   
   // Stagger queries to prevent hydration timeout
-  const [enableSecondaryQueries, setEnableSecondaryQueries] = useState(false);
+  const [enableQueries, setEnableQueries] = useState(false);
   
-  // Primary queries (load first)
+  // Enable queries after hydration is complete
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (authUser?.id && !authLoading) {
+        setEnableQueries(true);
+      }
+    }, 1000); // Delay to ensure hydration is complete
+    
+    return () => clearTimeout(timer);
+  }, [authUser?.id, authLoading]);
+  
+  // Primary queries (essential data)
   const { data: exams, isLoading: isLoadingExams, refetch: refetchExams } = trpc.exams.getUserExams.useQuery(
     undefined,
     { 
-      enabled: !!authUser?.id && !authLoading,
-      retry: 1,
-      staleTime: 30000 // 30 seconds
+      enabled: enableQueries,
+      retry: false,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnMount: false,
     }
   );
   
   const { data: userProfile, isLoading: isLoadingProfile, refetch: refetchProfile } = trpc.users.getUserProfile.useQuery(
     { userId: authUser?.id || '' },
     { 
-      enabled: !!authUser?.id && !authLoading,
-      retry: 1,
-      staleTime: 60000 // 1 minute
+      enabled: enableQueries,
+      retry: false,
+      staleTime: 10 * 60 * 1000, // 10 minutes
+      refetchOnMount: false,
     }
   );
   
-  // Secondary queries (load after primary queries complete)
+  // Secondary queries (nice to have data)
   const { data: gradedExams, isLoading: isLoadingGradedExams, error: gradedExamsError, refetch: refetchGradedExams } = trpc.tests.getLatestTestResults.useQuery(
     undefined,
     { 
-      enabled: !!authUser?.id && !authLoading && enableSecondaryQueries,
-      retry: 1,
-      staleTime: 30000
+      enabled: enableQueries && !!exams, // Only after exams are loaded
+      retry: false,
+      staleTime: 5 * 60 * 1000,
+      refetchOnMount: false,
     }
   );
   
   const { data: brainDumps, isLoading: isLoadingBrainDumps, error: brainDumpsError, refetch: refetchBrainDumps } = trpc.brainDumps.getBrainDumps.useQuery(
     { limit: 10 },
     { 
-      enabled: !!authUser?.id && !authLoading && enableSecondaryQueries,
-      retry: 1,
-      staleTime: 30000
+      enabled: enableQueries && !!userProfile, // Only after profile is loaded
+      retry: false,
+      staleTime: 5 * 60 * 1000,
+      refetchOnMount: false,
     }
   );
   
   const { data: dbPriorityTasks, isLoading: isLoadingPriorityTasks, refetch: refetchPriorityTasks } = trpc.priorityTasks.getPriorityTasks.useQuery(
     { userId: authUser?.id || '' },
     { 
-      enabled: !!authUser?.id && !authLoading && enableSecondaryQueries,
-      retry: 1,
-      staleTime: 30000
+      enabled: enableQueries && !!userProfile, // Only after profile is loaded
+      retry: false,
+      staleTime: 5 * 60 * 1000,
+      refetchOnMount: false,
     }
   );
-  
-  // Enable secondary queries after primary ones complete
-  useEffect(() => {
-    if (authUser?.id && !authLoading && !isLoadingExams && !isLoadingProfile) {
-      const timer = setTimeout(() => {
-        setEnableSecondaryQueries(true);
-      }, 100); // Small delay to prevent race conditions
-      return () => clearTimeout(timer);
-    }
-  }, [authUser?.id, authLoading, isLoadingExams, isLoadingProfile]);
   
   // Log data status after all queries are defined
   console.log('🏠 Home Screen - Data Status:', { 

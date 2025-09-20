@@ -26,9 +26,9 @@ export const trpcClient = trpc.createClient({
       url: trpcUrl,
       transformer: superjson,
       fetch: (url, options) => {
-        // Add timeout to prevent hanging requests
+        // Reduce timeout to prevent hydration issues
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
         
         return fetch(url, {
           ...options,
@@ -44,10 +44,10 @@ export const trpcClient = trpc.createClient({
         };
 
         try {
-          // Add timeout to session request
+          // Add timeout to session request to prevent hydration blocking
           const sessionPromise = supabase.auth.getSession();
           const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Session timeout')), 3000)
+            setTimeout(() => reject(new Error('Session timeout')), 1500)
           );
           
           const { data: { session } } = await Promise.race([
@@ -80,9 +80,9 @@ export const createAuthenticatedTRPCClient = () => {
         url: trpcUrl,
         transformer: superjson,
         fetch: (url, options) => {
-          // Add timeout to prevent hanging requests
+          // Reduce timeout to prevent hydration issues
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+          const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
           
           return fetch(url, {
             ...options,
@@ -98,10 +98,10 @@ export const createAuthenticatedTRPCClient = () => {
           };
 
           try {
-            // Add timeout to session request
+            // Add timeout to session request to prevent hydration blocking
             const sessionPromise = supabase.auth.getSession();
             const timeoutPromise = new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('Session timeout')), 3000)
+              setTimeout(() => reject(new Error('Session timeout')), 1500)
             );
             
             const { data: { session } } = await Promise.race([

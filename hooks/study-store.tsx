@@ -103,12 +103,24 @@ export const [StudyProvider, useStudyStore] = createContextHook(() => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadData();
+    // Delay data loading to prevent hydration timeout
+    const timer = setTimeout(() => {
+      loadData();
+    }, 500);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   const loadData = async () => {
     try {
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
+      // Add timeout to AsyncStorage operation
+      const storagePromise = AsyncStorage.getItem(STORAGE_KEY);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Storage timeout')), 2000)
+      );
+      
+      const stored = await Promise.race([storagePromise, timeoutPromise]) as string | null;
+      
       if (stored) {
         const parsedData = JSON.parse(stored);
         // Ensure all required properties exist
@@ -125,6 +137,7 @@ export const [StudyProvider, useStudyStore] = createContextHook(() => {
       }
     } catch (error) {
       console.error("Failed to load study data:", error);
+      // Use default data on error to prevent blocking
     } finally {
       setIsLoading(false);
     }
@@ -132,8 +145,13 @@ export const [StudyProvider, useStudyStore] = createContextHook(() => {
 
   const saveData = async (newData: StudyData) => {
     try {
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
+      // Update state immediately for better UX
       setData(newData);
+      
+      // Save to storage asynchronously without blocking
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newData)).catch(error => {
+        console.error("Failed to save study data:", error);
+      });
     } catch (error) {
       console.error("Failed to save study data:", error);
     }

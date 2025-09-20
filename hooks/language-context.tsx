@@ -526,17 +526,30 @@ export const [LanguageProvider, useLanguage] = createContextHook(() => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadLanguage();
+    // Delay language loading to prevent hydration timeout
+    const timer = setTimeout(() => {
+      loadLanguage();
+    }, 300);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   const loadLanguage = async () => {
     try {
-      const savedLanguage = await AsyncStorage.getItem('language');
+      // Add timeout to AsyncStorage operation
+      const storagePromise = AsyncStorage.getItem('language');
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Language storage timeout')), 1000)
+      );
+      
+      const savedLanguage = await Promise.race([storagePromise, timeoutPromise]) as string | null;
+      
       if (savedLanguage && (savedLanguage === 'ko' || savedLanguage === 'en')) {
         setLanguage(savedLanguage as Language);
       }
     } catch (error) {
       console.error('Failed to load language:', error);
+      // Use default language on error
     } finally {
       setIsLoading(false);
     }
@@ -544,8 +557,13 @@ export const [LanguageProvider, useLanguage] = createContextHook(() => {
 
   const changeLanguage = useCallback(async (newLanguage: Language) => {
     try {
+      // Update state immediately
       setLanguage(newLanguage);
-      await AsyncStorage.setItem('language', newLanguage);
+      
+      // Save to storage asynchronously without blocking
+      AsyncStorage.setItem('language', newLanguage).catch(error => {
+        console.error('Failed to save language:', error);
+      });
     } catch (error) {
       console.error('Failed to save language:', error);
     }

@@ -48,15 +48,15 @@ function RootLayoutNav() {
 function AuthenticatedTRPCProvider({ children, queryClient }: { children: React.ReactNode; queryClient: QueryClient }) {
   const { session, isLoading } = useAuth();
   
-  // Create a new tRPC client whenever the session changes
+  // Create a stable tRPC client to prevent hydration issues
   const trpcClient = useMemo(() => {
-    console.log('🔄 Creating new tRPC client for session:', {
+    console.log('🔄 Creating tRPC client for session:', {
       hasSession: !!session,
       userEmail: session?.user?.email || 'none',
       isLoading
     });
     return createAuthenticatedTRPCClient();
-  }, [session]); // Recreate when session changes
+  }, []); // Only create once to prevent hydration mismatch
 
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
@@ -70,28 +70,23 @@ export default function RootLayout() {
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
       queries: {
-        retry: (failureCount, error) => {
-          // Don't retry on 4xx errors
-          if (error instanceof Error && error.message.includes('4')) {
-            return false;
-          }
-          // Reduce retries to prevent timeout
-          return failureCount < 1;
-        },
-        retryDelay: 1000, // Fixed delay instead of exponential backoff
-        staleTime: 30 * 1000, // 30 seconds - shorter to prevent stale data issues
-        gcTime: 5 * 60 * 1000, // 5 minutes
-        networkMode: 'online', // Only run queries when online
+        retry: false, // Disable retries to prevent hydration timeout
+        staleTime: 5 * 60 * 1000, // 5 minutes
+        gcTime: 10 * 60 * 1000, // 10 minutes
+        networkMode: 'online',
+        refetchOnWindowFocus: false, // Prevent unnecessary refetches
+        refetchOnMount: false, // Prevent refetch on mount to reduce hydration issues
       },
       mutations: {
-        retry: 0, // No retries for mutations to prevent timeout
+        retry: false,
         networkMode: 'online',
       },
     },
   }));
 
   useEffect(() => {
-    const initializeApp = async () => {
+    // Delay splash screen hiding to prevent hydration timeout
+    const timer = setTimeout(async () => {
       try {
         console.log('📋 App layout mounted, hiding splash screen...');
         await SplashScreen.hideAsync();
@@ -99,9 +94,7 @@ export default function RootLayout() {
       } catch (error) {
         console.error('❌ Failed to hide splash screen:', error);
       }
-    };
-    
-    initializeApp();
+    }, 500); // Small delay to allow hydration to complete
 
     // Set up global error handler for React Query
     queryClient.setMutationDefaults(['trpc'], {
@@ -123,6 +116,8 @@ export default function RootLayout() {
       timestamp: new Date().toISOString(),
       environment: __DEV__ ? 'development' : 'production',
     });
+
+    return () => clearTimeout(timer);
   }, [queryClient]);
 
   return (
