@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Alert,
-  Platform,
 } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 
@@ -33,6 +32,7 @@ export default function MathematicsAnswerSheet() {
       });
     }
     setQuestions(initialQuestions);
+    console.log('Mathematics Answer Sheet initialized with', initialQuestions.length, 'questions');
   }, []);
 
   const handleMCQSelect = (questionNumber: number, option: MCQOption) => {
@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
   },
   subjectTitle: {
     fontSize: 18,
-    fontWeight: 'bold' as const,
+    fontWeight: '700',
     color: '#FFFFFF',
     marginBottom: 4,
   },
@@ -158,24 +158,20 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderRadius: 8,
     padding: 16,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   questionHeader: {
     marginBottom: 12,
   },
   questionNumberText: {
     fontSize: 18,
-    fontWeight: 'bold' as const,
+    fontWeight: '700',
     color: '#333333',
   },
   bubbleRow: {
@@ -188,20 +184,20 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 25,
     borderWidth: 3,
-    borderColor: '#333333',
+    borderColor: '#4ECDC4',
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
     marginHorizontal: 2,
   },
   bubbleSelected: {
-    backgroundColor: '#333333',
-    borderColor: '#333333',
+    backgroundColor: '#4ECDC4',
+    borderColor: '#4ECDC4',
   },
   bubbleText: {
     fontSize: 18,
-    fontWeight: 'bold' as const,
-    color: '#333333',
+    fontWeight: '700',
+    color: '#4ECDC4',
   },
   bubbleTextSelected: {
     color: '#FFFFFF',
@@ -219,21 +215,15 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 8,
     alignItems: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
   submitButtonText: {
     fontSize: 16,
-    fontWeight: 'bold' as const,
+    fontWeight: '700',
     color: '#FFFFFF',
   },
 });
