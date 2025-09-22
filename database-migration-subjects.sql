@@ -1,17 +1,9 @@
--- Create subjects table for unified subject management
-CREATE TABLE IF NOT EXISTS subjects (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID NOT NULL,
-  name TEXT NOT NULL,
-  color TEXT NOT NULL DEFAULT '#4ECDC4',
-  mcq_questions INTEGER NOT NULL DEFAULT 20,
-  text_questions INTEGER NOT NULL DEFAULT 0,
-  total_questions INTEGER NOT NULL DEFAULT 20,
-  question_config JSONB,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  UNIQUE(user_id, name)
-);
+-- Add additional columns to existing subjects table for unified subject management
+ALTER TABLE subjects ADD COLUMN IF NOT EXISTS color TEXT NOT NULL DEFAULT '#4ECDC4';
+ALTER TABLE subjects ADD COLUMN IF NOT EXISTS mcq_questions INTEGER NOT NULL DEFAULT 20;
+ALTER TABLE subjects ADD COLUMN IF NOT EXISTS text_questions INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE subjects ADD COLUMN IF NOT EXISTS total_questions INTEGER NOT NULL DEFAULT 20;
+ALTER TABLE subjects ADD COLUMN IF NOT EXISTS question_config JSONB;
 
 -- Create index for faster queries
 CREATE INDEX IF NOT EXISTS idx_subjects_user_id ON subjects(user_id);
