@@ -76,6 +76,7 @@ import { addAnswerCommentProcedure } from "./routes/community/questions/add-answ
 import { likeAnswerCommentProcedure } from "./routes/community/questions/like-answer-comment/route";
 import { incrementQuestionViewProcedure } from "./routes/community/questions/increment-view/route";
 import { deleteQuestionProcedure } from "./routes/community/questions/delete-question/route";
+import { updateQuestionProcedure } from "./routes/community/questions/update-question/route";
 
 // Timer routes
 import { createTimerSessionProcedure } from "./routes/timers/create-timer-session/route";
@@ -187,6 +188,7 @@ export const appRouter = createTRPCRouter({
       getQuestions: getQuestionsProcedure,
       getQuestionById: getQuestionByIdProcedure,
       createQuestion: createQuestionProcedure,
+      updateQuestion: updateQuestionProcedure,
       deleteQuestion: deleteQuestionProcedure,
       addAnswer: addAnswerProcedure,
       addAnswerComment: addAnswerCommentProcedure,

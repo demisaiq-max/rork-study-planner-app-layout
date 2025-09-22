@@ -12,6 +12,7 @@ import {
   Image,
   ActionSheetIOS,
   Keyboard,
+  Modal,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { 
@@ -25,7 +26,9 @@ import {
   User,
   Image as ImageIcon,
   Heart,
-  MoreVertical
+  MoreVertical,
+  Edit3,
+  Trash2
 } from "lucide-react-native";
 import * as ImagePicker from 'expo-image-picker';
 import { useLanguage } from "@/hooks/language-context";
@@ -48,6 +51,12 @@ export default function QuestionDetailScreen() {
   const [commentImages, setCommentImages] = useState<string[]>([]);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [editSubject, setEditSubject] = useState("");
+  const [editTags, setEditTags] = useState<string[]>([]);
+  const [editImages, setEditImages] = useState<string[]>([]);
 
   const questionQuery = trpc.community.questions.getQuestionById.useQuery(
     { questionId: id! },
@@ -117,9 +126,28 @@ export default function QuestionDetailScreen() {
       );
     },
     onError: (error) => {
+      console.error('Delete question error:', error);
       Alert.alert(
         language === 'ko' ? '오류' : 'Error',
         error.message || (language === 'ko' ? '질문 삭제에 실패했습니다.' : 'Failed to delete question.')
+      );
+    },
+  });
+
+  const updateQuestionMutation = trpc.community.questions.updateQuestion.useMutation({
+    onSuccess: () => {
+      questionQuery.refetch();
+      setIsEditModalVisible(false);
+      Alert.alert(
+        language === 'ko' ? '성공' : 'Success',
+        language === 'ko' ? '질문이 수정되었습니다.' : 'Question updated successfully.'
+      );
+    },
+    onError: (error) => {
+      console.error('Update question error:', error);
+      Alert.alert(
+        language === 'ko' ? '오류' : 'Error',
+        error.message || (language === 'ko' ? '질문 수정에 실패했습니다.' : 'Failed to update question.')
       );
     },
   });
@@ -373,6 +401,7 @@ export default function QuestionDetailScreen() {
           style: 'destructive',
           onPress: () => {
             if (id) {
+              console.log('Deleting question with ID:', id);
               deleteQuestionMutation.mutate({ questionId: id });
             }
           },
@@ -381,25 +410,89 @@ export default function QuestionDetailScreen() {
     );
   };
 
+  const handleEditQuestion = () => {
+    if (!questionQuery.data) return;
+    
+    const question = questionQuery.data;
+    setEditTitle(question.title || '');
+    setEditContent(question.content || '');
+    setEditSubject(question.subject || '');
+    setEditTags(question.tags || []);
+    setEditImages(question.image_urls || []);
+    setIsEditModalVisible(true);
+  };
+
+  const handleUpdateQuestion = () => {
+    if (!editTitle.trim() || !editContent.trim()) {
+      Alert.alert(
+        language === 'ko' ? '알림' : 'Notice',
+        language === 'ko' ? '제목과 내용을 입력해주세요.' : 'Please enter title and content.'
+      );
+      return;
+    }
+
+    if (!id) return;
+
+    updateQuestionMutation.mutate({
+      questionId: id,
+      title: editTitle,
+      content: editContent,
+      subject: editSubject,
+      tags: editTags,
+      imageUrls: editImages.length > 0 ? editImages : undefined,
+    });
+  };
+
+  const addEditTag = (tag: string) => {
+    if (tag.trim() && editTags.length < 5 && !editTags.includes(tag.trim())) {
+      setEditTags([...editTags, tag.trim()]);
+    }
+  };
+
+  const removeEditTag = (index: number) => {
+    setEditTags(editTags.filter((_, i) => i !== index));
+  };
+
+  const addEditImage = (imageUri: string) => {
+    if (editImages.length < 5) {
+      setEditImages([...editImages, imageUri]);
+    }
+  };
+
+  const removeEditImage = (index: number) => {
+    setEditImages(editImages.filter((_, i) => i !== index));
+  };
+
   const showQuestionOptions = () => {
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         {
           options: [
             language === 'ko' ? '취소' : 'Cancel',
+            language === 'ko' ? '질문 수정' : 'Edit Question',
             language === 'ko' ? '질문 삭제' : 'Delete Question',
           ],
-          destructiveButtonIndex: 1,
+          destructiveButtonIndex: 2,
           cancelButtonIndex: 0,
         },
         (buttonIndex) => {
           if (buttonIndex === 1) {
+            handleEditQuestion();
+          } else if (buttonIndex === 2) {
             handleDeleteQuestion();
           }
         }
       );
     } else {
-      handleDeleteQuestion();
+      Alert.alert(
+        language === 'ko' ? '질문 옵션' : 'Question Options',
+        language === 'ko' ? '어떤 작업을 하시겠습니까?' : 'What would you like to do?',
+        [
+          { text: language === 'ko' ? '취소' : 'Cancel', style: 'cancel' },
+          { text: language === 'ko' ? '수정' : 'Edit', onPress: handleEditQuestion },
+          { text: language === 'ko' ? '삭제' : 'Delete', style: 'destructive', onPress: handleDeleteQuestion },
+        ]
+      );
     }
   };
 
@@ -704,6 +797,132 @@ export default function QuestionDetailScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* Edit Question Modal */}
+      <Modal
+        visible={isEditModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setIsEditModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setIsEditModalVisible(false)}>
+              <Text style={styles.modalCancelButton}>
+                {language === 'ko' ? '취소' : 'Cancel'}
+              </Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>
+              {language === 'ko' ? '질문 수정' : 'Edit Question'}
+            </Text>
+            <TouchableOpacity 
+              onPress={handleUpdateQuestion}
+              disabled={updateQuestionMutation.isPending}
+            >
+              <Text style={[styles.modalSaveButton, updateQuestionMutation.isPending && styles.modalSaveButtonDisabled]}>
+                {updateQuestionMutation.isPending 
+                  ? (language === 'ko' ? '저장 중...' : 'Saving...') 
+                  : (language === 'ko' ? '저장' : 'Save')
+                }
+              </Text>
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView style={styles.modalContent} keyboardShouldPersistTaps="handled">
+            <View style={styles.modalField}>
+              <Text style={styles.modalFieldLabel}>
+                {language === 'ko' ? '제목' : 'Title'}
+              </Text>
+              <TextInput
+                style={styles.modalTextInput}
+                value={editTitle}
+                onChangeText={setEditTitle}
+                placeholder={language === 'ko' ? '질문 제목을 입력하세요' : 'Enter question title'}
+                placeholderTextColor="#8E8E93"
+                maxLength={200}
+              />
+            </View>
+            
+            <View style={styles.modalField}>
+              <Text style={styles.modalFieldLabel}>
+                {language === 'ko' ? '과목' : 'Subject'}
+              </Text>
+              <TextInput
+                style={styles.modalTextInput}
+                value={editSubject}
+                onChangeText={setEditSubject}
+                placeholder={language === 'ko' ? '과목을 입력하세요' : 'Enter subject'}
+                placeholderTextColor="#8E8E93"
+                maxLength={50}
+              />
+            </View>
+            
+            <View style={styles.modalField}>
+              <Text style={styles.modalFieldLabel}>
+                {language === 'ko' ? '내용' : 'Content'}
+              </Text>
+              <TextInput
+                style={[styles.modalTextInput, styles.modalTextArea]}
+                value={editContent}
+                onChangeText={setEditContent}
+                placeholder={language === 'ko' ? '질문 내용을 입력하세요' : 'Enter question content'}
+                placeholderTextColor="#8E8E93"
+                multiline
+                maxLength={2000}
+              />
+            </View>
+            
+            <View style={styles.modalField}>
+              <Text style={styles.modalFieldLabel}>
+                {language === 'ko' ? '태그' : 'Tags'} ({editTags.length}/5)
+              </Text>
+              {editTags.length > 0 && (
+                <View style={styles.modalTagsContainer}>
+                  {editTags.map((tag, index) => (
+                    <View key={index} style={styles.modalTag}>
+                      <Text style={styles.modalTagText}>#{tag}</Text>
+                      <TouchableOpacity onPress={() => removeEditTag(index)}>
+                        <X size={14} color="#007AFF" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              )}
+              <TextInput
+                style={styles.modalTextInput}
+                placeholder={language === 'ko' ? '태그를 입력하고 엔터를 누르세요' : 'Enter tag and press enter'}
+                placeholderTextColor="#8E8E93"
+                onSubmitEditing={(e) => {
+                  addEditTag(e.nativeEvent.text);
+                  (e.target as any).clear();
+                }}
+                maxLength={20}
+              />
+            </View>
+            
+            {editImages.length > 0 && (
+              <View style={styles.modalField}>
+                <Text style={styles.modalFieldLabel}>
+                  {language === 'ko' ? '이미지' : 'Images'} ({editImages.length}/5)
+                </Text>
+                <ScrollView horizontal style={styles.modalImageContainer}>
+                  {editImages.map((imageUri, index) => (
+                    <View key={index} style={styles.modalImagePreview}>
+                      <Image source={{ uri: imageUri }} style={styles.modalImage} />
+                      <TouchableOpacity 
+                        style={styles.modalRemoveImageButton}
+                        onPress={() => removeEditImage(index)}
+                      >
+                        <X size={12} color="#FFFFFF" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+          </ScrollView>
+        </View>
+      </Modal>
 
       {/* Answer Input */}
       <KeyboardAvoidingView 
@@ -1200,5 +1419,104 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#8E8E93",
     fontWeight: "500",
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E5EA",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#000000",
+  },
+  modalCancelButton: {
+    fontSize: 16,
+    color: "#8E8E93",
+  },
+  modalSaveButton: {
+    fontSize: 16,
+    color: "#007AFF",
+    fontWeight: "600",
+  },
+  modalSaveButtonDisabled: {
+    color: "#C7C7CC",
+  },
+  modalContent: {
+    flex: 1,
+    padding: 16,
+  },
+  modalField: {
+    marginBottom: 20,
+  },
+  modalFieldLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#000000",
+    marginBottom: 8,
+  },
+  modalTextInput: {
+    backgroundColor: "#F2F2F7",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    color: "#000000",
+    minHeight: 44,
+  },
+  modalTextArea: {
+    minHeight: 100,
+    textAlignVertical: "top",
+  },
+  modalTagsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 8,
+  },
+  modalTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#E3F2FD",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 16,
+    gap: 4,
+  },
+  modalTagText: {
+    fontSize: 14,
+    color: "#007AFF",
+  },
+  modalImageContainer: {
+    marginBottom: 8,
+  },
+  modalImagePreview: {
+    position: "relative",
+    marginRight: 8,
+  },
+  modalImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: "#F2F2F7",
+  },
+  modalRemoveImageButton: {
+    position: "absolute",
+    top: -6,
+    right: -6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#FF3B30",
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

@@ -22,7 +22,12 @@ export const deleteQuestionProcedure = protectedProcedure
       .eq("id", questionId)
       .single();
 
-    if (fetchError || !question) {
+    if (fetchError) {
+      console.error('Fetch error:', fetchError);
+      throw new Error("Question not found");
+    }
+
+    if (!question) {
       throw new Error("Question not found");
     }
 
