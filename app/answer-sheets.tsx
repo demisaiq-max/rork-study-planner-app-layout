@@ -158,6 +158,8 @@ export default function AnswerSheetsScreen() {
       setSelectedSubjectId(validSubjects[0].id);
     }
   }, [subjectsQuery.data, selectedSubjectId]);
+
+
   
   if (subjectsQuery.isLoading || answerSheetsQuery.isLoading) {
     return (
@@ -453,35 +455,7 @@ export default function AnswerSheetsScreen() {
     setQuestionConfig(newConfig);
   };
 
-  // Update question config when MCQ/Text counts change
-  React.useEffect(() => {
-    if (showDynamicConfig) {
-      updateQuestionConfig();
-    } else {
-      // In basic mode, update the counts based on current config
-      const mcqCount = questionConfig.filter(q => q.type === 'mcq').length;
-      const textCount = questionConfig.filter(q => q.type === 'text').length;
-      if (mcqCount > 0 || textCount > 0) {
-        setNewSubjectMCQ(mcqCount.toString());
-        setNewSubjectText(textCount.toString());
-      }
-    }
-  }, [newSubjectMCQ, newSubjectText, showDynamicConfig]);
 
-  // Initialize config when editing a subject
-  React.useEffect(() => {
-    if (editingSubject && showBubbleSheetConfig) {
-      if (editingSubject.questionConfig) {
-        setQuestionConfig(editingSubject.questionConfig);
-        setShowDynamicConfig(true);
-      } else {
-        initializeQuestionConfig(
-          editingSubject.mcqQuestions || 0,
-          editingSubject.textQuestions || 0
-        );
-      }
-    }
-  }, [editingSubject, showBubbleSheetConfig]);
 
   return (
     <SafeAreaView style={styles.container}>
