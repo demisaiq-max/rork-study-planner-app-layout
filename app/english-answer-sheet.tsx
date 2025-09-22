@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
   },
   subjectTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#FFFFFF',
     marginBottom: 4,
   },
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
   },
   questionNumberText: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#333333',
   },
   bubbleRow: {
@@ -183,12 +183,12 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    borderWidth: 3,
+    borderWidth: 2,
     borderColor: '#45B7D1',
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 2,
+    marginHorizontal: 4,
   },
   bubbleSelected: {
     backgroundColor: '#45B7D1',
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
   },
   bubbleText: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#45B7D1',
   },
   bubbleTextSelected: {
@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#FFFFFF',
   },
 });
