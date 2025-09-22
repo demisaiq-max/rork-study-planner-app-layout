@@ -788,9 +788,9 @@ export default function AnswerSheetsScreen() {
                     {language === 'ko' ? '색상' : 'Color'}
                   </Text>
                   <View style={styles.colorSelector}>
-                    {DEFAULT_COLORS.map((color) => (
+                    {DEFAULT_COLORS.map((color, index) => (
                       <TouchableOpacity
-                        key={color}
+                        key={`color-${index}-${Math.random()}`}
                         style={[
                           styles.colorOption,
                           { backgroundColor: color },
@@ -1044,9 +1044,9 @@ export default function AnswerSheetsScreen() {
                     {language === 'ko' ? '색상' : 'Color'}
                   </Text>
                   <View style={styles.colorSelector}>
-                    {DEFAULT_COLORS.map((color) => (
+                    {DEFAULT_COLORS.map((color, index) => (
                       <TouchableOpacity
-                        key={color}
+                        key={`color-${index}-${Math.random()}`}
                         style={[
                           styles.colorOption,
                           { backgroundColor: color },

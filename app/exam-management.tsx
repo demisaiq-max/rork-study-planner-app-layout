@@ -358,7 +358,7 @@ export default function ExamManagementScreen() {
                   const subjectAnswerSheets = answerSheets.filter(sheet => sheet.subject_id === subject.id);
                   return (
                     <TouchableOpacity 
-                      key={subject.id} 
+                      key={`exam-subject-${subject.id}`} 
                       style={styles.subjectCard}
                       onPress={() => handleSubjectPress(subject.name)}
                     >
@@ -396,7 +396,7 @@ export default function ExamManagementScreen() {
 
               <View style={styles.examsList}>
                 {filteredExams.map((exam) => (
-                  <View key={exam.id} style={styles.examCard}>
+                  <View key={`exam-${exam.id}`} style={styles.examCard}>
                     <View style={[styles.priorityIndicator, { backgroundColor: getPriorityColor(exam.priority) }]} />
                     <View style={styles.examContent}>
                       <View style={styles.examInfo}>
