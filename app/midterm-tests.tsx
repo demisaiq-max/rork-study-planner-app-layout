@@ -226,9 +226,22 @@ export default function MidtermTestsScreen() {
                 <TouchableOpacity 
                   style={[styles.openSheetButton, { backgroundColor: (params.subjectColor || '#FF9500') + '20' }]}
                   onPress={() => {
-                    // Navigate to dynamic answer sheet editor with custom configuration
+                    // Navigate to subject-specific answer sheet based on subject name
+                    const subjectName = params.subjectName?.toLowerCase() || '';
+                    let pathname = '/answer-sheet-editor'; // Default fallback
+                    
+                    if (subjectName.includes('korean') || subjectName.includes('국어')) {
+                      pathname = '/korean-answer-sheet';
+                    } else if (subjectName.includes('mathematics') || subjectName.includes('수학')) {
+                      pathname = '/mathematics-answer-sheet';
+                    } else if (subjectName.includes('english') || subjectName.includes('영어')) {
+                      pathname = '/english-answer-sheet';
+                    } else if (subjectName.includes('others') || subjectName.includes('그외')) {
+                      pathname = '/others-answer-sheet';
+                    }
+                    
                     router.push({
-                      pathname: '/answer-sheet-editor',
+                      pathname,
                       params: {
                         name: sheet.name,
                         subjectId: params.subjectId,
