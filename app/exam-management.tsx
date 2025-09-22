@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   StyleSheet,
   Text,
@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack } from "expo-router";
-import { Edit2, Trash2, Plus, X, Calendar } from "lucide-react-native";
+import { Edit2, Trash2, Plus, X, Calendar, ArrowLeft } from "lucide-react-native";
 import { useLanguage } from "@/hooks/language-context";
 import { useAuth } from "@/hooks/auth-context";
 import FormattedDateInput from "@/components/FormattedDateInput";
@@ -30,6 +30,8 @@ interface Exam {
   updated_at?: string;
 }
 
+
+
 export default function ExamManagementScreen() {
   const { t } = useLanguage();
   const { user: authUser } = useAuth();
@@ -37,6 +39,10 @@ export default function ExamManagementScreen() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingExam, setEditingExam] = useState<Exam | null>(null);
+  const [showSubjects, setShowSubjects] = useState(true);
+  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+  const [showAddSubjectModal, setShowAddSubjectModal] = useState(false);
+  const [newSubjectName, setNewSubjectName] = useState("");
   
   const [newExamTitle, setNewExamTitle] = useState("");
   const [newExamDate, setNewExamDate] = useState("");
@@ -47,11 +53,25 @@ export default function ExamManagementScreen() {
   const [editExamSubject, setEditExamSubject] = useState("");
   const [editExamPriority, setEditExamPriority] = useState<"high" | "medium" | "low">("medium");
   
+  // Set subject when coming from subject selection
+  useEffect(() => {
+    if (selectedSubject) {
+      setNewExamSubject(selectedSubject);
+    }
+  }, [selectedSubject]);
+  
   // Fetch exams from database
   const examsQuery = trpc.exams.getUserExams.useQuery(
     undefined,
     { enabled: !!authUser?.id }
   );
+  
+  // Fetch subjects from answer sheets
+  const subjectsQuery = trpc.tests.getUserSubjects.useQuery({
+    userId: authUser?.id || ""
+  }, {
+    enabled: !!authUser?.id
+  });
   
 
   
@@ -81,6 +101,26 @@ export default function ExamManagementScreen() {
   const deleteExamMutation = trpc.exams.deleteExam.useMutation({
     onSuccess: () => {
       examsQuery.refetch();
+    },
+    onError: (error) => {
+      Alert.alert(t('error'), error.message);
+    }
+  });
+  
+  // Fetch answer sheets to sync counts
+  const answerSheetsQuery = trpc.answerSheets.getAnswerSheets.useQuery({
+    userId: authUser?.id || ""
+  }, {
+    enabled: !!authUser?.id
+  });
+  
+  // Subject mutations
+  const createSubjectMutation = trpc.tests.createSubject.useMutation({
+    onSuccess: () => {
+      subjectsQuery.refetch();
+      answerSheetsQuery.refetch(); // Sync with answer sheets
+      setShowAddSubjectModal(false);
+      setNewSubjectName("");
     },
     onError: (error) => {
       Alert.alert(t('error'), error.message);
@@ -147,6 +187,33 @@ export default function ExamManagementScreen() {
       subject: newExamSubject,
       priority: newExamPriority === "high"
     });
+  };
+  
+  const handleAddSubject = () => {
+    if (!newSubjectName.trim()) {
+      Alert.alert(t('error'), 'Please enter a subject name');
+      return;
+    }
+    
+    if (!authUser?.id) {
+      Alert.alert(t('error'), 'Please sign in to add subjects');
+      return;
+    }
+    
+    createSubjectMutation.mutate({
+      userId: authUser.id,
+      name: newSubjectName
+    });
+  };
+  
+  const handleSubjectPress = (subjectName: string) => {
+    setSelectedSubject(subjectName);
+    setShowSubjects(false);
+  };
+  
+  const handleBackToSubjects = () => {
+    setShowSubjects(true);
+    setSelectedSubject(null);
   };
 
   const handleEditExam = () => {
@@ -219,7 +286,7 @@ export default function ExamManagementScreen() {
     return priority ? "#FF3B30" : "#FF9500";
   };
   
-  if (examsQuery.isLoading) {
+  if (examsQuery.isLoading || subjectsQuery.isLoading) {
     return (
       <View style={[styles.container, styles.centerContent]}>
         <ActivityIndicator size="large" color="#007AFF" />
@@ -228,12 +295,19 @@ export default function ExamManagementScreen() {
   }
   
   const exams = examsQuery.data || [];
+  const subjects = subjectsQuery.data || [];
+  const answerSheets = answerSheetsQuery.data || [];
+  
+  // Filter exams by selected subject
+  const filteredExams = selectedSubject 
+    ? exams.filter(exam => exam.subject === selectedSubject)
+    : exams;
 
   return (
     <>
       <Stack.Screen 
         options={{ 
-          title: t('examManagement'),
+          title: showSubjects ? t('examManagement') : selectedSubject || t('examManagement'),
           headerStyle: {
             backgroundColor: '#FFFFFF',
           },
@@ -242,10 +316,18 @@ export default function ExamManagementScreen() {
             fontWeight: '600',
           },
           headerShadowVisible: false,
+          headerLeft: !showSubjects ? () => (
+            <TouchableOpacity 
+              style={styles.headerBackButton}
+              onPress={handleBackToSubjects}
+            >
+              <ArrowLeft size={24} color="#007AFF" />
+            </TouchableOpacity>
+          ) : undefined,
           headerRight: () => (
             <TouchableOpacity 
               style={styles.headerPlusButton}
-              onPress={() => setShowAddModal(true)}
+              onPress={() => showSubjects ? setShowAddSubjectModal(true) : setShowAddModal(true)}
             >
               <Plus size={24} color="#FF3B30" />
             </TouchableOpacity>
@@ -259,60 +341,104 @@ export default function ExamManagementScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>{t('manageExams')}</Text>
-            <Text style={styles.headerSubtitle}>{t('manageExamsDesc')}</Text>
-          </View>
+          {showSubjects ? (
+            <>
+              <View style={styles.header}>
+                <Text style={styles.headerTitle}>Exam Subjects</Text>
+                <Text style={styles.headerSubtitle}>Select a subject to manage exams</Text>
+              </View>
 
-          <View style={styles.examsList}>
-            {exams.map((exam) => (
-              <View key={exam.id} style={styles.examCard}>
-                <View style={[styles.priorityIndicator, { backgroundColor: getPriorityColor(exam.priority) }]} />
-                <View style={styles.examContent}>
-                  <View style={styles.examInfo}>
-                    <View style={styles.examTextContainer}>
-                      <Text style={styles.examTitle}>{exam.title}</Text>
-                      {exam.subject && (
-                        <Text style={styles.examDescription} numberOfLines={2}>{exam.subject}</Text>
-                      )}
-                      <Text style={styles.examDate}>{exam.date}</Text>
-                    </View>
-                    <View style={styles.daysContainer}>
-                      <Text style={[
-                        styles.daysLeft,
-                        calculateDaysLeft(exam.date) <= 30 && styles.daysLeftUrgent
-                      ]}>
-                        D-{calculateDaysLeft(exam.date)}
-                      </Text>
+              <View style={styles.subjectsList}>
+                {subjects.map((subject) => {
+                  if (!subject) return null;
+                  const subjectExams = exams.filter(exam => exam.subject === subject.name);
+                  const subjectAnswerSheets = answerSheets.filter(sheet => sheet.subject_id === subject.id);
+                  return (
+                    <TouchableOpacity 
+                      key={subject.id} 
+                      style={styles.subjectCard}
+                      onPress={() => handleSubjectPress(subject.name)}
+                    >
+                      <View style={styles.subjectContent}>
+                        <Text style={styles.subjectName}>{subject.name}</Text>
+                        <Text style={styles.subjectCount}>
+                          {subjectExams.length} {subjectExams.length === 1 ? 'exam' : 'exams'}
+                        </Text>
+                        <Text style={styles.subjectAnswerSheetCount}>
+                          {subjectAnswerSheets.length} answer {subjectAnswerSheets.length === 1 ? 'sheet' : 'sheets'}
+                        </Text>
+                      </View>
+                      <View style={styles.subjectArrow}>
+                        <Text style={styles.arrowText}>›</Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                }).filter(Boolean)}
+                
+                {subjects.length === 0 && (
+                  <View style={styles.emptyState}>
+                    <Calendar size={48} color="#C7C7CC" />
+                    <Text style={styles.emptyTitle}>No Subjects</Text>
+                    <Text style={styles.emptySubtitle}>Add a subject to start managing exams</Text>
+                  </View>
+                )}
+              </View>
+            </>
+          ) : (
+            <>
+              <View style={styles.header}>
+                <Text style={styles.headerTitle}>{selectedSubject || 'Subject'} Exams</Text>
+                <Text style={styles.headerSubtitle}>Manage exams for {selectedSubject || 'this subject'}</Text>
+              </View>
+
+              <View style={styles.examsList}>
+                {filteredExams.map((exam) => (
+                  <View key={exam.id} style={styles.examCard}>
+                    <View style={[styles.priorityIndicator, { backgroundColor: getPriorityColor(exam.priority) }]} />
+                    <View style={styles.examContent}>
+                      <View style={styles.examInfo}>
+                        <View style={styles.examTextContainer}>
+                          <Text style={styles.examTitle}>{exam.title}</Text>
+                          <Text style={styles.examDate}>{exam.date}</Text>
+                        </View>
+                        <View style={styles.daysContainer}>
+                          <Text style={[
+                            styles.daysLeft,
+                            calculateDaysLeft(exam.date) <= 30 && styles.daysLeftUrgent
+                          ]}>
+                            D-{calculateDaysLeft(exam.date)}
+                          </Text>
+                        </View>
+                      </View>
+                      
+                      <View style={styles.examActions}>
+                        <TouchableOpacity 
+                          style={styles.actionButton}
+                          onPress={() => openEditModal(exam)}
+                        >
+                          <Edit2 size={18} color="#007AFF" />
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          style={styles.actionButton}
+                          onPress={() => handleDeleteExam(exam.id)}
+                        >
+                          <Trash2 size={18} color="#FF3B30" />
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   </View>
-                  
-                  <View style={styles.examActions}>
-                    <TouchableOpacity 
-                      style={styles.actionButton}
-                      onPress={() => openEditModal(exam)}
-                    >
-                      <Edit2 size={18} color="#007AFF" />
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={styles.actionButton}
-                      onPress={() => handleDeleteExam(exam.id)}
-                    >
-                      <Trash2 size={18} color="#FF3B30" />
-                    </TouchableOpacity>
+                ))}
+                
+                {filteredExams.length === 0 && (
+                  <View style={styles.emptyState}>
+                    <Calendar size={48} color="#C7C7CC" />
+                    <Text style={styles.emptyTitle}>No Exams</Text>
+                    <Text style={styles.emptySubtitle}>Add an exam for {selectedSubject || 'this subject'}</Text>
                   </View>
-                </View>
+                )}
               </View>
-            ))}
-            
-            {exams.length === 0 && (
-              <View style={styles.emptyState}>
-                <Calendar size={48} color="#C7C7CC" />
-                <Text style={styles.emptyTitle}>{t('noExams')}</Text>
-                <Text style={styles.emptySubtitle}>{t('noExamsDesc')}</Text>
-              </View>
-            )}
-          </View>
+            </>
+          )}
         </ScrollView>
       </View>
 
@@ -365,10 +491,11 @@ export default function ExamManagementScreen() {
                   <Text style={styles.inputLabel}>{t('subject')}</Text>
                   <TextInput
                     style={styles.textInput}
-                    value={newExamSubject}
+                    value={selectedSubject || newExamSubject}
                     onChangeText={setNewExamSubject}
                     placeholder={t('subjectPlaceholder')}
                     placeholderTextColor="#8E8E93"
+                    editable={!selectedSubject}
                   />
                 </View>
                 
@@ -505,6 +632,40 @@ export default function ExamManagementScreen() {
                 </View>
               </View>
             </ScrollView>
+          </SafeAreaView>
+        </Modal>
+        
+        {/* Add Subject Modal */}
+        <Modal
+          visible={showAddSubjectModal}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setShowAddSubjectModal(false)}
+        >
+          <SafeAreaView style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => setShowAddSubjectModal(false)}>
+                <X size={24} color="#8E8E93" />
+              </TouchableOpacity>
+              <Text style={styles.modalTitle}>Add Subject</Text>
+              <TouchableOpacity onPress={handleAddSubject}>
+                <Text style={styles.saveButton}>Save</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalContent}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Subject Name</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={newSubjectName}
+                  onChangeText={setNewSubjectName}
+                  placeholder="Enter subject name"
+                  placeholderTextColor="#8E8E93"
+                  autoFocus
+                />
+              </View>
+            </View>
           </SafeAreaView>
         </Modal>
     </>
@@ -719,6 +880,52 @@ const styles = StyleSheet.create({
   centerContent: {
     justifyContent: "center",
     alignItems: "center",
+  },
+  headerBackButton: {
+    padding: 8,
+    marginLeft: 8,
+  },
+  subjectsList: {
+    padding: 20,
+  },
+  subjectCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+  },
+  subjectContent: {
+    flex: 1,
+  },
+  subjectName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#000000",
+    marginBottom: 4,
+  },
+  subjectCount: {
+    fontSize: 14,
+    color: "#8E8E93",
+  },
+  subjectArrow: {
+    marginLeft: 12,
+  },
+  arrowText: {
+    fontSize: 20,
+    color: "#C7C7CC",
+    fontWeight: "300",
+  },
+  subjectAnswerSheetCount: {
+    fontSize: 12,
+    color: "#666666",
+    marginTop: 2,
   },
 
 });

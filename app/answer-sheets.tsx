@@ -68,105 +68,112 @@ export default function AnswerSheetsScreen() {
   const [showDynamicConfig, setShowDynamicConfig] = useState(false);
   const [dynamicTotalQuestions, setDynamicTotalQuestions] = useState('20');
   
-  // Mock subjects data - in real app this would come from backend
-  const [subjects, setSubjects] = useState<Subject[]>([
-    {
-      id: '1',
-      name: 'Korean (국어)',
-      color: '#FF6B6B',
-      createdAt: new Date('2024-01-01'),
-      mcqQuestions: 34,
-      textQuestions: 11,
-      totalQuestions: 45,
-    },
-    {
-      id: '2', 
-      name: 'Mathematics (수학)',
-      color: '#4ECDC4',
-      createdAt: new Date('2024-01-01'),
-      mcqQuestions: 30,
-      textQuestions: 0,
-      totalQuestions: 30,
-    },
-    {
-      id: '3',
-      name: 'English (영어)',
-      color: '#45B7D1',
-      createdAt: new Date('2024-01-01'),
-      mcqQuestions: 45,
-      textQuestions: 0,
-      totalQuestions: 45,
-    },
-    {
-      id: '4',
-      name: 'Others (그외)',
-      color: '#96CEB4',
-      createdAt: new Date('2024-01-01'),
-      mcqQuestions: 20,
-      textQuestions: 0,
-      totalQuestions: 20,
-    },
-  ]);
+  const { user: authUser } = useAuth();
   
-  // Mock data - in real app this would come from backend
-  const [answerSheets, setAnswerSheets] = useState<AnswerSheet[]>([
-    {
-      id: '1',
-      name: '2024 수능 모의고사 1회',
-      subjectId: '1',
-      testType: 'mock',
-      createdAt: new Date('2024-01-15'),
-      questions: 45,
+  // Fetch subjects from database
+  const subjectsQuery = trpc.tests.getUserSubjects.useQuery({
+    userId: authUser?.id || ""
+  }, {
+    enabled: !!authUser?.id
+  });
+  
+  // Fetch answer sheets from database
+  const answerSheetsQuery = trpc.answerSheets.getAnswerSheets.useQuery({
+    userId: authUser?.id || ""
+  }, {
+    enabled: !!authUser?.id
+  });
+  
+  // Mutations
+  const createAnswerSheetMutation = trpc.answerSheets.createAnswerSheet.useMutation({
+    onSuccess: () => {
+      answerSheetsQuery.refetch();
+      closeModal();
     },
-    {
-      id: '2', 
-      name: '중간고사 대비 문제',
-      subjectId: '1',
-      testType: 'midterm',
-      createdAt: new Date('2024-01-10'),
-      questions: 30,
+    onError: (error) => {
+      Alert.alert('Error', error.message);
+    }
+  });
+  
+  const updateAnswerSheetMutation = trpc.answerSheets.updateAnswerSheet.useMutation({
+    onSuccess: () => {
+      answerSheetsQuery.refetch();
+      closeModal();
     },
-    {
-      id: '3',
-      name: '미적분 단원평가',
-      subjectId: '2',
-      testType: 'mock',
-      createdAt: new Date('2024-01-12'),
-      questions: 25,
+    onError: (error) => {
+      Alert.alert('Error', error.message);
+    }
+  });
+  
+  const deleteAnswerSheetMutation = trpc.answerSheets.deleteAnswerSheet.useMutation({
+    onSuccess: () => {
+      answerSheetsQuery.refetch();
     },
-    {
-      id: '4',
-      name: 'TOEIC Practice Test',
-      subjectId: '3',
-      testType: 'final',
-      createdAt: new Date('2024-01-08'),
-      questions: 100,
+    onError: (error) => {
+      Alert.alert('Error', error.message);
+    }
+  });
+  
+  const createSubjectMutation = trpc.tests.createSubject.useMutation({
+    onSuccess: () => {
+      subjectsQuery.refetch();
+      closeSubjectModal();
     },
-    {
-      id: '5',
-      name: '한국사 능력검정시험',
-      subjectId: '4',
-      testType: 'mock',
-      createdAt: new Date('2024-01-05'),
-      questions: 50,
+    onError: (error) => {
+      Alert.alert('Error', error.message);
+    }
+  });
+  
+  const updateSubjectMutation = trpc.tests.updateSubject.useMutation({
+    onSuccess: () => {
+      subjectsQuery.refetch();
+      closeSubjectModal();
     },
-  ]);
+    onError: (error) => {
+      Alert.alert('Error', error.message);
+    }
+  });
+  
+  const deleteSubjectMutation = trpc.tests.deleteSubject.useMutation({
+    onSuccess: () => {
+      subjectsQuery.refetch();
+      if (selectedSubjectId === editingSubject?.id) {
+        const remainingSubjects = (subjectsQuery.data || []).filter(s => s && s.id !== editingSubject?.id);
+        setSelectedSubjectId(remainingSubjects[0]?.id || '');
+      }
+    },
+    onError: (error) => {
+      Alert.alert('Error', error.message);
+    }
+  });
   
   // Set initial selected subject
   React.useEffect(() => {
-    if (subjects.length > 0 && !selectedSubjectId) {
+    const subjects = subjectsQuery.data || [];
+    if (subjects.length > 0 && !selectedSubjectId && subjects[0]) {
       setSelectedSubjectId(subjects[0].id);
     }
-  }, [subjects, selectedSubjectId]);
+  }, [subjectsQuery.data, selectedSubjectId]);
+  
+  if (subjectsQuery.isLoading || answerSheetsQuery.isLoading) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#007AFF" />
+      </SafeAreaView>
+    );
+  }
+  
+  const subjects = subjectsQuery.data || [];
+  const answerSheets = answerSheetsQuery.data || [];
 
   const filteredSheets = answerSheets.filter(sheet => 
-    sheet.subjectId === selectedSubjectId && sheet.testType === selectedTestType
+    sheet.subject_id === selectedSubjectId && sheet.test_type === selectedTestType
   );
-  const selectedSubjectInfo = subjects.find(s => s.id === selectedSubjectId);
+  const selectedSubjectInfo = subjects.find(s => s && s.id === selectedSubjectId);
   
   const getTestTypeInfo = (type: 'mock' | 'midterm' | 'final') => {
     const count = answerSheets.filter(sheet => 
-      sheet.subjectId === selectedSubjectId && sheet.testType === type
+      sheet.subject_id === selectedSubjectId && sheet.test_type === type
     ).length;
     
     switch (type) {
@@ -205,27 +212,26 @@ export default function AnswerSheetsScreen() {
       Alert.alert('Error', 'Questions must be between 1 and 200');
       return;
     }
+    
+    if (!authUser?.id) {
+      Alert.alert('Error', 'Please sign in to create answer sheets');
+      return;
+    }
 
-    const newSheet: AnswerSheet = {
-      id: Date.now().toString(),
-      name: newSheetName,
-      subjectId: selectedSubjectId,
+    createAnswerSheetMutation.mutate({
+      userId: authUser.id,
+      subject: 'korean', // Default subject
+      sheetName: newSheetName,
+      totalQuestions: questionsNum,
       testType: newTestType,
-      createdAt: new Date(),
-      questions: questionsNum,
-    };
-
-    setAnswerSheets(prev => [newSheet, ...prev]);
-    setNewSheetName('');
-    setNewSheetQuestions('20');
-    setShowAddModal(false);
+    });
   };
 
-  const handleEditSheet = (sheet: AnswerSheet) => {
+  const handleEditSheet = (sheet: any) => {
     setEditingSheet(sheet);
     setNewSheetName(sheet.name);
     setNewSheetQuestions(sheet.questions.toString());
-    setNewTestType(sheet.testType);
+    setNewTestType(sheet.test_type);
     setShowAddModal(true);
   };
 
@@ -240,17 +246,18 @@ export default function AnswerSheetsScreen() {
       Alert.alert('Error', 'Questions must be between 1 and 200');
       return;
     }
-
-    setAnswerSheets(prev => prev.map(sheet => 
-      sheet.id === editingSheet.id 
-        ? { ...sheet, name: newSheetName, questions: questionsNum, testType: newTestType }
-        : sheet
-    ));
     
-    setEditingSheet(null);
-    setNewSheetName('');
-    setNewSheetQuestions('20');
-    setShowAddModal(false);
+    if (!authUser?.id) {
+      Alert.alert('Error', 'Please sign in to update answer sheets');
+      return;
+    }
+
+    updateAnswerSheetMutation.mutate({
+      sheetId: editingSheet.id,
+      sheetName: newSheetName,
+      totalQuestions: questionsNum,
+      testType: newTestType,
+    });
   };
 
   const handleDeleteSheet = (sheetId: string) => {
@@ -263,7 +270,11 @@ export default function AnswerSheetsScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            setAnswerSheets(prev => prev.filter(sheet => sheet.id !== sheetId));
+            if (!authUser?.id) {
+              Alert.alert('Error', 'Please sign in to delete answer sheets');
+              return;
+            }
+            deleteAnswerSheetMutation.mutate({ sheetId: sheetId });
           },
         },
       ]
@@ -275,8 +286,13 @@ export default function AnswerSheetsScreen() {
       Alert.alert('Error', 'Please enter a subject name');
       return;
     }
+    
+    if (!authUser?.id) {
+      Alert.alert('Error', 'Please sign in to create subjects');
+      return;
+    }
 
-    const mcqCount = parseInt(newSubjectMCQ) || 0;
+    const mcqCount = parseInt(newSubjectMCQ) || 20;
     const textCount = parseInt(newSubjectText) || 0;
     const totalCount = mcqCount + textCount;
 
@@ -290,28 +306,18 @@ export default function AnswerSheetsScreen() {
       return;
     }
 
-    const newSubject: Subject = {
-      id: Date.now().toString(),
+    createSubjectMutation.mutate({
+      userId: authUser.id,
       name: newSubjectName,
-      color: newSubjectColor,
-      createdAt: new Date(),
-      mcqQuestions: mcqCount,
-      textQuestions: textCount,
-      totalQuestions: totalCount,
-      questionConfig: showDynamicConfig ? questionConfig : undefined,
-    };
-
-    setSubjects(prev => [...prev, newSubject]);
-    setSelectedSubjectId(newSubject.id);
-    closeSubjectModal();
+    });
   };
 
-  const handleEditSubject = (subject: Subject) => {
+  const handleEditSubject = (subject: any) => {
     setEditingSubject(subject);
     setNewSubjectName(subject.name);
-    setNewSubjectColor(subject.color);
-    setNewSubjectMCQ((subject.mcqQuestions || 0).toString());
-    setNewSubjectText((subject.textQuestions || 0).toString());
+    setNewSubjectColor(DEFAULT_COLORS[0]);
+    setNewSubjectMCQ('20');
+    setNewSubjectText('0');
     setShowSubjectModal(true);
   };
 
@@ -320,40 +326,21 @@ export default function AnswerSheetsScreen() {
       Alert.alert('Error', 'Please enter a subject name');
       return;
     }
-
-    const mcqCount = parseInt(newSubjectMCQ) || 0;
-    const textCount = parseInt(newSubjectText) || 0;
-    const totalCount = mcqCount + textCount;
-
-    if (totalCount === 0) {
-      Alert.alert('Error', 'Total questions must be greater than 0');
-      return;
-    }
-
-    if (totalCount > 200) {
-      Alert.alert('Error', 'Total questions cannot exceed 200');
-      return;
-    }
-
-    setSubjects(prev => prev.map(subject => 
-      subject.id === editingSubject.id 
-        ? { 
-            ...subject, 
-            name: newSubjectName, 
-            color: newSubjectColor,
-            mcqQuestions: mcqCount,
-            textQuestions: textCount,
-            totalQuestions: totalCount,
-            questionConfig: showDynamicConfig ? questionConfig : undefined,
-          }
-        : subject
-    ));
     
-    closeSubjectModal();
+    if (!authUser?.id) {
+      Alert.alert('Error', 'Please sign in to update subjects');
+      return;
+    }
+
+    updateSubjectMutation.mutate({
+      id: editingSubject.id,
+      userId: authUser.id,
+      name: newSubjectName,
+    });
   };
 
   const handleDeleteSubject = (subjectId: string) => {
-    const sheetsInSubject = answerSheets.filter(sheet => sheet.subjectId === subjectId);
+    const sheetsInSubject = answerSheets.filter(sheet => sheet.subject_id === subjectId);
     
     if (sheetsInSubject.length > 0) {
       Alert.alert(
@@ -373,11 +360,11 @@ export default function AnswerSheetsScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            setSubjects(prev => prev.filter(subject => subject.id !== subjectId));
-            if (selectedSubjectId === subjectId && subjects.length > 1) {
-              const remainingSubjects = subjects.filter(s => s.id !== subjectId);
-              setSelectedSubjectId(remainingSubjects[0]?.id || '');
+            if (!authUser?.id) {
+              Alert.alert('Error', 'Please sign in to delete subjects');
+              return;
             }
+            deleteSubjectMutation.mutate({ id: subjectId, userId: authUser.id });
           },
         },
       ]
@@ -508,26 +495,29 @@ export default function AnswerSheetsScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.tabsContainer}
         >
-          {subjects.map((subject) => (
-            <TouchableOpacity
-              key={subject.id}
-              style={[
-                styles.subjectTab,
-                selectedSubjectId === subject.id && {
-                  backgroundColor: subject.color,
-                  ...styles.subjectTabActive
-                }
-              ]}
-              onPress={() => setSelectedSubjectId(subject.id)}
-            >
-              <Text style={[
-                styles.subjectTabText,
-                selectedSubjectId === subject.id && styles.subjectTabTextActive
-              ]}>
-                {subject.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {subjects.map((subject) => {
+            if (!subject) return null;
+            return (
+              <TouchableOpacity
+                key={subject.id}
+                style={[
+                  styles.subjectTab,
+                  selectedSubjectId === subject.id && {
+                    backgroundColor: DEFAULT_COLORS[0],
+                    ...styles.subjectTabActive
+                  }
+                ]}
+                onPress={() => setSelectedSubjectId(subject.id)}
+              >
+                <Text style={[
+                  styles.subjectTabText,
+                  selectedSubjectId === subject.id && styles.subjectTabTextActive
+                ]}>
+                  {subject.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          }).filter(Boolean)}
           <TouchableOpacity
             style={styles.manageSubjectsTab}
             onPress={() => setShowSubjectModal(true)}
@@ -545,7 +535,7 @@ export default function AnswerSheetsScreen() {
           {(['mock', 'midterm', 'final'] as const).map((testType) => {
             const typeInfo = getTestTypeInfo(testType);
             const typeSheets = answerSheets.filter(sheet => 
-              sheet.subjectId === selectedSubjectId && sheet.testType === testType
+              sheet.subject_id === selectedSubjectId && sheet.test_type === testType
             );
             const isExpanded = selectedTestType === testType;
             
@@ -563,11 +553,11 @@ export default function AnswerSheetsScreen() {
                         params: {
                           subjectId: selectedSubjectId,
                           subjectName: selectedSubjectInfo?.name || '',
-                          subjectColor: selectedSubjectInfo?.color || '#4ECDC4',
-                          mcqQuestions: selectedSubjectInfo?.mcqQuestions || 20,
-                          textQuestions: selectedSubjectInfo?.textQuestions || 0,
-                          totalQuestions: selectedSubjectInfo?.totalQuestions || 20,
-                          questionConfig: selectedSubjectInfo?.questionConfig ? JSON.stringify(selectedSubjectInfo.questionConfig) : undefined,
+                          subjectColor: '#4ECDC4',
+                          mcqQuestions: 20,
+                          textQuestions: 0,
+                          totalQuestions: 20,
+                          questionConfig: undefined,
                         }
                       });
                     } else if (testType === 'midterm') {
@@ -576,11 +566,11 @@ export default function AnswerSheetsScreen() {
                         params: {
                           subjectId: selectedSubjectId,
                           subjectName: selectedSubjectInfo?.name || '',
-                          subjectColor: selectedSubjectInfo?.color || '#FF9500',
-                          mcqQuestions: selectedSubjectInfo?.mcqQuestions || 20,
-                          textQuestions: selectedSubjectInfo?.textQuestions || 0,
-                          totalQuestions: selectedSubjectInfo?.totalQuestions || 20,
-                          questionConfig: selectedSubjectInfo?.questionConfig ? JSON.stringify(selectedSubjectInfo.questionConfig) : undefined,
+                          subjectColor: '#FF9500',
+                          mcqQuestions: 20,
+                          textQuestions: 0,
+                          totalQuestions: 20,
+                          questionConfig: undefined,
                         }
                       });
                     } else if (testType === 'final') {
@@ -589,11 +579,11 @@ export default function AnswerSheetsScreen() {
                         params: {
                           subjectId: selectedSubjectId,
                           subjectName: selectedSubjectInfo?.name || '',
-                          subjectColor: selectedSubjectInfo?.color || '#AF52DE',
-                          mcqQuestions: selectedSubjectInfo?.mcqQuestions || 20,
-                          textQuestions: selectedSubjectInfo?.textQuestions || 0,
-                          totalQuestions: selectedSubjectInfo?.totalQuestions || 20,
-                          questionConfig: selectedSubjectInfo?.questionConfig ? JSON.stringify(selectedSubjectInfo.questionConfig) : undefined,
+                          subjectColor: '#AF52DE',
+                          mcqQuestions: 20,
+                          textQuestions: 0,
+                          totalQuestions: 20,
+                          questionConfig: undefined,
                         }
                       });
                     }
@@ -715,26 +705,29 @@ export default function AnswerSheetsScreen() {
                 {language === 'ko' ? '과목' : 'Subject'}
               </Text>
               <View style={styles.subjectSelector}>
-                {subjects.map((subject) => (
-                  <TouchableOpacity
-                    key={subject.id}
-                    style={[
-                      styles.subjectOption,
-                      selectedSubjectId === subject.id && {
-                        backgroundColor: subject.color,
-                        ...styles.subjectOptionSelected
-                      }
-                    ]}
-                    onPress={() => setSelectedSubjectId(subject.id)}
-                  >
-                    <Text style={[
-                      styles.subjectOptionText,
-                      selectedSubjectId === subject.id && styles.subjectOptionTextSelected
-                    ]}>
-                      {subject.name}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                {subjects.map((subject) => {
+                  if (!subject) return null;
+                  return (
+                    <TouchableOpacity
+                      key={subject.id}
+                      style={[
+                        styles.subjectOption,
+                        selectedSubjectId === subject.id && {
+                          backgroundColor: DEFAULT_COLORS[0],
+                          ...styles.subjectOptionSelected
+                        }
+                      ]}
+                      onPress={() => setSelectedSubjectId(subject.id)}
+                    >
+                      <Text style={[
+                        styles.subjectOptionText,
+                        selectedSubjectId === subject.id && styles.subjectOptionTextSelected
+                      ]}>
+                        {subject.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                }).filter(Boolean)}
               </View>
             </View>
           </ScrollView>
@@ -1293,18 +1286,19 @@ export default function AnswerSheetsScreen() {
                   </Text>
                   <View style={styles.subjectsList}>
                     {subjects.map((subject) => {
-                      const sheetCount = answerSheets.filter(sheet => sheet.subjectId === subject.id).length;
+                      if (!subject) return null;
+                      const sheetCount = answerSheets.filter(sheet => sheet.subject_id === subject.id).length;
                       return (
                         <View key={subject.id} style={styles.subjectItem}>
                           <View style={styles.subjectItemLeft}>
-                            <View style={[styles.subjectColorIndicator, { backgroundColor: subject.color }]} />
+                            <View style={[styles.subjectColorIndicator, { backgroundColor: DEFAULT_COLORS[0] }]} />
                             <View>
                               <Text style={styles.subjectItemName}>{subject.name}</Text>
                               <Text style={styles.subjectItemCount}>
                                 {sheetCount} {language === 'ko' ? '개 답안지' : 'answer sheets'}
                               </Text>
                               <Text style={styles.subjectItemConfig}>
-                                MCQ: {subject.mcqQuestions || 0} | Text: {subject.textQuestions || 0} | Total: {subject.totalQuestions || 0}
+                                MCQ: 20 | Text: 0 | Total: 20
                               </Text>
                             </View>
                           </View>
@@ -1324,7 +1318,7 @@ export default function AnswerSheetsScreen() {
                           </View>
                         </View>
                       );
-                    })}
+                    }).filter(Boolean)}
                   </View>
                 </View>
               </>
