@@ -1,7 +1,7 @@
 -- Create subjects table for unified subject management
 CREATE TABLE IF NOT EXISTS subjects (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id TEXT NOT NULL,
+  user_id UUID NOT NULL,
   name TEXT NOT NULL,
   color TEXT NOT NULL DEFAULT '#4ECDC4',
   mcq_questions INTEGER NOT NULL DEFAULT 20,
@@ -22,19 +22,19 @@ ALTER TABLE subjects ENABLE ROW LEVEL SECURITY;
 
 -- Policy for users to see only their own subjects
 CREATE POLICY "Users can view their own subjects" ON subjects
-  FOR SELECT USING (user_id = auth.uid()::text);
+  FOR SELECT USING (user_id = auth.uid());
 
 -- Policy for users to insert their own subjects
 CREATE POLICY "Users can insert their own subjects" ON subjects
-  FOR INSERT WITH CHECK (user_id = auth.uid()::text);
+  FOR INSERT WITH CHECK (user_id = auth.uid());
 
 -- Policy for users to update their own subjects
 CREATE POLICY "Users can update their own subjects" ON subjects
-  FOR UPDATE USING (user_id = auth.uid()::text);
+  FOR UPDATE USING (user_id = auth.uid());
 
 -- Policy for users to delete their own subjects
 CREATE POLICY "Users can delete their own subjects" ON subjects
-  FOR DELETE USING (user_id = auth.uid()::text);
+  FOR DELETE USING (user_id = auth.uid());
 
 -- Update answer_sheets table to reference subjects
 ALTER TABLE answer_sheets ADD COLUMN IF NOT EXISTS subject_id UUID REFERENCES subjects(id) ON DELETE CASCADE;
@@ -47,6 +47,14 @@ ALTER TABLE exams ADD COLUMN IF NOT EXISTS subject_id UUID REFERENCES subjects(i
 
 -- Create index for the new foreign key
 CREATE INDEX IF NOT EXISTS idx_exams_subject_id ON exams(subject_id);
+
+-- Insert default subjects for the specified user
+INSERT INTO subjects (user_id, name, color, mcq_questions, text_questions, total_questions) VALUES
+  ('bdfd8c34-a28f-4101-97e0-894c3fa5c7a6'::uuid, 'Korean', '#FF6B6B', 20, 0, 20),
+  ('bdfd8c34-a28f-4101-97e0-894c3fa5c7a6'::uuid, 'Mathematics', '#4ECDC4', 20, 0, 20),
+  ('bdfd8c34-a28f-4101-97e0-894c3fa5c7a6'::uuid, 'English', '#45B7D1', 20, 0, 20),
+  ('bdfd8c34-a28f-4101-97e0-894c3fa5c7a6'::uuid, 'Others', '#96CEB4', 20, 0, 20)
+ON CONFLICT (user_id, name) DO NOTHING;
 
 -- Note: You may need to manually migrate existing data from the 'subject' text field to the new subject_id UUID field
 -- This migration script creates the structure but doesn't migrate existing data to avoid data loss
