@@ -65,28 +65,28 @@ CREATE INDEX IF NOT EXISTS idx_answer_sheet_templates_subject ON answer_sheet_te
 
 -- Create the update_updated_at_column function if it doesn't exist
 CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $
+RETURNS TRIGGER AS $$
 BEGIN
     NEW.updated_at = NOW();
     RETURN NEW;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 -- Create triggers for updated_at columns
 DROP TRIGGER IF EXISTS update_answer_sheets_updated_at ON answer_sheets;
 DROP TRIGGER IF EXISTS update_answer_sheet_responses_updated_at ON answer_sheet_responses;
 DROP TRIGGER IF EXISTS update_answer_sheet_templates_updated_at ON answer_sheet_templates;
 
-CREATE TRIGGER update_answer_sheets_updated_at 
-    BEFORE UPDATE ON answer_sheets 
+CREATE TRIGGER update_answer_sheets_updated_at
+    BEFORE UPDATE ON answer_sheets
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_answer_sheet_responses_updated_at 
-    BEFORE UPDATE ON answer_sheet_responses 
+CREATE TRIGGER update_answer_sheet_responses_updated_at
+    BEFORE UPDATE ON answer_sheet_responses
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_answer_sheet_templates_updated_at 
-    BEFORE UPDATE ON answer_sheet_templates 
+CREATE TRIGGER update_answer_sheet_templates_updated_at
+    BEFORE UPDATE ON answer_sheet_templates
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Enable Row Level Security
@@ -152,17 +152,17 @@ DECLARE
     english_sheet_id UUID;
 BEGIN
     -- Get the Korean sheet ID
-    SELECT id INTO korean_sheet_id FROM answer_sheets 
+    SELECT id INTO korean_sheet_id FROM answer_sheets
     WHERE user_id = 'bdfd8c34-a28f-4101-97e0-894c3fa5c7a6' AND subject = 'korean' LIMIT 1;
-    
+
     -- Get the Math sheet ID
-    SELECT id INTO math_sheet_id FROM answer_sheets 
+    SELECT id INTO math_sheet_id FROM answer_sheets
     WHERE user_id = 'bdfd8c34-a28f-4101-97e0-894c3fa5c7a6' AND subject = 'mathematics' LIMIT 1;
-    
+
     -- Get the English sheet ID
-    SELECT id INTO english_sheet_id FROM answer_sheets 
+    SELECT id INTO english_sheet_id FROM answer_sheets
     WHERE user_id = 'bdfd8c34-a28f-4101-97e0-894c3fa5c7a6' AND subject = 'english' LIMIT 1;
-    
+
     -- Insert sample MCQ responses for Korean (questions 1-10)
     IF korean_sheet_id IS NOT NULL THEN
         INSERT INTO answer_sheet_responses (answer_sheet_id, question_number, question_type, mcq_option) VALUES
@@ -172,7 +172,7 @@ BEGIN
         (korean_sheet_id, 4, 'mcq', 3),
         (korean_sheet_id, 5, 'mcq', 2)
         ON CONFLICT (answer_sheet_id, question_number) DO NOTHING;
-        
+
         -- Insert sample text responses for Korean (questions 35-37)
         INSERT INTO answer_sheet_responses (answer_sheet_id, question_number, question_type, text_answer) VALUES
         (korean_sheet_id, 35, 'text', '이 문제의 답은 작가의 의도를 파악하는 것입니다. 주인공의 심리 변화를 통해...'),
@@ -180,7 +180,7 @@ BEGIN
         (korean_sheet_id, 37, 'text', '화자의 정서는 그리움과 아쉬움이 복합적으로 나타나고 있습니다.')
         ON CONFLICT (answer_sheet_id, question_number) DO NOTHING;
     END IF;
-    
+
     -- Insert sample MCQ responses for Math (questions 1-10)
     IF math_sheet_id IS NOT NULL THEN
         INSERT INTO answer_sheet_responses (answer_sheet_id, question_number, question_type, mcq_option, is_correct, points_earned) VALUES
@@ -195,13 +195,13 @@ BEGIN
         (math_sheet_id, 9, 'mcq', 2, false, 0.0),
         (math_sheet_id, 10, 'mcq', 4, true, 4.0)
         ON CONFLICT (answer_sheet_id, question_number) DO NOTHING;
-        
+
         -- Update the math sheet with score and grade
-        UPDATE answer_sheets 
+        UPDATE answer_sheets
         SET score = 28, grade = '2등급', submitted_at = NOW() - INTERVAL '2 days'
         WHERE id = math_sheet_id;
     END IF;
-    
+
     -- Insert sample MCQ responses for English (questions 1-10)
     IF english_sheet_id IS NOT NULL THEN
         INSERT INTO answer_sheet_responses (answer_sheet_id, question_number, question_type, mcq_option, is_correct, points_earned) VALUES
@@ -216,9 +216,9 @@ BEGIN
         (english_sheet_id, 9, 'mcq', 1, false, 0.0),
         (english_sheet_id, 10, 'mcq', 4, true, 2.0)
         ON CONFLICT (answer_sheet_id, question_number) DO NOTHING;
-        
+
         -- Update the English sheet with score and grade
-        UPDATE answer_sheets 
+        UPDATE answer_sheets
         SET score = 38, grade = '1등급', submitted_at = NOW() - INTERVAL '1 day'
         WHERE id = english_sheet_id;
     END IF;
@@ -234,15 +234,15 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
+    SELECT
         COUNT(*)::INTEGER as total_answered,
         COUNT(CASE WHEN question_type = 'mcq' AND mcq_option IS NOT NULL THEN 1 END)::INTEGER as mcq_answered,
         COUNT(CASE WHEN question_type = 'text' AND text_answer IS NOT NULL AND text_answer != '' THEN 1 END)::INTEGER as text_answered,
         ROUND((COUNT(*) * 100.0 / (SELECT total_questions FROM answer_sheets WHERE id = sheet_id)), 2) as completion_percentage
-    FROM answer_sheet_responses 
+    FROM answer_sheet_responses
     WHERE answer_sheet_id = sheet_id
     AND (
-        (question_type = 'mcq' AND mcq_option IS NOT NULL) OR 
+        (question_type = 'mcq' AND mcq_option IS NOT NULL) OR
         (question_type = 'text' AND text_answer IS NOT NULL AND text_answer != '')
     );
 END;
@@ -252,10 +252,10 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION submit_answer_sheet(sheet_id UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
-    UPDATE answer_sheets 
+    UPDATE answer_sheets
     SET status = 'submitted', submitted_at = NOW()
     WHERE id = sheet_id AND status = 'draft';
-    
+
     RETURN FOUND;
 END;
 $$ LANGUAGE plpgsql;
@@ -271,50 +271,50 @@ DECLARE
 BEGIN
     -- Get max possible score based on total questions
     SELECT total_questions INTO max_score FROM answer_sheets WHERE id = sheet_id;
-    
+
     -- Grade each response
-    FOR response_record IN 
+    FOR response_record IN
         SELECT * FROM answer_sheet_responses WHERE answer_sheet_id = sheet_id
     LOOP
         correct_answer := correct_answers ->> response_record.question_number::TEXT;
-        
+
         IF response_record.question_type = 'mcq' THEN
             IF response_record.mcq_option::TEXT = correct_answer THEN
-                UPDATE answer_sheet_responses 
-                SET is_correct = true, points_earned = 
-                    CASE 
+                UPDATE answer_sheet_responses
+                SET is_correct = true, points_earned =
+                    CASE
                         WHEN (SELECT subject FROM answer_sheets WHERE id = sheet_id) = 'mathematics' THEN 4.0
                         WHEN (SELECT subject FROM answer_sheets WHERE id = sheet_id) = 'english' THEN 2.0
                         ELSE 2.0
                     END
                 WHERE id = response_record.id;
-                
-                total_score := total_score + 
-                    CASE 
+
+                total_score := total_score +
+                    CASE
                         WHEN (SELECT subject FROM answer_sheets WHERE id = sheet_id) = 'mathematics' THEN 4
                         WHEN (SELECT subject FROM answer_sheets WHERE id = sheet_id) = 'english' THEN 2
                         ELSE 2
                     END;
             ELSE
-                UPDATE answer_sheet_responses 
+                UPDATE answer_sheet_responses
                 SET is_correct = false, points_earned = 0
                 WHERE id = response_record.id;
             END IF;
         END IF;
     END LOOP;
-    
+
     -- Update answer sheet with final score and status
-    UPDATE answer_sheets 
+    UPDATE answer_sheets
     SET score = total_score, status = 'graded'
     WHERE id = sheet_id;
-    
+
     RETURN true;
 END;
 $$ LANGUAGE plpgsql;
 
 -- Create a view for answer sheet summary
 CREATE OR REPLACE VIEW answer_sheet_summary AS
-SELECT 
+SELECT
     a.id,
     a.user_id,
     a.subject,
@@ -334,14 +334,14 @@ SELECT
     ROUND((COUNT(r.id) * 100.0 / a.total_questions), 2) as completion_percentage
 FROM answer_sheets a
 LEFT JOIN answer_sheet_responses r ON a.id = r.answer_sheet_id
-WHERE (r.question_type = 'mcq' AND r.mcq_option IS NOT NULL) 
+WHERE (r.question_type = 'mcq' AND r.mcq_option IS NOT NULL)
    OR (r.question_type = 'text' AND r.text_answer IS NOT NULL AND r.text_answer != '')
    OR r.id IS NULL
-GROUP BY a.id, a.user_id, a.subject, a.sheet_name, a.test_type, a.total_questions, 
+GROUP BY a.id, a.user_id, a.subject, a.sheet_name, a.test_type, a.total_questions,
          a.mcq_questions, a.text_questions, a.status, a.score, a.grade, a.submitted_at, a.created_at;
 
 -- Grant necessary permissions (adjust as needed for your setup)
 -- GRANT ALL ON answer_sheets TO authenticated;
 -- GRANT ALL ON answer_sheet_responses TO authenticated;
 -- GRANT ALL ON answer_sheet_templates TO authenticated;
--- GRANT SELECT ON answer_sheet_summary TO authenticated;
+-- GRANT SELECT ON answer_sheet_summary TO authenticated;```
