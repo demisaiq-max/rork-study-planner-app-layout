@@ -129,9 +129,9 @@ ON CONFLICT (subject, template_name) DO NOTHING;
 -- Sample data for testing (using the existing test user)
 -- Create sample answer sheets for the test user
 INSERT INTO answer_sheets (user_id, subject, sheet_name, test_type, total_questions, mcq_questions, text_questions, status) VALUES
-('550e8400-e29b-41d4-a716-446655440000', 'korean', 'Korean Practice Test 1', 'practice', 45, 34, 11, 'draft'),
-('550e8400-e29b-41d4-a716-446655440000', 'mathematics', 'Math Mock Exam', 'mock', 30, 30, 0, 'submitted'),
-('550e8400-e29b-41d4-a716-446655440000', 'english', 'English Midterm', 'midterm', 45, 45, 0, 'graded')
+('bdfd8c34-a28f-4101-97e0-894c3fa5c7a6', 'korean', 'Korean Practice Test 1', 'practice', 45, 34, 11, 'draft'),
+('bdfd8c34-a28f-4101-97e0-894c3fa5c7a6', 'mathematics', 'Math Mock Exam', 'mock', 30, 30, 0, 'submitted'),
+('bdfd8c34-a28f-4101-97e0-894c3fa5c7a6', 'english', 'English Midterm', 'midterm', 45, 45, 0, 'graded')
 ON CONFLICT DO NOTHING;
 
 -- Sample answer sheet responses for the test user
@@ -144,15 +144,15 @@ DECLARE
 BEGIN
     -- Get the Korean sheet ID
     SELECT id INTO korean_sheet_id FROM answer_sheets 
-    WHERE user_id = '550e8400-e29b-41d4-a716-446655440000' AND subject = 'korean' LIMIT 1;
+    WHERE user_id = 'bdfd8c34-a28f-4101-97e0-894c3fa5c7a6' AND subject = 'korean' LIMIT 1;
     
     -- Get the Math sheet ID
     SELECT id INTO math_sheet_id FROM answer_sheets 
-    WHERE user_id = '550e8400-e29b-41d4-a716-446655440000' AND subject = 'mathematics' LIMIT 1;
+    WHERE user_id = 'bdfd8c34-a28f-4101-97e0-894c3fa5c7a6' AND subject = 'mathematics' LIMIT 1;
     
     -- Get the English sheet ID
     SELECT id INTO english_sheet_id FROM answer_sheets 
-    WHERE user_id = '550e8400-e29b-41d4-a716-446655440000' AND subject = 'english' LIMIT 1;
+    WHERE user_id = 'bdfd8c34-a28f-4101-97e0-894c3fa5c7a6' AND subject = 'english' LIMIT 1;
     
     -- Insert sample MCQ responses for Korean (questions 1-10)
     IF korean_sheet_id IS NOT NULL THEN
