@@ -590,7 +590,7 @@ export default function HomeScreen() {
               return (
                 <TouchableOpacity
                   key={exam.id}
-                  onPress={() => router.push('/exam-management')}
+                  onPress={() => router.push('/exam-management?directView=true')}
                 >
                   <DayCard 
                     title={exam.title}
@@ -603,7 +603,7 @@ export default function HomeScreen() {
             })}
             <TouchableOpacity 
               style={styles.addDDayCard}
-              onPress={() => router.push('/exam-management')}
+              onPress={() => router.push('/exam-management?directView=true')}
             >
               <Plus size={32} color="#8E8E93" />
             </TouchableOpacity>

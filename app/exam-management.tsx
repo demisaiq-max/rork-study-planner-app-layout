@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Stack } from "expo-router";
+import { Stack, useLocalSearchParams } from "expo-router";
 import { Edit2, Trash2, Plus, X, Calendar, ArrowLeft } from "lucide-react-native";
 import { useLanguage } from "@/hooks/language-context";
 import { useAuth } from "@/hooks/auth-context";
@@ -35,11 +35,12 @@ interface Exam {
 export default function ExamManagementScreen() {
   const { t } = useLanguage();
   const { user: authUser } = useAuth();
+  const { directView } = useLocalSearchParams();
   
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingExam, setEditingExam] = useState<Exam | null>(null);
-  const [showSubjects, setShowSubjects] = useState(true);
+  const [showSubjects, setShowSubjects] = useState(!directView);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [showAddSubjectModal, setShowAddSubjectModal] = useState(false);
   const [newSubjectName, setNewSubjectName] = useState("");
@@ -390,12 +391,12 @@ export default function ExamManagementScreen() {
           ) : (
             <>
               <View style={styles.header}>
-                <Text style={styles.headerTitle}>{selectedSubject || 'Subject'} Exams</Text>
-                <Text style={styles.headerSubtitle}>Manage exams for {selectedSubject || 'this subject'}</Text>
+                <Text style={styles.headerTitle}>{selectedSubject ? `${selectedSubject} Exams` : 'All Exams'}</Text>
+                <Text style={styles.headerSubtitle}>{selectedSubject ? `Manage exams for ${selectedSubject}` : 'Manage all your exams'}</Text>
               </View>
 
               <View style={styles.examsList}>
-                {filteredExams.map((exam) => (
+                {(selectedSubject ? filteredExams : exams).map((exam) => (
                   <View key={`exam-${exam.id}`} style={styles.examCard}>
                     <View style={[styles.priorityIndicator, { backgroundColor: getPriorityColor(exam.priority) }]} />
                     <View style={styles.examContent}>
@@ -432,11 +433,11 @@ export default function ExamManagementScreen() {
                   </View>
                 ))}
                 
-                {filteredExams.length === 0 && (
+                {(selectedSubject ? filteredExams : exams).length === 0 && (
                   <View style={styles.emptyState}>
                     <Calendar size={48} color="#C7C7CC" />
                     <Text style={styles.emptyTitle}>No Exams</Text>
-                    <Text style={styles.emptySubtitle}>Add an exam for {selectedSubject || 'this subject'}</Text>
+                    <Text style={styles.emptySubtitle}>{selectedSubject ? `Add an exam for ${selectedSubject}` : 'Add your first exam'}</Text>
                   </View>
                 )}
               </View>
