@@ -7,9 +7,9 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Alert,
+  Platform,
 } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
-import { useLanguage } from '@/hooks/language-context';
 
 type MCQOption = 1 | 2 | 3 | 4 | 5;
 
@@ -19,13 +19,12 @@ interface Question {
 }
 
 export default function EnglishAnswerSheet() {
-  const { language } = useLanguage();
   const params = useLocalSearchParams();
   const sheetName = params.name as string || 'English Answer Sheet';
   
   const [questions, setQuestions] = useState<Question[]>([]);
   
-  // Initialize English questions: 1-45 all MCQ (Common)
+  // Initialize English questions: 1-45 all MCQ
   useEffect(() => {
     const initialQuestions: Question[] = [];
     for (let i = 1; i <= 45; i++) {
@@ -65,23 +64,24 @@ export default function EnglishAnswerSheet() {
 
   const renderMCQQuestion = (question: Question) => {
     return (
-      <View key={question.number} style={styles.questionRow}>
-        <View style={styles.questionNumber}>
+      <View key={question.number} style={styles.questionContainer}>
+        <View style={styles.questionHeader}>
           <Text style={styles.questionNumberText}>{question.number}</Text>
         </View>
-        <View style={styles.optionsContainer}>
+        <View style={styles.bubbleRow}>
           {[1, 2, 3, 4, 5].map((option) => (
             <TouchableOpacity
               key={option}
               style={[
-                styles.optionBubble,
-                question.selectedOption === option && styles.optionBubbleSelected
+                styles.bubble,
+                question.selectedOption === option && styles.bubbleSelected
               ]}
               onPress={() => handleMCQSelect(question.number, option as MCQOption)}
+              activeOpacity={0.7}
             >
               <Text style={[
-                styles.optionBubbleText,
-                question.selectedOption === option && styles.optionBubbleTextSelected
+                styles.bubbleText,
+                question.selectedOption === option && styles.bubbleTextSelected
               ]}>
                 {option}
               </Text>
@@ -103,16 +103,14 @@ export default function EnglishAnswerSheet() {
         }} 
       />
       
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.pageContainer}>
-          <View style={styles.answerGrid}>
-            <View style={styles.gridHeader}>
-              <Text style={styles.gridHeaderText}>문번</Text>
-              <Text style={styles.gridHeaderText}>답안</Text>
-            </View>
-            
-            {questions.map(question => renderMCQQuestion(question))}
-          </View>
+      <View style={styles.headerInfo}>
+        <Text style={styles.subjectTitle}>English (영어)</Text>
+        <Text style={styles.questionCount}>총 45문제 (객관식)</Text>
+      </View>
+      
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={true}>
+        <View style={styles.sheetContainer}>
+          {questions.map(question => renderMCQQuestion(question))}
         </View>
       </ScrollView>
 
@@ -128,116 +126,114 @@ export default function EnglishAnswerSheet() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: '#FFFFFF',
+  },
+  headerInfo: {
+    backgroundColor: '#45B7D1',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+  },
+  subjectTitle: {
+    fontSize: 18,
+    fontWeight: 'bold' as const,
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  questionCount: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    opacity: 0.9,
   },
   scrollView: {
     flex: 1,
+    backgroundColor: '#F8F9FA',
   },
-  scrollContent: {
-    padding: 20,
+  sheetContainer: {
+    padding: 16,
   },
-  pageContainer: {
+  
+  // MCQ Question Styles
+  questionContainer: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
+    marginBottom: 12,
+    borderRadius: 8,
+    padding: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
-
-  answerGrid: {
-    borderWidth: 2,
-    borderColor: '#000000',
-  },
-  gridHeader: {
-    flexDirection: 'row',
-    backgroundColor: '#F8F8F8',
-    borderBottomWidth: 1,
-    borderBottomColor: '#000000',
-    paddingVertical: 8,
-  },
-  gridHeaderText: {
-    textAlign: 'center',
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000000',
-    flex: 1,
-  },
-
-  questionRow: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#000000',
-    minHeight: 70,
-    alignItems: 'center',
-  },
-  questionNumber: {
-    width: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRightWidth: 1,
-    borderRightColor: '#000000',
-    backgroundColor: '#F8F8F8',
-    paddingVertical: 10,
+  questionHeader: {
+    marginBottom: 12,
   },
   questionNumberText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
+    fontSize: 18,
+    fontWeight: 'bold' as const,
+    color: '#333333',
   },
-  optionsContainer: {
-    flex: 1,
+  bubbleRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    justifyContent: 'space-around',
-    paddingVertical: 15,
-    minHeight: 70,
   },
-  optionBubble: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: '#000000',
+  bubble: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 3,
+    borderColor: '#333333',
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 4,
+    marginHorizontal: 2,
   },
-  optionBubbleSelected: {
-    backgroundColor: '#000000',
-    borderColor: '#000000',
+  bubbleSelected: {
+    backgroundColor: '#333333',
+    borderColor: '#333333',
   },
-  optionBubbleText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
-    textAlign: 'center',
+  bubbleText: {
+    fontSize: 18,
+    fontWeight: 'bold' as const,
+    color: '#333333',
   },
-  optionBubbleTextSelected: {
+  bubbleTextSelected: {
     color: '#FFFFFF',
-    fontWeight: '600',
   },
+  
+  // Submit Button
   submitContainer: {
     padding: 20,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
-    borderTopColor: '#E5E5EA',
+    borderTopColor: '#E0E0E0',
   },
   submitButton: {
-    backgroundColor: '#D3D3D3',
-    paddingVertical: 15,
+    backgroundColor: '#45B7D1',
+    paddingVertical: 16,
     borderRadius: 8,
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#000000',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   submitButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
+    fontWeight: 'bold' as const,
+    color: '#FFFFFF',
   },
 });

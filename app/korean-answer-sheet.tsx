@@ -8,6 +8,7 @@ import {
   SafeAreaView,
   Alert,
   TextInput,
+  Platform,
 } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useLanguage } from '@/hooks/language-context';
@@ -81,23 +82,24 @@ export default function KoreanAnswerSheet() {
 
   const renderMCQQuestion = (question: Question) => {
     return (
-      <View key={question.number} style={styles.questionRow}>
-        <View style={styles.questionNumber}>
+      <View key={question.number} style={styles.questionContainer}>
+        <View style={styles.questionHeader}>
           <Text style={styles.questionNumberText}>{question.number}</Text>
         </View>
-        <View style={styles.optionsContainer}>
+        <View style={styles.bubbleRow}>
           {[1, 2, 3, 4, 5].map((option) => (
             <TouchableOpacity
               key={option}
               style={[
-                styles.optionBubble,
-                question.selectedOption === option && styles.optionBubbleSelected
+                styles.bubble,
+                question.selectedOption === option && styles.bubbleSelected
               ]}
               onPress={() => handleMCQSelect(question.number, option as MCQOption)}
+              activeOpacity={0.7}
             >
               <Text style={[
-                styles.optionBubbleText,
-                question.selectedOption === option && styles.optionBubbleTextSelected
+                styles.bubbleText,
+                question.selectedOption === option && styles.bubbleTextSelected
               ]}>
                 {option}
               </Text>
@@ -110,23 +112,22 @@ export default function KoreanAnswerSheet() {
 
   const renderTextQuestion = (question: Question) => {
     return (
-      <View key={question.number} style={styles.textQuestionRow}>
-        <View style={styles.questionNumber}>
+      <View key={question.number} style={styles.textQuestionContainer}>
+        <View style={styles.questionHeader}>
           <Text style={styles.questionNumberText}>{question.number}</Text>
         </View>
-        <View style={styles.textAnswerContainer}>
+        <View style={styles.textInputContainer}>
           <TextInput
-            style={styles.textAnswerBox}
+            style={styles.textInput}
             value={question.textAnswer || ''}
             onChangeText={(text) => handleTextAnswer(question.number, text)}
             placeholder="답안을 입력하세요"
-            placeholderTextColor="#8E8E93"
+            placeholderTextColor="#999999"
             multiline={true}
+            numberOfLines={3}
             textAlignVertical="top"
             autoCorrect={false}
             autoCapitalize="none"
-            returnKeyType="done"
-            blurOnSubmit={true}
           />
         </View>
       </View>
@@ -144,20 +145,18 @@ export default function KoreanAnswerSheet() {
         }} 
       />
       
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.pageContainer}>
-          <View style={styles.answerGrid}>
-            <View style={styles.gridHeader}>
-              <Text style={styles.gridHeaderText}>문번</Text>
-              <Text style={styles.gridHeaderText}>답안</Text>
-            </View>
-            
-            {questions.map(question => 
-              question.type === 'mcq' 
-                ? renderMCQQuestion(question)
-                : renderTextQuestion(question)
-            )}
-          </View>
+      <View style={styles.headerInfo}>
+        <Text style={styles.subjectTitle}>Korean (국어)</Text>
+        <Text style={styles.questionCount}>총 45문제 (객관식 34문제, 주관식 11문제)</Text>
+      </View>
+      
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={true}>
+        <View style={styles.sheetContainer}>
+          {questions.map(question => 
+            question.type === 'mcq' 
+              ? renderMCQQuestion(question)
+              : renderTextQuestion(question)
+          )}
         </View>
       </ScrollView>
 
@@ -173,144 +172,147 @@ export default function KoreanAnswerSheet() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: '#FFFFFF',
+  },
+  headerInfo: {
+    backgroundColor: '#FF6B6B',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+  },
+  subjectTitle: {
+    fontSize: 18,
+    fontWeight: 'bold' as const,
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  questionCount: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    opacity: 0.9,
   },
   scrollView: {
     flex: 1,
+    backgroundColor: '#F8F9FA',
   },
-  scrollContent: {
-    padding: 20,
+  sheetContainer: {
+    padding: 16,
   },
-  pageContainer: {
+  
+  // MCQ Question Styles
+  questionContainer: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
+    marginBottom: 12,
+    borderRadius: 8,
+    padding: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
-
-  answerGrid: {
-    borderWidth: 2,
-    borderColor: '#000000',
-  },
-  gridHeader: {
-    flexDirection: 'row',
-    backgroundColor: '#F8F8F8',
-    borderBottomWidth: 1,
-    borderBottomColor: '#000000',
-    paddingVertical: 8,
-  },
-  gridHeaderText: {
-    textAlign: 'center',
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000000',
-    flex: 1,
-  },
-
-  questionRow: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#000000',
-    minHeight: 70,
-    alignItems: 'center',
-  },
-  textQuestionRow: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#000000',
-    minHeight: 80,
-    alignItems: 'stretch',
-    paddingVertical: 10,
-  },
-  questionNumber: {
-    width: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRightWidth: 1,
-    borderRightColor: '#000000',
-    backgroundColor: '#F8F8F8',
-    paddingVertical: 10,
+  questionHeader: {
+    marginBottom: 12,
   },
   questionNumberText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
+    fontSize: 18,
+    fontWeight: 'bold' as const,
+    color: '#333333',
   },
-  optionsContainer: {
-    flex: 1,
+  bubbleRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    justifyContent: 'space-around',
-    paddingVertical: 15,
-    minHeight: 70,
   },
-  optionBubble: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: '#000000',
+  bubble: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 3,
+    borderColor: '#333333',
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 4,
+    marginHorizontal: 2,
   },
-  optionBubbleSelected: {
-    backgroundColor: '#000000',
-    borderColor: '#000000',
+  bubbleSelected: {
+    backgroundColor: '#333333',
+    borderColor: '#333333',
   },
-  optionBubbleText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
-    textAlign: 'center',
+  bubbleText: {
+    fontSize: 18,
+    fontWeight: 'bold' as const,
+    color: '#333333',
   },
-  optionBubbleTextSelected: {
+  bubbleTextSelected: {
     color: '#FFFFFF',
-    fontWeight: '600',
   },
-  textAnswerContainer: {
-    flex: 1,
-    paddingHorizontal: 10,
-    justifyContent: 'center',
-    paddingVertical: 5,
-  },
-  textAnswerBox: {
-    minHeight: 60,
-    maxHeight: 120,
-    borderWidth: 2,
-    borderColor: '#000000',
+  
+  // Text Question Styles
+  textQuestionContainer: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    color: '#000000',
-    textAlignVertical: 'top',
-    fontWeight: '500',
+    marginBottom: 12,
+    borderRadius: 8,
+    padding: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
+  textInputContainer: {
+    marginTop: 8,
+  },
+  textInput: {
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: '#333333',
+    backgroundColor: '#FFFFFF',
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  
+  // Submit Button
   submitContainer: {
     padding: 20,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
-    borderTopColor: '#E5E5EA',
+    borderTopColor: '#E0E0E0',
   },
   submitButton: {
-    backgroundColor: '#D3D3D3',
-    paddingVertical: 15,
+    backgroundColor: '#FF6B6B',
+    paddingVertical: 16,
     borderRadius: 8,
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#000000',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   submitButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
+    fontWeight: 'bold' as const,
+    color: '#FFFFFF',
   },
 });
