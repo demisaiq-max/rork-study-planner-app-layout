@@ -263,8 +263,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000',
   },
   optionBubbleText: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#000000',
   },
   optionBubbleTextSelected: {
