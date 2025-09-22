@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { Stack, useLocalSearchParams, router } from "expo-router";
 import { Edit2, Trash2, Plus, X, Calendar, ArrowLeft } from "lucide-react-native";
 import { useLanguage } from "@/hooks/language-context";
 import { useAuth } from "@/hooks/auth-context";
@@ -216,6 +216,10 @@ export default function ExamManagementScreen() {
     setShowSubjects(true);
     setSelectedSubject(null);
   };
+  
+  const handleBackToHome = () => {
+    router.push('/');
+  };
 
   const handleEditExam = () => {
     if (!editExamTitle.trim() || !editExamDate.trim() || !editExamSubject.trim() || !editingExam) {
@@ -322,7 +326,7 @@ export default function ExamManagementScreen() {
           headerLeft: !showSubjects ? () => (
             <TouchableOpacity 
               style={styles.headerBackButton}
-              onPress={handleBackToSubjects}
+              onPress={handleBackToHome}
             >
               <ArrowLeft size={24} color="#007AFF" />
             </TouchableOpacity>
