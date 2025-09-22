@@ -31,7 +31,7 @@ export default function LandingScreen() {
           <View style={styles.headerSection}>
             <View style={styles.logoContainer}>
               <Image
-                source={{ uri: 'https://r2-pub.rork.com/generated-images/5040b12e-0e90-4c3f-8d64-48c9488410a1.png' }}
+                source={{ uri: 'https://pub-e001eb4506b145aa938b5d3badbff6a5.r2.dev/attachments/jaodno8vz0lkalw16sawh' }}
                 style={styles.logo}
                 resizeMode="contain"
               />
