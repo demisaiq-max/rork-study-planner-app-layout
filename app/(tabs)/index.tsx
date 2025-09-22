@@ -588,15 +588,17 @@ export default function HomeScreen() {
               const validDaysLeft = !isNaN(daysLeft) && isFinite(daysLeft) ? daysLeft : 0;
               
               return (
-                <DayCard 
+                <TouchableOpacity
                   key={exam.id}
-                  title={exam.title}
-                  date={exam.date}
-                  daysLeft={validDaysLeft}
-                  priority={exam.priority ? "high" : "medium"}
-                  subject={exam.subject}
-                  examId={exam.id}
-                />
+                  onPress={() => router.push('/exam-management?directView=true')}
+                >
+                  <DayCard 
+                    title={exam.title}
+                    date={exam.date}
+                    daysLeft={validDaysLeft}
+                    priority={exam.priority ? "high" : "medium"}
+                  />
+                </TouchableOpacity>
               );
             })}
             <TouchableOpacity 

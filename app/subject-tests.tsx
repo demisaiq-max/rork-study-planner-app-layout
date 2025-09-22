@@ -17,7 +17,7 @@ import { trpc } from '@/lib/trpc';
 type TestType = 'mock' | 'midterm' | 'final';
 
 export default function SubjectTestsScreen() {
-  const { subject, examTitle } = useLocalSearchParams<{ subject: string; examTitle?: string }>();
+  const { subject } = useLocalSearchParams<{ subject: string }>();
   const { user } = useUser();
   const { t } = useLanguage();
   const [isLoading, setIsLoading] = useState(true);
@@ -99,9 +99,7 @@ export default function SubjectTestsScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <ArrowLeft size={24} color="#000000" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>
-            {examTitle ? `${examTitle} - ${getSubjectName(subject || '')}` : getSubjectName(subject || '')}
-          </Text>
+          <Text style={styles.headerTitle}>{getSubjectName(subject || '')}</Text>
           <View style={styles.headerRight} />
         </View>
         <View style={styles.loadingContainer}>
@@ -136,13 +134,6 @@ export default function SubjectTestsScreen() {
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.testTypesContainer}>
-          {examTitle && (
-            <View style={styles.examInfoCard}>
-              <Text style={styles.examInfoTitle}>Exam: {examTitle}</Text>
-              <Text style={styles.examInfoSubject}>Subject: {getSubjectName(subject || '')}</Text>
-              <Text style={styles.examInfoDescription}>View all tests for this subject to prepare for your exam</Text>
-            </View>
-          )}
           <Text style={styles.sectionTitle}>{t('testTypes')}</Text>
           
           {testTypes.map((testType) => {
@@ -306,35 +297,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#C7C7CC',
     textAlign: 'center',
-  },
-  examInfoCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  examInfoTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
-    marginBottom: 4,
-  },
-  examInfoSubject: {
-    fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '500',
-    marginBottom: 8,
-  },
-  examInfoDescription: {
-    fontSize: 12,
-    color: '#8E8E93',
-    lineHeight: 16,
   },
 });
