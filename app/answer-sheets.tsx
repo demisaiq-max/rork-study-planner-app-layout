@@ -790,7 +790,7 @@ export default function AnswerSheetsScreen() {
                   <View style={styles.colorSelector}>
                     {DEFAULT_COLORS.map((color, index) => (
                       <TouchableOpacity
-                        key={`color-${index}-${Math.random()}`}
+                        key={`color-${index}`}
                         style={[
                           styles.colorOption,
                           { backgroundColor: color },
@@ -1046,7 +1046,7 @@ export default function AnswerSheetsScreen() {
                   <View style={styles.colorSelector}>
                     {DEFAULT_COLORS.map((color, index) => (
                       <TouchableOpacity
-                        key={`color-${index}-${Math.random()}`}
+                        key={`color-${index}`}
                         style={[
                           styles.colorOption,
                           { backgroundColor: color },
