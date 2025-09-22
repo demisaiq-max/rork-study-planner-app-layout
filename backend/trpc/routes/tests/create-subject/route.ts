@@ -5,29 +5,40 @@ import { z } from 'zod';
 export const createSubject = publicProcedure
   .input(z.object({ 
     userId: z.string(),
-    subject: z.string()
+    name: z.string(),
+    color: z.string().optional().default('#4ECDC4'),
+    mcqQuestions: z.number().optional().default(20),
+    textQuestions: z.number().optional().default(0),
+    totalQuestions: z.number().optional().default(20),
+    questionConfig: z.array(z.object({
+      number: z.number(),
+      type: z.enum(['mcq', 'text'])
+    })).optional()
   }))
   .mutation(async ({ input }) => {
     // Check if subject already exists for this user
-    const { data: existingTests } = await supabase
-      .from('tests')
+    const { data: existingSubjects } = await supabase
+      .from('subjects')
       .select('id')
       .eq('user_id', input.userId)
-      .eq('subject', input.subject)
+      .eq('name', input.name)
       .limit(1);
 
-    if (existingTests && existingTests.length > 0) {
+    if (existingSubjects && existingSubjects.length > 0) {
       throw new Error('Subject already exists');
     }
 
-    // Create a placeholder test for this subject to establish it in the system
+    // Create the subject
     const { data, error } = await supabase
-      .from('tests')
+      .from('subjects')
       .insert({
         user_id: input.userId,
-        subject: input.subject,
-        test_type: 'mock',
-        test_name: 'Placeholder Test',
+        name: input.name,
+        color: input.color,
+        mcq_questions: input.mcqQuestions,
+        text_questions: input.textQuestions,
+        total_questions: input.totalQuestions,
+        question_config: input.questionConfig ? JSON.stringify(input.questionConfig) : null,
         created_at: new Date().toISOString(),
       })
       .select()
@@ -37,7 +48,16 @@ export const createSubject = publicProcedure
       throw new Error(`Failed to create subject: ${error.message}`);
     }
 
-    return data;
+    return {
+      id: data.id,
+      name: data.name,
+      color: data.color,
+      mcqQuestions: data.mcq_questions,
+      textQuestions: data.text_questions,
+      totalQuestions: data.total_questions,
+      questionConfig: data.question_config ? JSON.parse(data.question_config) : null,
+      createdAt: data.created_at
+    };
   });
 
 export default createSubject;

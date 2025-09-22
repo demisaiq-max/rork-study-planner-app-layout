@@ -5,26 +5,74 @@ import { z } from 'zod';
 export const getUserSubjects = publicProcedure
   .input(z.object({ userId: z.string() }))
   .query(async ({ input }) => {
-    // Get distinct subjects from tests table
+    // Get subjects from subjects table
     const { data, error } = await supabase
-      .from('tests')
-      .select('subject')
+      .from('subjects')
+      .select('*')
       .eq('user_id', input.userId)
-      .order('subject');
+      .order('created_at', { ascending: true });
 
     if (error) {
       throw new Error(`Failed to fetch subjects: ${error.message}`);
     }
 
-    // Extract unique subjects
-    const subjects = [...new Set(data?.map(item => item.subject) || [])];
-    
-    // If no subjects found, return default subjects
-    if (subjects.length === 0) {
-      return ['국어', '영어', '수학', '탐구'];
+    // If no subjects found, create default subjects
+    if (!data || data.length === 0) {
+      const defaultSubjects = [
+        { name: 'Korean (국어)', color: '#FF6B6B', mcq: 34, text: 11 },
+        { name: 'Mathematics (수학)', color: '#4ECDC4', mcq: 30, text: 0 },
+        { name: 'English (영어)', color: '#45B7D1', mcq: 45, text: 0 },
+        { name: 'Others (그외)', color: '#96CEB4', mcq: 20, text: 0 }
+      ];
+
+      const insertPromises = defaultSubjects.map(subject => 
+        supabase
+          .from('subjects')
+          .insert({
+            user_id: input.userId,
+            name: subject.name,
+            color: subject.color,
+            mcq_questions: subject.mcq,
+            text_questions: subject.text,
+            total_questions: subject.mcq + subject.text,
+            created_at: new Date().toISOString(),
+          })
+          .select()
+          .single()
+      );
+
+      const results = await Promise.all(insertPromises);
+      const createdSubjects = results.map(result => {
+        if (result.error) {
+          console.error('Error creating default subject:', result.error);
+          return null;
+        }
+        return {
+          id: result.data.id,
+          name: result.data.name,
+          color: result.data.color,
+          mcqQuestions: result.data.mcq_questions,
+          textQuestions: result.data.text_questions,
+          totalQuestions: result.data.total_questions,
+          questionConfig: result.data.question_config ? JSON.parse(result.data.question_config) : null,
+          createdAt: result.data.created_at
+        };
+      }).filter(Boolean);
+
+      return createdSubjects;
     }
 
-    return subjects;
+    // Transform the data to match the expected format
+    return data.map(subject => ({
+      id: subject.id,
+      name: subject.name,
+      color: subject.color,
+      mcqQuestions: subject.mcq_questions,
+      textQuestions: subject.text_questions,
+      totalQuestions: subject.total_questions,
+      questionConfig: subject.question_config ? JSON.parse(subject.question_config) : null,
+      createdAt: subject.created_at
+    }));
   });
 
 export default getUserSubjects;

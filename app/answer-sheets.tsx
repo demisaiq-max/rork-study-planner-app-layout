@@ -9,10 +9,13 @@ import {
   TextInput,
   Alert,
   SafeAreaView,
+  ActivityIndicator,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { Plus, X, Edit2, Trash2, FileText, Settings } from 'lucide-react-native';
 import { useLanguage } from '@/hooks/language-context';
+import { useAuth } from '@/hooks/auth-context';
+import { trpc } from '@/lib/trpc';
 
 interface QuestionConfig {
   number: number;
