@@ -25,7 +25,7 @@ export default function AllSubjectsScreen() {
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [newSubjectName, setNewSubjectName] = useState('');
-  const [editingSubject, setEditingSubject] = useState<string | null>(null);
+  const [editingSubject, setEditingSubject] = useState<{id: string, name: string} | null>(null);
   const [editedSubjectName, setEditedSubjectName] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
 
@@ -94,9 +94,9 @@ export default function AllSubjectsScreen() {
     return subjectName;
   }, [t]);
 
-  const handleSubjectPress = useCallback((subject: string) => {
+  const handleSubjectPress = useCallback((subjectName: string) => {
     if (!isEditMode) {
-      router.push(`/subject-tests?subject=${encodeURIComponent(subject)}`);
+      router.push(`/subject-tests?subject=${encodeURIComponent(subjectName)}`);
     }
   }, [isEditMode]);
 
@@ -113,13 +113,13 @@ export default function AllSubjectsScreen() {
 
     createSubjectMutation.mutate({
       userId: user.id,
-      subject: newSubjectName.trim(),
+      name: newSubjectName.trim(),
     });
   }, [newSubjectName, user?.id, createSubjectMutation]);
 
-  const handleEditSubject = useCallback((subject: string) => {
+  const handleEditSubject = useCallback((subject: {id: string, name: string}) => {
     setEditingSubject(subject);
-    setEditedSubjectName(subject);
+    setEditedSubjectName(subject.name);
     setIsEditModalVisible(true);
   }, []);
 
@@ -135,16 +135,16 @@ export default function AllSubjectsScreen() {
     }
 
     updateSubjectMutation.mutate({
+      id: editingSubject!.id,
       userId: user.id,
-      oldSubject: editingSubject,
-      newSubject: editedSubjectName.trim(),
+      name: editedSubjectName.trim(),
     });
   }, [editedSubjectName, user?.id, editingSubject, updateSubjectMutation]);
 
-  const handleDeleteSubject = useCallback((subject: string) => {
+  const handleDeleteSubject = useCallback((subject: {id: string, name: string}) => {
     Alert.alert(
       'Delete Subject',
-      `Are you sure you want to delete "${subject}"? This will also delete all tests and results for this subject.`,
+      `Are you sure you want to delete "${subject.name}"? This will also delete all tests and results for this subject.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -153,8 +153,8 @@ export default function AllSubjectsScreen() {
           onPress: () => {
             if (!user?.id) return;
             deleteSubjectMutation.mutate({
+              id: subject.id,
               userId: user.id,
-              subject,
             });
           },
         },
@@ -212,17 +212,17 @@ export default function AllSubjectsScreen() {
             </TouchableOpacity>
           </View>
           
-          {subjects.map((subject: string) => (
+          {subjects.map((subject: any) => (
             <TouchableOpacity
-              key={subject}
+              key={subject.id}
               style={styles.subjectCard}
-              onPress={() => handleSubjectPress(subject)}
+              onPress={() => handleSubjectPress(subject.name)}
               activeOpacity={0.7}
             >
               <View style={styles.subjectContent}>
                 <View style={styles.subjectInfo}>
                   <Text style={styles.subjectName}>
-                    {getSubjectName(subject)}
+                    {getSubjectName(subject.name)}
                   </Text>
                   <Text style={styles.subjectSubtext}>
                     View tests and grades
@@ -232,13 +232,13 @@ export default function AllSubjectsScreen() {
                   <View style={styles.editActions}>
                     <TouchableOpacity
                       style={styles.actionButton}
-                      onPress={() => handleEditSubject(subject)}
+                      onPress={() => handleEditSubject({id: subject.id, name: subject.name})}
                     >
                       <Edit2 size={18} color="#007AFF" />
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.actionButton}
-                      onPress={() => handleDeleteSubject(subject)}
+                      onPress={() => handleDeleteSubject({id: subject.id, name: subject.name})}
                     >
                       <Trash2 size={18} color="#FF3B30" />
                     </TouchableOpacity>
