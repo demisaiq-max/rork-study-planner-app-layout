@@ -40,7 +40,7 @@ export default function ExamManagementScreen() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingExam, setEditingExam] = useState<Exam | null>(null);
-  const [showSubjects, setShowSubjects] = useState(!directView);
+  const [showSubjects, setShowSubjects] = useState(directView !== 'true');
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [showAddSubjectModal, setShowAddSubjectModal] = useState(false);
   const [newSubjectName, setNewSubjectName] = useState("");

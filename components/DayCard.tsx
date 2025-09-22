@@ -16,7 +16,7 @@ export default function DayCard({ title, daysLeft, date, priority }: DayCardProp
   const validDaysLeft = !isNaN(daysLeft) && isFinite(daysLeft) ? daysLeft : 0;
   
   const handlePress = () => {
-    router.push('/exam-management');
+    router.push('/exam-management?directView=true');
   };
   
   const getPriorityColor = () => {
