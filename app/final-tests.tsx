@@ -8,23 +8,30 @@ import {
   Modal,
   TextInput,
   Alert,
-  SafeAreaView,
 } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { Plus, X, Edit2, Trash2, FileText } from 'lucide-react-native';
 import { useLanguage } from '@/hooks/language-context';
+import { useUser } from '@/hooks/user-context';
+import { trpc } from '@/lib/trpc';
 
 interface AnswerSheet {
   id: string;
-  name: string;
-  subjectId: string;
-  testType: 'mock' | 'midterm' | 'final';
-  createdAt: Date;
-  questions: number;
+  sheet_name: string;
+  subject: string;
+  test_type: 'practice' | 'mock' | 'midterm' | 'final';
+  created_at: string;
+  total_questions: number;
+  answered_questions: number;
+  completion_percentage: number;
+  status: 'draft' | 'submitted' | 'graded';
+  score?: number;
+  grade?: string;
 }
 
 export default function FinalTestsScreen() {
   const { language } = useLanguage();
+  const { user } = useUser();
   const params = useLocalSearchParams<{
     subjectId: string;
     subjectName: string;
@@ -40,39 +47,76 @@ export default function FinalTestsScreen() {
   const [newSheetQuestions, setNewSheetQuestions] = useState('20');
   const [editingSheet, setEditingSheet] = useState<AnswerSheet | null>(null);
   
-  // Mock data - in real app this would come from backend
-  const [answerSheets, setAnswerSheets] = useState<AnswerSheet[]>([
-    {
-      id: '1',
-      name: '2024 기말고사 1차',
-      subjectId: params.subjectId || '1',
-      testType: 'final',
-      createdAt: new Date('2024-01-15'),
-      questions: 35,
-    },
-    {
-      id: '2',
-      name: '미적분 기말고사',
-      subjectId: params.subjectId || '2',
-      testType: 'final',
-      createdAt: new Date('2024-01-12'),
-      questions: 30,
-    },
-    {
-      id: '3',
-      name: '한국사 기말고사',
-      subjectId: params.subjectId || '4',
-      testType: 'final',
-      createdAt: new Date('2024-01-05'),
-      questions: 45,
-    },
-  ]);
+  // Get subject name mapping
+  const getSubjectKey = (subjectName: string): 'korean' | 'mathematics' | 'english' | 'others' => {
+    const name = subjectName?.toLowerCase() || '';
+    if (name.includes('korean') || name.includes('국어')) return 'korean';
+    if (name.includes('mathematics') || name.includes('수학')) return 'mathematics';
+    if (name.includes('english') || name.includes('영어')) return 'english';
+    return 'others';
+  };
   
-  const filteredSheets = answerSheets.filter(sheet => 
-    sheet.subjectId === params.subjectId && sheet.testType === 'final'
+  const subjectKey = getSubjectKey(params.subjectName || '');
+  
+  // Fetch answer sheets from database
+  const answerSheetsQuery = trpc.answerSheets.getAnswerSheets.useQuery(
+    {
+      userId: user?.id || '',
+      subject: subjectKey,
+      testType: 'final',
+    },
+    {
+      enabled: !!user?.id,
+      refetchOnWindowFocus: false,
+    }
   );
+  
+  const createAnswerSheetMutation = trpc.answerSheets.createAnswerSheet.useMutation({
+    onSuccess: () => {
+      answerSheetsQuery.refetch();
+      setShowAddModal(false);
+      setNewSheetName('');
+      setNewSheetQuestions('20');
+      Alert.alert('Success', 'Answer sheet created successfully!');
+    },
+    onError: (error) => {
+      Alert.alert('Error', error.message || 'Failed to create answer sheet');
+    },
+  });
+  
+  const updateAnswerSheetMutation = trpc.answerSheets.updateAnswerSheet.useMutation({
+    onSuccess: () => {
+      answerSheetsQuery.refetch();
+      setEditingSheet(null);
+      setShowAddModal(false);
+      setNewSheetName('');
+      setNewSheetQuestions('20');
+      Alert.alert('Success', 'Answer sheet updated successfully!');
+    },
+    onError: (error) => {
+      Alert.alert('Error', error.message || 'Failed to update answer sheet');
+    },
+  });
+  
+  const deleteAnswerSheetMutation = trpc.answerSheets.deleteAnswerSheet.useMutation({
+    onSuccess: () => {
+      answerSheetsQuery.refetch();
+      Alert.alert('Success', 'Answer sheet deleted successfully!');
+    },
+    onError: (error) => {
+      Alert.alert('Error', error.message || 'Failed to delete answer sheet');
+    },
+  });
+  
+  const answerSheets = answerSheetsQuery.data || [];
+  const isLoading = answerSheetsQuery.isLoading;
 
   const handleAddSheet = () => {
+    if (!user?.id) {
+      Alert.alert('Error', 'Please log in to create answer sheets');
+      return;
+    }
+    
     if (!newSheetName.trim()) {
       Alert.alert('Error', 'Please enter a sheet name');
       return;
@@ -84,25 +128,30 @@ export default function FinalTestsScreen() {
       return;
     }
 
-    const newSheet: AnswerSheet = {
-      id: Date.now().toString(),
-      name: newSheetName,
-      subjectId: params.subjectId || '1',
-      testType: 'final',
-      createdAt: new Date(),
-      questions: questionsNum,
-    };
+    // Determine MCQ and text questions based on subject
+    let mcqQuestions = questionsNum;
+    let textQuestions = 0;
+    
+    if (subjectKey === 'korean') {
+      mcqQuestions = Math.floor(questionsNum * 0.75); // 75% MCQ
+      textQuestions = questionsNum - mcqQuestions;
+    }
 
-    setAnswerSheets(prev => [newSheet, ...prev]);
-    setNewSheetName('');
-    setNewSheetQuestions('20');
-    setShowAddModal(false);
+    createAnswerSheetMutation.mutate({
+      userId: user.id,
+      subject: subjectKey,
+      sheetName: newSheetName,
+      testType: 'final',
+      totalQuestions: questionsNum,
+      mcqQuestions,
+      textQuestions,
+    });
   };
 
   const handleEditSheet = (sheet: AnswerSheet) => {
     setEditingSheet(sheet);
-    setNewSheetName(sheet.name);
-    setNewSheetQuestions(sheet.questions.toString());
+    setNewSheetName(sheet.sheet_name);
+    setNewSheetQuestions(sheet.total_questions.toString());
     setShowAddModal(true);
   };
 
@@ -118,29 +167,35 @@ export default function FinalTestsScreen() {
       return;
     }
 
-    setAnswerSheets(prev => prev.map(sheet => 
-      sheet.id === editingSheet.id 
-        ? { ...sheet, name: newSheetName, questions: questionsNum }
-        : sheet
-    ));
+    // Determine MCQ and text questions based on subject
+    let mcqQuestions = questionsNum;
+    let textQuestions = 0;
     
-    setEditingSheet(null);
-    setNewSheetName('');
-    setNewSheetQuestions('20');
-    setShowAddModal(false);
+    if (subjectKey === 'korean') {
+      mcqQuestions = Math.floor(questionsNum * 0.75); // 75% MCQ
+      textQuestions = questionsNum - mcqQuestions;
+    }
+
+    updateAnswerSheetMutation.mutate({
+      sheetId: editingSheet.id,
+      sheetName: newSheetName,
+      totalQuestions: questionsNum,
+      mcqQuestions,
+      textQuestions,
+    });
   };
 
   const handleDeleteSheet = (sheetId: string) => {
     Alert.alert(
       'Delete Answer Sheet',
-      'Are you sure you want to delete this answer sheet?',
+      'Are you sure you want to delete this answer sheet? This action cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            setAnswerSheets(prev => prev.filter(sheet => sheet.id !== sheetId));
+            deleteAnswerSheetMutation.mutate({ sheetId });
           },
         },
       ]
@@ -155,7 +210,7 @@ export default function FinalTestsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <Stack.Screen 
         options={{
           title: language === 'ko' ? 'Final Tests' : 'Final Tests',
@@ -186,7 +241,13 @@ export default function FinalTestsScreen() {
 
       {/* Content */}
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {filteredSheets.length === 0 ? (
+        {isLoading ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyTitle}>
+              {language === 'ko' ? '로딩 중...' : 'Loading...'}
+            </Text>
+          </View>
+        ) : answerSheets.length === 0 ? (
           <View style={styles.emptyState}>
             <FileText size={48} color="#C7C7CC" />
             <Text style={styles.emptyTitle}>
@@ -198,21 +259,28 @@ export default function FinalTestsScreen() {
           </View>
         ) : (
           <View style={styles.sheetsList}>
-            {filteredSheets.map((sheet) => (
+            {answerSheets.map((sheet) => (
               <View key={sheet.id} style={styles.sheetCard}>
                 <View style={styles.sheetHeader}>
                   <View style={styles.sheetInfo}>
-                    <Text style={styles.sheetName}>{sheet.name}</Text>
+                    <Text style={styles.sheetName}>{sheet.sheet_name}</Text>
                     <Text style={styles.sheetMeta}>
-                      {sheet.questions} questions • {sheet.createdAt.toLocaleDateString()}
+                      {sheet.total_questions} questions • {sheet.answered_questions} answered ({sheet.completion_percentage}%)
+                    </Text>
+                    <Text style={styles.sheetDate}>
+                      {new Date(sheet.created_at).toLocaleDateString()}
+                      {sheet.status === 'graded' && sheet.score && (
+                        <Text style={styles.scoreText}> • Score: {sheet.score}{sheet.grade && ` (${sheet.grade})`}</Text>
+                      )}
                     </Text>
                   </View>
                   <View style={styles.sheetActions}>
                     <TouchableOpacity 
                       style={styles.actionButton}
                       onPress={() => handleEditSheet(sheet)}
+                      disabled={sheet.status === 'submitted' || sheet.status === 'graded'}
                     >
-                      <Edit2 size={16} color="#8E8E93" />
+                      <Edit2 size={16} color={sheet.status === 'draft' ? '#8E8E93' : '#C7C7CC'} />
                     </TouchableOpacity>
                     <TouchableOpacity 
                       style={styles.actionButton}
@@ -220,6 +288,24 @@ export default function FinalTestsScreen() {
                     >
                       <Trash2 size={16} color="#FF3B30" />
                     </TouchableOpacity>
+                  </View>
+                </View>
+                
+                <View style={styles.statusIndicator}>
+                  <View style={[
+                    styles.statusBadge,
+                    {
+                      backgroundColor: 
+                        sheet.status === 'draft' ? '#FF9500' :
+                        sheet.status === 'submitted' ? '#007AFF' :
+                        '#34C759'
+                    }
+                  ]}>
+                    <Text style={styles.statusText}>
+                      {sheet.status === 'draft' ? (language === 'ko' ? '작성중' : 'Draft') :
+                       sheet.status === 'submitted' ? (language === 'ko' ? '제출됨' : 'Submitted') :
+                       (language === 'ko' ? '채점됨' : 'Graded')}
+                    </Text>
                   </View>
                 </View>
                 
@@ -243,13 +329,14 @@ export default function FinalTestsScreen() {
                     router.push({
                       pathname,
                       params: {
-                        name: sheet.name,
+                        sheetId: sheet.id,
+                        name: sheet.sheet_name,
                         subjectId: params.subjectId,
                         subjectName: params.subjectName,
                         subjectColor: params.subjectColor,
-                        mcqQuestions: params.mcqQuestions || '20',
-                        textQuestions: params.textQuestions || '0',
-                        totalQuestions: params.totalQuestions || '20',
+                        mcqQuestions: sheet.total_questions.toString(),
+                        textQuestions: '0',
+                        totalQuestions: sheet.total_questions.toString(),
                         questionConfig: params.questionConfig,
                       }
                     });
@@ -272,7 +359,7 @@ export default function FinalTestsScreen() {
         presentationStyle="pageSheet"
         onRequestClose={closeModal}
       >
-        <SafeAreaView style={styles.modalContainer}>
+        <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={closeModal}>
               <X size={24} color="#8E8E93" />
@@ -283,9 +370,17 @@ export default function FinalTestsScreen() {
                 : (language === 'ko' ? '새 기말고사' : 'New Final Test')
               }
             </Text>
-            <TouchableOpacity onPress={editingSheet ? handleUpdateSheet : handleAddSheet}>
-              <Text style={styles.saveButton}>
-                {language === 'ko' ? '저장' : 'Save'}
+            <TouchableOpacity 
+              onPress={editingSheet ? handleUpdateSheet : handleAddSheet}
+              disabled={createAnswerSheetMutation.isPending || updateAnswerSheetMutation.isPending}
+            >
+              <Text style={[styles.saveButton, {
+                opacity: (createAnswerSheetMutation.isPending || updateAnswerSheetMutation.isPending) ? 0.5 : 1
+              }]}>
+                {(createAnswerSheetMutation.isPending || updateAnswerSheetMutation.isPending) 
+                  ? (language === 'ko' ? '저장 중...' : 'Saving...') 
+                  : (language === 'ko' ? '저장' : 'Save')
+                }
               </Text>
             </TouchableOpacity>
           </View>
@@ -318,9 +413,9 @@ export default function FinalTestsScreen() {
               />
             </View>
           </ScrollView>
-        </SafeAreaView>
+        </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -429,6 +524,29 @@ const styles = StyleSheet.create({
   sheetMeta: {
     fontSize: 12,
     color: '#8E8E93',
+    marginBottom: 2,
+  },
+  sheetDate: {
+    fontSize: 11,
+    color: '#C7C7CC',
+  },
+  scoreText: {
+    color: '#34C759',
+    fontWeight: '600',
+  },
+  statusIndicator: {
+    marginBottom: 12,
+  },
+  statusBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusText: {
+    fontSize: 11,
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   sheetActions: {
     flexDirection: 'row',
