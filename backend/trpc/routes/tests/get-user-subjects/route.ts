@@ -19,10 +19,11 @@ export const getUserSubjects = publicProcedure
     // If no subjects found, create default subjects
     if (!data || data.length === 0) {
       const defaultSubjects = [
-        { name: 'Korean (국어)', color: '#FF6B6B', mcq: 34, text: 11 },
-        { name: 'Mathematics (수학)', color: '#4ECDC4', mcq: 30, text: 0 },
-        { name: 'English (영어)', color: '#45B7D1', mcq: 45, text: 0 },
-        { name: 'Others (그외)', color: '#96CEB4', mcq: 20, text: 0 }
+        { name: '국어', color: '#FF6B6B', mcq: 34, text: 11 },
+        { name: '수학', color: '#4ECDC4', mcq: 30, text: 0 },
+        { name: '영어', color: '#45B7D1', mcq: 45, text: 0 },
+        { name: '탐구', color: '#96CEB4', mcq: 20, text: 0 },
+        { name: '한국사', color: '#9B59B6', mcq: 20, text: 0 }
       ];
 
       const insertPromises = defaultSubjects.map(subject => 
