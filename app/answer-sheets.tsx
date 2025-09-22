@@ -25,12 +25,12 @@ interface QuestionConfig {
 interface Subject {
   id: string;
   name: string;
-  color: string;
-  createdAt: Date;
+  color?: string;
+  createdAt?: Date;
   mcqQuestions?: number;
   textQuestions?: number;
   totalQuestions?: number;
-  questionConfig?: QuestionConfig[]; // Dynamic question configuration
+  questionConfig?: QuestionConfig[];
 }
 
 interface AnswerSheet {
@@ -138,7 +138,9 @@ export default function AnswerSheetsScreen() {
     onSuccess: () => {
       subjectsQuery.refetch();
       if (selectedSubjectId === editingSubject?.id) {
-        const remainingSubjects = (subjectsQuery.data || []).filter(s => s && s.id !== editingSubject?.id);
+        const remainingSubjects = (subjectsQuery.data || []).filter((s): s is NonNullable<typeof s> => 
+          s !== null && s !== undefined && !!s.id && !!s.name && s.id !== editingSubject?.id
+        );
         setSelectedSubjectId(remainingSubjects[0]?.id || '');
       }
     },
@@ -149,9 +151,11 @@ export default function AnswerSheetsScreen() {
   
   // Set initial selected subject
   React.useEffect(() => {
-    const subjects = subjectsQuery.data || [];
-    if (subjects.length > 0 && !selectedSubjectId && subjects[0]) {
-      setSelectedSubjectId(subjects[0].id);
+    const validSubjects = (subjectsQuery.data || []).filter((subject): subject is NonNullable<typeof subject> => 
+      subject !== null && subject !== undefined && !!subject.id && !!subject.name
+    );
+    if (validSubjects.length > 0 && !selectedSubjectId) {
+      setSelectedSubjectId(validSubjects[0].id);
     }
   }, [subjectsQuery.data, selectedSubjectId]);
   
@@ -163,13 +167,15 @@ export default function AnswerSheetsScreen() {
     );
   }
   
-  const subjects = subjectsQuery.data || [];
+  const subjects = (subjectsQuery.data || []).filter((subject): subject is NonNullable<typeof subject> => 
+    subject !== null && subject !== undefined && !!subject.id && !!subject.name
+  );
   const answerSheets = answerSheetsQuery.data || [];
 
   const filteredSheets = answerSheets.filter(sheet => 
     sheet.subject_id === selectedSubjectId && sheet.test_type === selectedTestType
   );
-  const selectedSubjectInfo = subjects.find(s => s && s.id === selectedSubjectId);
+  const selectedSubjectInfo = subjects.find(s => s.id === selectedSubjectId);
   
   const getTestTypeInfo = (type: 'mock' | 'midterm' | 'final') => {
     const count = answerSheets.filter(sheet => 
@@ -495,29 +501,26 @@ export default function AnswerSheetsScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.tabsContainer}
         >
-          {subjects.map((subject) => {
-            if (!subject) return null;
-            return (
-              <TouchableOpacity
-                key={subject.id}
-                style={[
-                  styles.subjectTab,
-                  selectedSubjectId === subject.id && {
-                    backgroundColor: DEFAULT_COLORS[0],
-                    ...styles.subjectTabActive
-                  }
-                ]}
-                onPress={() => setSelectedSubjectId(subject.id)}
-              >
-                <Text style={[
-                  styles.subjectTabText,
-                  selectedSubjectId === subject.id && styles.subjectTabTextActive
-                ]}>
-                  {subject.name}
-                </Text>
-              </TouchableOpacity>
-            );
-          }).filter(Boolean)}
+          {subjects.map((subject) => (
+            <TouchableOpacity
+              key={subject.id}
+              style={[
+                styles.subjectTab,
+                selectedSubjectId === subject.id && {
+                  backgroundColor: DEFAULT_COLORS[0],
+                  ...styles.subjectTabActive
+                }
+              ]}
+              onPress={() => setSelectedSubjectId(subject.id)}
+            >
+              <Text style={[
+                styles.subjectTabText,
+                selectedSubjectId === subject.id && styles.subjectTabTextActive
+              ]}>
+                {subject.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
           <TouchableOpacity
             style={styles.manageSubjectsTab}
             onPress={() => setShowSubjectModal(true)}
@@ -705,29 +708,26 @@ export default function AnswerSheetsScreen() {
                 {language === 'ko' ? '과목' : 'Subject'}
               </Text>
               <View style={styles.subjectSelector}>
-                {subjects.map((subject) => {
-                  if (!subject) return null;
-                  return (
-                    <TouchableOpacity
-                      key={subject.id}
-                      style={[
-                        styles.subjectOption,
-                        selectedSubjectId === subject.id && {
-                          backgroundColor: DEFAULT_COLORS[0],
-                          ...styles.subjectOptionSelected
-                        }
-                      ]}
-                      onPress={() => setSelectedSubjectId(subject.id)}
-                    >
-                      <Text style={[
-                        styles.subjectOptionText,
-                        selectedSubjectId === subject.id && styles.subjectOptionTextSelected
-                      ]}>
-                        {subject.name}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                }).filter(Boolean)}
+                {subjects.map((subject) => (
+                  <TouchableOpacity
+                    key={subject.id}
+                    style={[
+                      styles.subjectOption,
+                      selectedSubjectId === subject.id && {
+                        backgroundColor: DEFAULT_COLORS[0],
+                        ...styles.subjectOptionSelected
+                      }
+                    ]}
+                    onPress={() => setSelectedSubjectId(subject.id)}
+                  >
+                    <Text style={[
+                      styles.subjectOptionText,
+                      selectedSubjectId === subject.id && styles.subjectOptionTextSelected
+                    ]}>
+                      {subject.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
               </View>
             </View>
           </ScrollView>
@@ -1286,7 +1286,6 @@ export default function AnswerSheetsScreen() {
                   </Text>
                   <View style={styles.subjectsList}>
                     {subjects.map((subject) => {
-                      if (!subject) return null;
                       const sheetCount = answerSheets.filter(sheet => sheet.subject_id === subject.id).length;
                       return (
                         <View key={subject.id} style={styles.subjectItem}>
@@ -1318,7 +1317,7 @@ export default function AnswerSheetsScreen() {
                           </View>
                         </View>
                       );
-                    }).filter(Boolean)}
+                    })}
                   </View>
                 </View>
               </>

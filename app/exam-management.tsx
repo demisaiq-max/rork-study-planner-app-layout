@@ -295,7 +295,9 @@ export default function ExamManagementScreen() {
   }
   
   const exams = examsQuery.data || [];
-  const subjects = subjectsQuery.data || [];
+  const subjects = (subjectsQuery.data || []).filter((subject): subject is NonNullable<typeof subject> => 
+    subject !== null && subject !== undefined && !!subject.id && !!subject.name
+  );
   const answerSheets = answerSheetsQuery.data || [];
   
   // Filter exams by selected subject
@@ -349,8 +351,9 @@ export default function ExamManagementScreen() {
               </View>
 
               <View style={styles.subjectsList}>
-                {subjects.map((subject) => {
-                  if (!subject) return null;
+                {subjects.filter((subject): subject is NonNullable<typeof subject> => 
+                  subject !== null && subject !== undefined && !!subject.id && !!subject.name
+                ).map((subject) => {
                   const subjectExams = exams.filter(exam => exam.subject === subject.name);
                   const subjectAnswerSheets = answerSheets.filter(sheet => sheet.subject_id === subject.id);
                   return (
@@ -373,7 +376,7 @@ export default function ExamManagementScreen() {
                       </View>
                     </TouchableOpacity>
                   );
-                }).filter(Boolean)}
+                })}
                 
                 {subjects.length === 0 && (
                   <View style={styles.emptyState}>
