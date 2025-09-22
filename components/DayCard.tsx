@@ -9,14 +9,22 @@ interface DayCardProps {
   daysLeft: number;
   date: string;
   priority?: "high" | "medium" | "low";
+  subject?: string;
+  examId?: string;
 }
 
-export default function DayCard({ title, daysLeft, date, priority }: DayCardProps) {
+export default function DayCard({ title, daysLeft, date, priority, subject, examId }: DayCardProps) {
   const isUrgent = daysLeft <= 30;
   const validDaysLeft = !isNaN(daysLeft) && isFinite(daysLeft) ? daysLeft : 0;
   
   const handlePress = () => {
-    router.push('/exam-management');
+    if (subject) {
+      // Navigate directly to tests for this subject
+      router.push(`/subject-tests?subject=${encodeURIComponent(subject)}&examTitle=${encodeURIComponent(title)}`);
+    } else {
+      // Fallback to exam management
+      router.push('/exam-management');
+    }
   };
   
   const getPriorityColor = () => {
