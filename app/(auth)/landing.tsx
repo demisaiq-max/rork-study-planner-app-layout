@@ -38,7 +38,7 @@ export default function LandingScreen() {
             </View>
             
             <Text style={styles.welcomeText}>환영합니다</Text>
-            <Text style={styles.appName}>프로플래너</Text>
+            <Text style={styles.appName}>메이저패스</Text>
             <Text style={styles.tagline}>
               학업 성취를 위한 최고의 학습 동반자
             </Text>
