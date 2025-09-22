@@ -230,9 +230,7 @@ export default function MockTestsScreen() {
           <View style={[styles.subjectIndicator, { backgroundColor: params.subjectColor || '#4ECDC4' }]} />
           <View>
             <Text style={styles.headerTitle}>{params.subjectName || 'Mock Tests'}</Text>
-            <Text style={styles.headerSubtitle}>
-              {language === 'ko' ? '최근 성적: 2등급 (95%)' : 'Recent Score: Grade 2 (95%)'}
-            </Text>
+
           </View>
         </View>
         <TouchableOpacity 
@@ -269,7 +267,7 @@ export default function MockTestsScreen() {
                   <View style={styles.sheetInfo}>
                     <Text style={styles.sheetName}>{sheet.sheet_name}</Text>
                     <Text style={styles.sheetMeta}>
-                      {sheet.total_questions} questions • {sheet.answered_questions} answered ({sheet.completion_percentage}%)
+                      {sheet.total_questions} questions • {sheet.answered_questions || 0} answered ({Math.round(sheet.completion_percentage || 0)}%)
                     </Text>
                     <Text style={styles.sheetDate}>
                       {new Date(sheet.created_at).toLocaleDateString()}

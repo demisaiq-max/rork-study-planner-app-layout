@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useLanguage } from '@/hooks/language-context';
+import { useUser } from '@/hooks/user-context';
+import { trpc } from '@/lib/trpc';
 
 type AnswerType = 'mcq' | 'text';
 type MCQOption = 1 | 2 | 3 | 4 | 5;
@@ -24,16 +26,51 @@ interface Question {
 
 export default function KoreanAnswerSheet() {
   const { language } = useLanguage();
-  const params = useLocalSearchParams();
-  const sheetName = params.name as string || 'Korean Answer Sheet';
+  const { user } = useUser();
+  const params = useLocalSearchParams<{
+    sheetId: string;
+    name: string;
+    subjectId: string;
+    subjectName: string;
+    subjectColor: string;
+    mcqQuestions: string;
+    textQuestions: string;
+    totalQuestions: string;
+    questionConfig?: string;
+  }>();
+  
+  const sheetName = params.name || 'Korean Answer Sheet';
+  const totalQuestions = parseInt(params.totalQuestions || '45');
+  const mcqQuestions = parseInt(params.mcqQuestions || '34');
+  const textQuestions = parseInt(params.textQuestions || '11');
   
   const [questions, setQuestions] = useState<Question[]>([]);
   
-  // Initialize Korean questions: 1-34 MCQ (Common), 35-45 Text (Elective)
+  // Fetch answer sheet stats for real-time tracking
+  const answerSheetStatsQuery = trpc.answerSheets.getAnswerSheetStats.useQuery(
+    { sheetId: params.sheetId || '' },
+    { 
+      enabled: !!params.sheetId,
+      refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
+    }
+  );
+  
+  // Save answer mutation
+  const saveAnswerMutation = trpc.answerSheets.saveAnswer.useMutation({
+    onSuccess: () => {
+      // Refetch stats after saving answer
+      answerSheetStatsQuery.refetch();
+    },
+    onError: (error) => {
+      console.error('Error saving answer:', error);
+    },
+  });
+
+  // Initialize questions based on configuration
   useEffect(() => {
     const initialQuestions: Question[] = [];
-    for (let i = 1; i <= 45; i++) {
-      const questionType: AnswerType = i <= 34 ? 'mcq' : 'text';
+    for (let i = 1; i <= totalQuestions; i++) {
+      const questionType: AnswerType = i <= mcqQuestions ? 'mcq' : 'text';
       initialQuestions.push({
         number: i,
         type: questionType,
@@ -41,14 +78,29 @@ export default function KoreanAnswerSheet() {
     }
     setQuestions(initialQuestions);
     console.log('Korean Answer Sheet initialized with', initialQuestions.length, 'questions');
-  }, []);
+  }, [totalQuestions, mcqQuestions]);
 
   const handleMCQSelect = (questionNumber: number, option: MCQOption) => {
+    const question = questions.find(q => q.number === questionNumber);
+    if (!question || !params.sheetId) return;
+    
+    const newOption = question.selectedOption === option ? undefined : option;
+    
     setQuestions(prev => prev.map(q => 
       q.number === questionNumber 
-        ? { ...q, selectedOption: q.selectedOption === option ? undefined : option }
+        ? { ...q, selectedOption: newOption }
         : q
     ));
+    
+    // Save to database if option is selected
+    if (newOption && user?.id) {
+      saveAnswerMutation.mutate({
+        sheetId: params.sheetId,
+        questionNumber,
+        questionType: 'mcq',
+        mcqOption: newOption,
+      });
+    }
   };
 
   const handleTextAnswer = (questionNumber: number, text: string) => {
@@ -57,6 +109,22 @@ export default function KoreanAnswerSheet() {
         ? { ...q, textAnswer: text }
         : q
     ));
+    
+    // Save to database with debounce
+    if (text.trim() && params.sheetId && user?.id) {
+      // Simple debounce - save after user stops typing for 1 second
+      setTimeout(() => {
+        const currentQuestion = questions.find(q => q.number === questionNumber);
+        if (currentQuestion?.textAnswer === text) {
+          saveAnswerMutation.mutate({
+            sheetId: params.sheetId,
+            questionNumber,
+            questionType: 'text',
+            textAnswer: text,
+          });
+        }
+      }, 1000);
+    }
   };
 
   const handleSubmit = () => {
@@ -64,9 +132,13 @@ export default function KoreanAnswerSheet() {
       q.type === 'mcq' ? q.selectedOption : q.textAnswer?.trim()
     );
     
+    const stats = answerSheetStatsQuery.data;
+    const totalAnswered = stats?.total_answered || answeredQuestions.length;
+    const completionPercentage = Math.round((totalAnswered / totalQuestions) * 100);
+    
     Alert.alert(
       '제출 결과 보기',
-      `Korean (국어)\n총 45문제 중 ${answeredQuestions.length}문제 답변완료\n\n제출하시겠습니까?`,
+      `Korean (국어)\n총 ${totalQuestions}문제 중 ${totalAnswered}문제 답변완료 (${completionPercentage}%)\n\n제출하시겠습니까?`,
       [
         { text: '취소', style: 'cancel' },
         {
@@ -142,12 +214,32 @@ export default function KoreanAnswerSheet() {
           headerStyle: { backgroundColor: '#FFFFFF' },
           headerTintColor: '#000000',
           headerTitleStyle: { fontWeight: '600' },
+          headerRight: () => {
+            const stats = answerSheetStatsQuery.data;
+            const totalAnswered = stats?.total_answered || 0;
+            const completionPercentage = Math.round((totalAnswered / totalQuestions) * 100);
+            
+            return (
+              <View style={styles.headerStats}>
+                <Text style={styles.headerStatsText}>
+                  {totalAnswered}/{totalQuestions} ({completionPercentage}%)
+                </Text>
+              </View>
+            );
+          },
         }} 
       />
       
       <View style={styles.headerInfo}>
         <Text style={styles.subjectTitle}>Korean (국어)</Text>
-        <Text style={styles.questionCount}>총 45문제 (객관식 34문제, 주관식 11문제)</Text>
+        <View style={styles.statsContainer}>
+          <Text style={styles.questionCount}>총 {totalQuestions}문제 (객관식 {mcqQuestions}문제, 주관식 {textQuestions}문제)</Text>
+          {answerSheetStatsQuery.data && (
+            <Text style={styles.progressText}>
+              {answerSheetStatsQuery.data.total_answered}개 답변완료 ({Math.round((answerSheetStatsQuery.data.total_answered / totalQuestions) * 100)}%)
+            </Text>
+          )}
+        </View>
       </View>
       
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={true}>
@@ -174,6 +266,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
+  headerStats: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#F0F0F0',
+    borderRadius: 12,
+  },
+  headerStatsText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666666',
+  },
   headerInfo: {
     backgroundColor: '#FF6B6B',
     paddingHorizontal: 20,
@@ -185,10 +288,19 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     marginBottom: 4,
   },
+  statsContainer: {
+    gap: 4,
+  },
   questionCount: {
     fontSize: 14,
     color: '#FFFFFF',
     opacity: 0.9,
+  },
+  progressText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '500',
+    opacity: 0.8,
   },
   scrollView: {
     flex: 1,

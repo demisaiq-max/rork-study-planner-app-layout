@@ -49,6 +49,15 @@ export const saveAnswerProcedure = publicProcedure
       throw new Error(`Failed to save answer: ${error.message}`);
     }
 
+    // Update answer sheet statistics after saving answer
+    const { data: statsData, error: statsError } = await supabase
+      .rpc('update_answer_sheet_stats', { sheet_id: input.sheetId });
+
+    if (statsError) {
+      console.error('Error updating answer sheet stats:', statsError);
+      // Don't throw error here as the answer was saved successfully
+    }
+
     console.log('Answer saved successfully:', data);
     return data;
   });
