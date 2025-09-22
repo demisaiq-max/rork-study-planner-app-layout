@@ -22,19 +22,19 @@ ALTER TABLE subjects ENABLE ROW LEVEL SECURITY;
 
 -- Policy for users to see only their own subjects
 CREATE POLICY "Users can view their own subjects" ON subjects
-  FOR SELECT USING (auth.uid()::text = user_id);
+  FOR SELECT USING (user_id = auth.uid()::text);
 
 -- Policy for users to insert their own subjects
 CREATE POLICY "Users can insert their own subjects" ON subjects
-  FOR INSERT WITH CHECK (auth.uid()::text = user_id);
+  FOR INSERT WITH CHECK (user_id = auth.uid()::text);
 
 -- Policy for users to update their own subjects
 CREATE POLICY "Users can update their own subjects" ON subjects
-  FOR UPDATE USING (auth.uid()::text = user_id);
+  FOR UPDATE USING (user_id = auth.uid()::text);
 
 -- Policy for users to delete their own subjects
 CREATE POLICY "Users can delete their own subjects" ON subjects
-  FOR DELETE USING (auth.uid()::text = user_id);
+  FOR DELETE USING (user_id = auth.uid()::text);
 
 -- Update answer_sheets table to reference subjects
 ALTER TABLE answer_sheets ADD COLUMN IF NOT EXISTS subject_id UUID REFERENCES subjects(id) ON DELETE CASCADE;
