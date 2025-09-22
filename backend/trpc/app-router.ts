@@ -101,6 +101,17 @@ import { getUserProfileProcedure } from "./routes/users/get-user-profile/route";
 import { updateUserProfileProcedure } from "./routes/users/update-user-profile/route";
 import { syncClerkUserProcedure } from "./routes/users/sync-clerk-user/route";
 
+// Answer sheets routes
+import { createAnswerSheetProcedure } from "./routes/answer-sheets/create-answer-sheet/route";
+import { getAnswerSheetsProcedure } from "./routes/answer-sheets/get-answer-sheets/route";
+import { getAnswerSheetByIdProcedure } from "./routes/answer-sheets/get-answer-sheet-by-id/route";
+import { updateAnswerSheetProcedure } from "./routes/answer-sheets/update-answer-sheet/route";
+import { deleteAnswerSheetProcedure } from "./routes/answer-sheets/delete-answer-sheet/route";
+import { saveAnswerProcedure } from "./routes/answer-sheets/save-answer/route";
+import { submitAnswerSheetProcedure } from "./routes/answer-sheets/submit-answer-sheet/route";
+import { getAnswerSheetStatsProcedure } from "./routes/answer-sheets/get-answer-sheet-stats/route";
+import { getTemplatesProcedure } from "./routes/answer-sheets/get-templates/route";
+
 
 
 
@@ -208,6 +219,17 @@ export const appRouter = createTRPCRouter({
     getUserProfile: getUserProfileProcedure,
     updateUserProfile: updateUserProfileProcedure,
     syncClerkUser: syncClerkUserProcedure,
+  }),
+  answerSheets: createTRPCRouter({
+    createAnswerSheet: createAnswerSheetProcedure,
+    getAnswerSheets: getAnswerSheetsProcedure,
+    getAnswerSheetById: getAnswerSheetByIdProcedure,
+    updateAnswerSheet: updateAnswerSheetProcedure,
+    deleteAnswerSheet: deleteAnswerSheetProcedure,
+    saveAnswer: saveAnswerProcedure,
+    submitAnswerSheet: submitAnswerSheetProcedure,
+    getAnswerSheetStats: getAnswerSheetStatsProcedure,
+    getTemplates: getTemplatesProcedure,
   }),
 });
 

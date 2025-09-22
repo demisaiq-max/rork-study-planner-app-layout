@@ -63,6 +63,15 @@ CREATE INDEX IF NOT EXISTS idx_answer_sheet_responses_sheet_id ON answer_sheet_r
 CREATE INDEX IF NOT EXISTS idx_answer_sheet_responses_question_number ON answer_sheet_responses(question_number);
 CREATE INDEX IF NOT EXISTS idx_answer_sheet_templates_subject ON answer_sheet_templates(subject);
 
+-- Create the update_updated_at_column function if it doesn't exist
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$ LANGUAGE plpgsql;
+
 -- Create triggers for updated_at columns
 DROP TRIGGER IF EXISTS update_answer_sheets_updated_at ON answer_sheets;
 DROP TRIGGER IF EXISTS update_answer_sheet_responses_updated_at ON answer_sheet_responses;
