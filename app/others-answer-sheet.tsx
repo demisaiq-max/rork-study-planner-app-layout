@@ -110,12 +110,13 @@ export default function OthersAnswerSheet() {
 
   // Initialize questions and load existing responses with real-time updates
   useEffect(() => {
-    // Only proceed if we have answer sheet data from the database
+    // ONLY proceed if we have database data - don't use fallback parameters
     if (!answerSheetQuery.data) {
-      console.log('No answer sheet data yet, waiting...');
+      console.log('No database data available yet, waiting for real-time data...');
       return;
     }
     
+    console.log('=== REAL-TIME OTHERS ANSWER SHEET UPDATE ===');
     console.log('Initializing questions with database data:', answerSheetQuery.data);
     
     const initialQuestions: Question[] = [];
@@ -152,7 +153,7 @@ export default function OthersAnswerSheet() {
         });
       }
     } else {
-      // Use the latest configuration from database for real-time updates
+      // Use ONLY the real-time configuration from database
       for (let i = 1; i <= latestTotalQuestions; i++) {
         const questionType: AnswerType = i <= latestMcqQuestions ? 'mcq' : 'text';
         initialQuestions.push({
@@ -197,8 +198,9 @@ export default function OthersAnswerSheet() {
       setIsSubmitted(false);
     }
     
-    console.log('Others Answer Sheet updated with', initialQuestions.length, 'questions');
+    console.log('✅ Others Answer Sheet updated with', initialQuestions.length, 'questions');
     console.log('Question types:', initialQuestions.map(q => `${q.number}:${q.type}`).join(', '));
+    console.log('=== END REAL-TIME UPDATE ===');
   }, [answerSheetQuery.data, params.questionConfig]);
 
   const handleMCQSelect = (questionNumber: number, option: MCQOption) => {

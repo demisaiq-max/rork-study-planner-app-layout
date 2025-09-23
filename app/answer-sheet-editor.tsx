@@ -139,15 +139,25 @@ export default function AnswerSheetEditor() {
   
   const [questions, setQuestions] = useState<Question[]>([]);
   
-  // Initialize questions based on real-time database data or parameters
+  // Initialize questions based on real-time database data ONLY
   useEffect(() => {
-    // Use real-time data from database if available, otherwise fall back to parameters
-    const currentMcqQuestions = answerSheetQuery.data?.mcq_questions || mcqQuestions;
-    const currentTextQuestions = answerSheetQuery.data?.text_questions || textQuestions;
-    const currentTotalQuestions = answerSheetQuery.data?.total_questions || totalQuestions;
+    // ONLY proceed if we have database data - don't use fallback parameters
+    if (!answerSheetQuery.data) {
+      console.log('No database data available yet, waiting for real-time data...');
+      return;
+    }
     
-    console.log(`Initializing ${currentTotalQuestions} questions for subject: ${config.name}`);
-    console.log(`Real-time MCQ: ${currentMcqQuestions}, Text: ${currentTextQuestions}`);
+    // ALWAYS use the latest data from the database for real-time updates
+    const currentMcqQuestions = answerSheetQuery.data.mcq_questions || answerSheetQuery.data.total_questions;
+    const currentTextQuestions = answerSheetQuery.data.text_questions || 0;
+    const currentTotalQuestions = answerSheetQuery.data.total_questions;
+    
+    console.log('=== REAL-TIME ANSWER SHEET EDITOR UPDATE ===');
+    console.log(`Database data for sheet ${answerSheetQuery.data.id}:`);
+    console.log(`- Total Questions: ${currentTotalQuestions}`);
+    console.log(`- MCQ Questions: ${currentMcqQuestions}`);
+    console.log(`- Text Questions: ${currentTextQuestions}`);
+    console.log(`- Subject: ${config.name}`);
     
     const initialQuestions: Question[] = [];
     
@@ -161,7 +171,7 @@ export default function AnswerSheetEditor() {
         });
       }
     } else {
-      // Use real-time configuration from database for accurate updates
+      // Use ONLY the real-time configuration from database
       for (let i = 1; i <= currentTotalQuestions; i++) {
         const questionType: AnswerType = i <= currentMcqQuestions ? 'mcq' : 'text';
         
@@ -172,7 +182,7 @@ export default function AnswerSheetEditor() {
       }
     }
     
-    console.log(`Created ${initialQuestions.length} questions with REAL-TIME config`);
+    console.log(`✅ Created ${initialQuestions.length} questions with REAL-TIME database config`);
     console.log('Question types:', initialQuestions.map(q => `${q.number}:${q.type}`).join(', '));
     console.log('Real-time MCQ/Text breakdown:', {
       mcq: initialQuestions.filter(q => q.type === 'mcq').length,
@@ -182,8 +192,10 @@ export default function AnswerSheetEditor() {
       databaseText: currentTextQuestions,
       databaseTotal: currentTotalQuestions
     });
+    console.log('=== END REAL-TIME UPDATE ===');
+    
     setQuestions(initialQuestions);
-  }, [answerSheetQuery.data, mcqQuestions, textQuestions, totalQuestions, config.totalQuestions, config.name, dynamicQuestionConfig]);
+  }, [answerSheetQuery.data, config.name, dynamicQuestionConfig]);
 
   const handleMCQSelect = (questionNumber: number, option: MCQOption) => {
     setQuestions(prev => prev.map(q => 
@@ -304,7 +316,7 @@ export default function AnswerSheetEditor() {
           <Text style={styles.pageSubtitle}>
             MCQ: {questions.filter(q => q.type === 'mcq').length}문제 | 
             Text: {questions.filter(q => q.type === 'text').length}문제 | 
-            Total: {config.totalQuestions}문제
+            Total: {questions.length}문제
           </Text>
           {dynamicQuestionConfig ? (
             <Text style={styles.pageDescription}>
@@ -319,7 +331,7 @@ export default function AnswerSheetEditor() {
           )}
           {answerSheetQuery.data && (
             <Text style={[styles.pageDescription, { color: '#007AFF', fontWeight: '600' }]}>
-              실시간 업데이트: DB에서 {answerSheetQuery.data.total_questions}문제 ({answerSheetQuery.data.mcq_questions}개 MCQ, {answerSheetQuery.data.text_questions}개 Text)
+              🔄 실시간 업데이트: DB에서 {answerSheetQuery.data.total_questions}문제 ({answerSheetQuery.data.mcq_questions || answerSheetQuery.data.total_questions}개 MCQ, {answerSheetQuery.data.text_questions || 0}개 Text)
             </Text>
           )}
         </View>

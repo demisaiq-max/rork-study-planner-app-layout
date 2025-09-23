@@ -98,20 +98,27 @@ export default function KoreanAnswerSheet() {
 
   // Initialize questions and load existing responses with real-time updates
   useEffect(() => {
-    console.log('Initializing questions with params:', { totalQuestions, mcqQuestions, textQuestions });
+    // ONLY proceed if we have database data - don't use fallback parameters
+    if (!answerSheetQuery.data) {
+      console.log('No database data available yet, waiting for real-time data...');
+      return;
+    }
+    
+    console.log('=== REAL-TIME KOREAN ANSWER SHEET UPDATE ===');
     console.log('Answer sheet data:', answerSheetQuery.data);
     
     const initialQuestions: Question[] = [];
     
-    // Use the latest data from the database if available
-    const latestTotalQuestions = answerSheetQuery.data?.total_questions || totalQuestions;
-    const latestMcqQuestions = answerSheetQuery.data?.mcq_questions || mcqQuestions;
-    const latestTextQuestions = answerSheetQuery.data?.text_questions || textQuestions;
+    // ALWAYS use the latest data from the database for real-time updates
+    const latestTotalQuestions = answerSheetQuery.data.total_questions;
+    const latestMcqQuestions = answerSheetQuery.data.mcq_questions || answerSheetQuery.data.total_questions;
+    const latestTextQuestions = answerSheetQuery.data.text_questions || 0;
     
-    console.log('Using latest configuration:', {
+    console.log('Using REAL-TIME configuration from database:', {
       latestTotalQuestions,
       latestMcqQuestions,
-      latestTextQuestions
+      latestTextQuestions,
+      sheetId: answerSheetQuery.data.id
     });
     
     // Parse dynamic question configuration if provided
@@ -134,7 +141,7 @@ export default function KoreanAnswerSheet() {
         });
       }
     } else {
-      // Use the latest configuration from database or fallback to params
+      // Use ONLY the real-time configuration from database
       for (let i = 1; i <= latestTotalQuestions; i++) {
         const questionType: AnswerType = i <= latestMcqQuestions ? 'mcq' : 'text';
         initialQuestions.push({
@@ -145,7 +152,7 @@ export default function KoreanAnswerSheet() {
     }
     
     // Load existing responses if available
-    if (answerSheetQuery.data?.responses) {
+    if (answerSheetQuery.data.responses) {
       const responsesMap = new Map();
       answerSheetQuery.data.responses.forEach((response: any) => {
         responsesMap.set(response.question_number, response);
@@ -163,16 +170,26 @@ export default function KoreanAnswerSheet() {
       });
     }
     
+    // ALWAYS update questions to reflect real-time changes from database
+    console.log('Updating questions with real-time data:', {
+      total: latestTotalQuestions,
+      mcq: latestMcqQuestions,
+      text: latestTextQuestions,
+      questionsLength: initialQuestions.length
+    });
     setQuestions(initialQuestions);
     
     // Check if answer sheet is already submitted
-    if (answerSheetQuery.data?.status === 'submitted' || answerSheetQuery.data?.status === 'graded') {
+    if (answerSheetQuery.data.status === 'submitted' || answerSheetQuery.data.status === 'graded') {
       setIsSubmitted(true);
+    } else {
+      setIsSubmitted(false);
     }
     
-    console.log('Korean Answer Sheet initialized with', initialQuestions.length, 'questions');
+    console.log('✅ Korean Answer Sheet updated with', initialQuestions.length, 'questions');
     console.log('Question types:', initialQuestions.map(q => `${q.number}:${q.type}`).join(', '));
-  }, [totalQuestions, mcqQuestions, textQuestions, params.questionConfig, answerSheetQuery.data]);
+    console.log('=== END REAL-TIME UPDATE ===');
+  }, [answerSheetQuery.data, params.questionConfig]);
 
   const handleMCQSelect = (questionNumber: number, option: MCQOption) => {
     if (isSubmitted) return; // Prevent editing if submitted
