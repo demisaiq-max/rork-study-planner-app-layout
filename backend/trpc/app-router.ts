@@ -112,6 +112,7 @@ import { saveAnswerProcedure } from "./routes/answer-sheets/save-answer/route";
 import { submitAnswerSheetProcedure } from "./routes/answer-sheets/submit-answer-sheet/route";
 import { getAnswerSheetStatsProcedure } from "./routes/answer-sheets/get-answer-sheet-stats/route";
 import { getTemplatesProcedure } from "./routes/answer-sheets/get-templates/route";
+import { deleteAnswerProcedure } from "./routes/answer-sheets/delete-answer/route";
 
 
 
@@ -229,6 +230,7 @@ export const appRouter = createTRPCRouter({
     updateAnswerSheet: updateAnswerSheetProcedure,
     deleteAnswerSheet: deleteAnswerSheetProcedure,
     saveAnswer: saveAnswerProcedure,
+    deleteAnswer: deleteAnswerProcedure,
     submitAnswerSheet: submitAnswerSheetProcedure,
     getAnswerSheetStats: getAnswerSheetStatsProcedure,
     getTemplates: getTemplatesProcedure,

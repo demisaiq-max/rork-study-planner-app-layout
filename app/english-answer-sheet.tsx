@@ -60,12 +60,26 @@ export default function EnglishAnswerSheet() {
   // Save answer mutation
   const saveAnswerMutation = trpc.answerSheets.saveAnswer.useMutation({
     onSuccess: () => {
-      // Refetch stats and data after saving answer
+      // Refetch stats after saving answer
       answerSheetStatsQuery.refetch();
+    },
+    onError: (error: any) => {
+      console.error('Error saving answer:', error);
+      // Revert local state on error
       answerSheetQuery.refetch();
     },
-    onError: (error) => {
-      console.error('Error saving answer:', error);
+  });
+  
+  // Delete answer mutation for deselection
+  const deleteAnswerMutation = trpc.answerSheets.deleteAnswer.useMutation({
+    onSuccess: () => {
+      // Refetch stats after deleting answer
+      answerSheetStatsQuery.refetch();
+    },
+    onError: (error: any) => {
+      console.error('Error deleting answer:', error);
+      // Revert local state on error
+      answerSheetQuery.refetch();
     },
   });
   
@@ -75,7 +89,7 @@ export default function EnglishAnswerSheet() {
       setIsSubmitted(true);
       answerSheetQuery.refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Error submitting answer sheet:', error);
       Alert.alert('오류', '답안지 제출 중 오류가 발생했습니다.');
     },
@@ -123,20 +137,30 @@ export default function EnglishAnswerSheet() {
     
     const newOption = question.selectedOption === option ? undefined : option;
     
+    // Update local state immediately for responsive UI
     setQuestions(prev => prev.map(q => 
       q.number === questionNumber 
         ? { ...q, selectedOption: newOption }
         : q
     ));
     
-    // Save to database if option is selected
-    if (newOption && user?.id) {
-      saveAnswerMutation.mutate({
-        sheetId: params.sheetId,
-        questionNumber,
-        questionType: 'mcq',
-        mcqOption: newOption,
-      });
+    // Always save to database (both selection and deselection)
+    if (user?.id) {
+      if (newOption) {
+        // Save selected option
+        saveAnswerMutation.mutate({
+          sheetId: params.sheetId,
+          questionNumber,
+          questionType: 'mcq',
+          mcqOption: newOption,
+        });
+      } else {
+        // Delete the answer when deselected
+        deleteAnswerMutation.mutate({
+          sheetId: params.sheetId,
+          questionNumber,
+        });
+      }
     }
   };
 
