@@ -70,6 +70,11 @@ export default function AnswerSheetsScreen() {
   
   const { user: authUser } = useAuth();
   
+  // Calculate total questions in real-time
+  const totalQuestions = React.useMemo(() => {
+    return (parseInt(newSubjectMCQ) || 0) + (parseInt(newSubjectText) || 0);
+  }, [newSubjectMCQ, newSubjectText]);
+  
   // Fetch subjects from database
   const subjectsQuery = trpc.tests.getUserSubjects.useQuery({
     userId: authUser?.id || ""
@@ -323,26 +328,40 @@ export default function AnswerSheetsScreen() {
   const handleEditSubject = (subject: any) => {
     setEditingSubject(subject);
     setNewSubjectName(subject.name);
-    setNewSubjectColor(DEFAULT_COLORS[0]);
+    setNewSubjectColor(subject.color || DEFAULT_COLORS[0]);
     
-    // Set subject-specific values based on subject name
-    const subjectName = subject.name.toLowerCase();
-    if (subjectName.includes('korean') || subjectName.includes('국어')) {
-      setNewSubjectMCQ('34'); // Common: 34 (Problem 1 ~ 34)
-      setNewSubjectText('11'); // Elective: 11 (Problem 35 ~ 45)
-    } else if (subjectName.includes('mathematics') || subjectName.includes('수학')) {
-      setNewSubjectMCQ('30'); // All questions are MCQ (Common: 22, Elective: 8)
-      setNewSubjectText('0');
-    } else if (subjectName.includes('english') || subjectName.includes('영어')) {
-      setNewSubjectMCQ('45'); // Common: 45 (Problem 1 ~ 45)
-      setNewSubjectText('0'); // Elective: 0
-    } else if (subjectName.includes('others') || subjectName.includes('그외')) {
-      setNewSubjectMCQ('20'); // Common: 20 (Problem 1 ~ 20)
-      setNewSubjectText('0'); // Elective: 0
+    // Use current values from database if available, otherwise use defaults based on subject name
+    if (subject.mcqQuestions !== undefined && subject.textQuestions !== undefined) {
+      // Use actual current values from database for real-time editing
+      setNewSubjectMCQ(subject.mcqQuestions.toString());
+      setNewSubjectText(subject.textQuestions.toString());
+      console.log('Using current database values for subject edit:', {
+        name: subject.name,
+        mcq: subject.mcqQuestions,
+        text: subject.textQuestions,
+        total: subject.totalQuestions
+      });
     } else {
-      // Default values for custom subjects
-      setNewSubjectMCQ('20');
-      setNewSubjectText('0');
+      // Fallback to defaults only if no database values exist
+      const subjectName = subject.name.toLowerCase();
+      if (subjectName.includes('korean') || subjectName.includes('국어')) {
+        setNewSubjectMCQ('34'); // Common: 34 (Problem 1 ~ 34)
+        setNewSubjectText('11'); // Elective: 11 (Problem 35 ~ 45)
+      } else if (subjectName.includes('mathematics') || subjectName.includes('수학')) {
+        setNewSubjectMCQ('30'); // All questions are MCQ (Common: 22, Elective: 8)
+        setNewSubjectText('0');
+      } else if (subjectName.includes('english') || subjectName.includes('영어')) {
+        setNewSubjectMCQ('45'); // Common: 45 (Problem 1 ~ 45)
+        setNewSubjectText('0'); // Elective: 0
+      } else if (subjectName.includes('others') || subjectName.includes('그외')) {
+        setNewSubjectMCQ('20'); // Common: 20 (Problem 1 ~ 20)
+        setNewSubjectText('0'); // Elective: 0
+      } else {
+        // Default values for custom subjects
+        setNewSubjectMCQ('20');
+        setNewSubjectText('0');
+      }
+      console.log('Using default values for subject edit (no database values found):', subject.name);
     }
     
     setShowSubjectModal(true);
@@ -891,7 +910,7 @@ export default function AnswerSheetsScreen() {
                           
                           <View style={styles.totalQuestionsContainer}>
                             <Text style={styles.totalQuestionsText}>
-                              {language === 'ko' ? '총 문제 수' : 'Total Questions'}: {(parseInt(newSubjectMCQ) || 0) + (parseInt(newSubjectText) || 0)}
+                              {language === 'ko' ? '총 문제 수' : 'Total Questions'}: {totalQuestions}
                             </Text>
                           </View>
                           
@@ -1147,7 +1166,7 @@ export default function AnswerSheetsScreen() {
                           
                           <View style={styles.totalQuestionsContainer}>
                             <Text style={styles.totalQuestionsText}>
-                              {language === 'ko' ? '총 문제 수' : 'Total Questions'}: {(parseInt(newSubjectMCQ) || 0) + (parseInt(newSubjectText) || 0)}
+                              {language === 'ko' ? '총 문제 수' : 'Total Questions'}: {totalQuestions}
                             </Text>
                           </View>
                           
