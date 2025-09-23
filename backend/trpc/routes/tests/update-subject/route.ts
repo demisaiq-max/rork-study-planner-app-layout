@@ -1,5 +1,5 @@
 import { publicProcedure } from '@/backend/trpc/create-context';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/backend/lib/supabase';
 import { z } from 'zod';
 
 export const updateSubject = publicProcedure
@@ -54,6 +54,25 @@ export const updateSubject = publicProcedure
 
     if (error) {
       throw new Error(`Failed to update subject: ${error.message}`);
+    }
+
+    // Update corresponding answer sheets if question configuration changed
+    if (input.mcqQuestions !== undefined || input.textQuestions !== undefined || input.totalQuestions !== undefined) {
+      const { error: updateSheetsError } = await supabase
+        .from('answer_sheets')
+        .update({
+          total_questions: input.totalQuestions || data.total_questions,
+          mcq_questions: input.mcqQuestions || data.mcq_questions,
+          text_questions: input.textQuestions || data.text_questions,
+          updated_at: new Date().toISOString()
+        })
+        .eq('subject_id', input.id)
+        .eq('user_id', input.userId);
+
+      if (updateSheetsError) {
+        console.error('Error updating answer sheets:', updateSheetsError);
+        // Don't throw error here, just log it so subject update doesn't fail
+      }
     }
 
     return {

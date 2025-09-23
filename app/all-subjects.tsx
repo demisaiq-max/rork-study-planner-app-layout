@@ -111,9 +111,36 @@ export default function AllSubjectsScreen() {
       return;
     }
 
+    // Set default question configuration based on subject name
+    const subjectName = newSubjectName.trim().toLowerCase();
+    let mcqQuestions = 20;
+    let textQuestions = 0;
+    let totalQuestions = 20;
+    
+    if (subjectName.includes('korean') || subjectName.includes('국어')) {
+      mcqQuestions = 34;
+      textQuestions = 11;
+      totalQuestions = 45;
+    } else if (subjectName.includes('mathematics') || subjectName.includes('수학') || subjectName.includes('math')) {
+      mcqQuestions = 30;
+      textQuestions = 0;
+      totalQuestions = 30;
+    } else if (subjectName.includes('english') || subjectName.includes('영어')) {
+      mcqQuestions = 45;
+      textQuestions = 0;
+      totalQuestions = 45;
+    } else if (subjectName.includes('others') || subjectName.includes('그외')) {
+      mcqQuestions = 20;
+      textQuestions = 0;
+      totalQuestions = 20;
+    }
+
     createSubjectMutation.mutate({
       userId: user.id,
       name: newSubjectName.trim(),
+      mcqQuestions,
+      textQuestions,
+      totalQuestions,
     });
   }, [newSubjectName, user?.id, createSubjectMutation]);
 

@@ -378,10 +378,35 @@ export default function AnswerSheetsScreen() {
       return;
     }
 
+    const mcqCount = parseInt(newSubjectMCQ) || 0;
+    const textCount = parseInt(newSubjectText) || 0;
+    const totalCount = mcqCount + textCount;
+
+    if (totalCount === 0) {
+      Alert.alert('Error', 'Total questions must be greater than 0');
+      return;
+    }
+
+    if (totalCount > 200) {
+      Alert.alert('Error', 'Total questions cannot exceed 200');
+      return;
+    }
+
+    // Prepare question config if using dynamic mode
+    let finalQuestionConfig = undefined;
+    if (showDynamicConfig && questionConfig.length > 0) {
+      finalQuestionConfig = questionConfig;
+    }
+
     updateSubjectMutation.mutate({
       id: editingSubject.id,
       userId: authUser.id,
       name: newSubjectName,
+      color: newSubjectColor,
+      mcqQuestions: mcqCount,
+      textQuestions: textCount,
+      totalQuestions: totalCount,
+      questionConfig: finalQuestionConfig,
     });
   };
 
