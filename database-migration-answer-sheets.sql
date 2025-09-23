@@ -1,5 +1,5 @@
 -- ============================================
--- ANSWER SHEETS DATABASE MIGRATION
+-- ANSWER SHEETS DATABASE MIGRATION (CORRECTED)
 -- ============================================
 -- Run this SQL in your Supabase SQL Editor to add answer sheet functionality
 
@@ -9,7 +9,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- Answer sheets table for storing answer sheet metadata
 CREATE TABLE IF NOT EXISTS answer_sheets (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     subject VARCHAR(100) NOT NULL CHECK (subject IN ('korean', 'mathematics', 'english', 'others')),
     sheet_name VARCHAR(255) NOT NULL,
     test_type VARCHAR(50) DEFAULT 'practice' CHECK (test_type IN ('practice', 'mock', 'midterm', 'final')),
@@ -141,7 +141,7 @@ INSERT INTO answer_sheets (user_id, subject, sheet_name, test_type, total_questi
 ('bdfd8c34-a28f-4101-97e0-894c3fa5c7a6', 'korean', 'Korean Practice Test 1', 'practice', 45, 34, 11, 'draft'),
 ('bdfd8c34-a28f-4101-97e0-894c3fa5c7a6', 'mathematics', 'Math Mock Exam', 'mock', 30, 30, 0, 'submitted'),
 ('bdfd8c34-a28f-4101-97e0-894c3fa5c7a6', 'english', 'English Midterm', 'midterm', 45, 45, 0, 'graded')
-ON CONFLICT DO NOTHING;
+ON CONFLICT (id) DO NOTHING;
 
 -- Sample answer sheet responses for the test user
 -- Get the answer sheet IDs for sample responses
@@ -163,7 +163,7 @@ BEGIN
     SELECT id INTO english_sheet_id FROM answer_sheets
     WHERE user_id = 'bdfd8c34-a28f-4101-97e0-894c3fa5c7a6' AND subject = 'english' LIMIT 1;
 
-    -- Insert sample MCQ responses for Korean (questions 1-10)
+    -- Insert sample MCQ responses for Korean (questions 1-5)
     IF korean_sheet_id IS NOT NULL THEN
         INSERT INTO answer_sheet_responses (answer_sheet_id, question_number, question_type, mcq_option) VALUES
         (korean_sheet_id, 1, 'mcq', 2),
@@ -250,18 +250,18 @@ $$ LANGUAGE plpgsql;
 
 -- Function to update answer sheet stats (called after saving answers)
 CREATE OR REPLACE FUNCTION update_answer_sheet_stats(sheet_id UUID)
-RETURNS BOOLEAN AS $
+RETURNS BOOLEAN AS $$
 BEGIN
     -- This function can be used to trigger any additional processing
     -- after an answer is saved, such as updating cached statistics
     -- For now, it just returns true as the stats are calculated on-demand
     RETURN true;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 -- Function to submit an answer sheet (change status and set submitted_at)
 CREATE OR REPLACE FUNCTION submit_answer_sheet(sheet_id UUID)
-RETURNS BOOLEAN AS $
+RETURNS BOOLEAN AS $$
 BEGIN
     UPDATE answer_sheets
     SET status = 'submitted', submitted_at = NOW()
@@ -269,7 +269,7 @@ BEGIN
 
     RETURN FOUND;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 -- Function to grade an answer sheet (for future auto-grading functionality)
 CREATE OR REPLACE FUNCTION grade_answer_sheet(sheet_id UUID, correct_answers JSONB)
@@ -342,12 +342,10 @@ SELECT
     COUNT(r.id) as answered_questions,
     COUNT(CASE WHEN r.question_type = 'mcq' AND r.mcq_option IS NOT NULL THEN 1 END) as mcq_answered,
     COUNT(CASE WHEN r.question_type = 'text' AND r.text_answer IS NOT NULL AND r.text_answer != '' THEN 1 END) as text_answered,
-    ROUND((COUNT(r.id) * 100.0 / a.total_questions), 2) as completion_percentage
+    ROUND((COUNT(r.id) * 100.0 / NULLIF(a.total_questions, 0)), 2) as completion_percentage
 FROM answer_sheets a
 LEFT JOIN answer_sheet_responses r ON a.id = r.answer_sheet_id
-WHERE (r.question_type = 'mcq' AND r.mcq_option IS NOT NULL)
-   OR (r.question_type = 'text' AND r.text_answer IS NOT NULL AND r.text_answer != '')
-   OR r.id IS NULL
+AND ((r.question_type = 'mcq' AND r.mcq_option IS NOT NULL) OR (r.question_type = 'text' AND r.text_answer IS NOT NULL AND r.text_answer != ''))
 GROUP BY a.id, a.user_id, a.subject, a.sheet_name, a.test_type, a.total_questions,
          a.mcq_questions, a.text_questions, a.status, a.score, a.grade, a.submitted_at, a.created_at;
 
