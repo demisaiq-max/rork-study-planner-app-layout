@@ -24,8 +24,6 @@ interface AnswerSheet {
   total_questions: number;
   mcq_questions?: number;
   text_questions?: number;
-  answered_questions: number;
-  completion_percentage: number;
   status: 'draft' | 'submitted' | 'graded';
   score?: number;
   grade?: string;
@@ -77,16 +75,19 @@ export default function MockTestsScreen() {
   );
   
   const createAnswerSheetMutation = trpc.answerSheets.createAnswerSheet.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('✅ Answer sheet created successfully:', data);
+      // Force immediate refetch to get the latest data
       answerSheetsQuery.refetch();
       setShowAddModal(false);
       setNewSheetName('');
       setNewSheetQuestions('20');
       setNewMcqQuestions('20');
       setNewTextQuestions('0');
-      Alert.alert('Success', 'Answer sheet created successfully!');
+      Alert.alert('Success', `Answer sheet created successfully with ${data.total_questions} questions (${data.mcq_questions} MCQ, ${data.text_questions} Text)!`);
     },
     onError: (error) => {
+      console.error('❌ Failed to create answer sheet:', error);
       Alert.alert('Error', error.message || 'Failed to create answer sheet');
     },
   });
@@ -300,7 +301,7 @@ export default function MockTestsScreen() {
                   <View style={styles.sheetInfo}>
                     <Text style={styles.sheetName}>{sheet.sheet_name}</Text>
                     <Text style={styles.sheetMeta}>
-                      {sheet.total_questions} questions ({sheet.mcq_questions || 0} MCQ, {sheet.text_questions || 0} Text) • {sheet.answered_questions || 0} answered ({Math.round(sheet.completion_percentage || 0)}%)
+                      {sheet.total_questions} questions ({sheet.mcq_questions || 0} MCQ, {sheet.text_questions || 0} Text)
                     </Text>
                     <Text style={styles.sheetDate}>
                       {new Date(sheet.created_at).toLocaleDateString()}

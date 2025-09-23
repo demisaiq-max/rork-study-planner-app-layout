@@ -108,7 +108,14 @@ export default function MathematicsAnswerSheet() {
     }
     
     console.log('=== REAL-TIME MATHEMATICS ANSWER SHEET UPDATE ===');
-    console.log('Initializing questions with database data:', answerSheetQuery.data);
+    console.log('📊 Raw database data:', {
+      id: answerSheetQuery.data.id,
+      total_questions: answerSheetQuery.data.total_questions,
+      mcq_questions: answerSheetQuery.data.mcq_questions,
+      text_questions: answerSheetQuery.data.text_questions,
+      subject: answerSheetQuery.data.subject,
+      status: answerSheetQuery.data.status
+    });
     
     const initialQuestions: Question[] = [];
     
@@ -117,19 +124,30 @@ export default function MathematicsAnswerSheet() {
     const latestMcqQuestions = answerSheetQuery.data.mcq_questions || answerSheetQuery.data.total_questions;
     const latestTextQuestions = answerSheetQuery.data.text_questions || 0;
     
-    console.log('Using REAL-TIME configuration from database:', {
+    console.log('🔄 Using REAL-TIME configuration from database:', {
       latestTotalQuestions,
       latestMcqQuestions,
       latestTextQuestions,
-      sheetId: answerSheetQuery.data.id
+      sheetId: answerSheetQuery.data.id,
+      calculatedTotal: latestMcqQuestions + latestTextQuestions
     });
+    
+    // Validate data consistency
+    if (latestMcqQuestions + latestTextQuestions !== latestTotalQuestions) {
+      console.warn('⚠️ Data inconsistency detected:', {
+        mcq: latestMcqQuestions,
+        text: latestTextQuestions,
+        sum: latestMcqQuestions + latestTextQuestions,
+        total: latestTotalQuestions
+      });
+    }
     
     // Parse dynamic question configuration if provided
     let dynamicQuestionConfig: any[] | undefined;
     try {
       if (params.questionConfig) {
         dynamicQuestionConfig = JSON.parse(params.questionConfig);
-        console.log('Using dynamic question config:', dynamicQuestionConfig);
+        console.log('🎯 Using dynamic question config:', dynamicQuestionConfig);
       }
     } catch (error) {
       console.warn('Failed to parse questionConfig:', error);
@@ -137,6 +155,7 @@ export default function MathematicsAnswerSheet() {
     
     if (dynamicQuestionConfig && dynamicQuestionConfig.length > 0) {
       // Use dynamic configuration if available
+      console.log('📋 Using dynamic configuration with', dynamicQuestionConfig.length, 'questions');
       for (const questionConfig of dynamicQuestionConfig) {
         initialQuestions.push({
           number: questionConfig.number,
@@ -151,9 +170,10 @@ export default function MathematicsAnswerSheet() {
         text: latestTextQuestions
       });
       
+      // Create questions based on database configuration
       for (let i = 1; i <= latestTotalQuestions; i++) {
         const questionType: AnswerType = i <= latestMcqQuestions ? 'mcq' : 'text';
-        console.log(`Question ${i}: type = ${questionType} (i <= ${latestMcqQuestions} = ${i <= latestMcqQuestions})`);
+        console.log(`📝 Question ${i}: type = ${questionType} (${i} <= ${latestMcqQuestions} = ${i <= latestMcqQuestions})`);
         initialQuestions.push({
           number: i,
           type: questionType,
@@ -162,7 +182,8 @@ export default function MathematicsAnswerSheet() {
     }
     
     // Load existing responses if available
-    if (answerSheetQuery.data.responses) {
+    if (answerSheetQuery.data.responses && answerSheetQuery.data.responses.length > 0) {
+      console.log('📥 Loading', answerSheetQuery.data.responses.length, 'existing responses');
       const responsesMap = new Map();
       answerSheetQuery.data.responses.forEach((response: any) => {
         responsesMap.set(response.question_number, response);
@@ -178,15 +199,20 @@ export default function MathematicsAnswerSheet() {
           }
         }
       });
+    } else {
+      console.log('📭 No existing responses found');
     }
     
     // ALWAYS update questions to reflect real-time changes from database
-    console.log('Updating questions with real-time data:', {
-      total: latestTotalQuestions,
-      mcq: latestMcqQuestions,
-      text: latestTextQuestions,
-      questionsLength: initialQuestions.length
+    console.log('✅ Final question configuration:', {
+      totalCreated: initialQuestions.length,
+      mcqCount: initialQuestions.filter(q => q.type === 'mcq').length,
+      textCount: initialQuestions.filter(q => q.type === 'text').length,
+      databaseTotal: latestTotalQuestions,
+      databaseMcq: latestMcqQuestions,
+      databaseText: latestTextQuestions
     });
+    
     setQuestions(initialQuestions);
     
     // Check if answer sheet is already submitted
@@ -196,8 +222,8 @@ export default function MathematicsAnswerSheet() {
       setIsSubmitted(false);
     }
     
-    console.log('✅ Mathematics Answer Sheet updated with', initialQuestions.length, 'questions');
-    console.log('Question types:', initialQuestions.map(q => `${q.number}:${q.type}`).join(', '));
+    console.log('🎉 Mathematics Answer Sheet updated with', initialQuestions.length, 'questions');
+    console.log('📋 Question breakdown:', initialQuestions.map(q => `${q.number}:${q.type}`).join(', '));
     console.log('=== END REAL-TIME UPDATE ===');
   }, [answerSheetQuery.data, params.questionConfig]);
 
