@@ -95,9 +95,15 @@ export default function MathematicsAnswerSheet() {
   
   // Initialize questions and load existing responses with real-time updates
   useEffect(() => {
-    // ONLY proceed if we have database data - don't use fallback parameters
+    // ALWAYS wait for database data if sheetId is provided - this ensures real-time updates
+    if (params.sheetId && !answerSheetQuery.data) {
+      console.log('⏳ Waiting for database data for sheet ID:', params.sheetId);
+      return;
+    }
+    
+    // If no sheetId, we can't proceed without database data
     if (!answerSheetQuery.data) {
-      console.log('No database data available yet, waiting for real-time data...');
+      console.log('❌ No database data available and no sheet ID provided');
       return;
     }
     

@@ -141,42 +141,52 @@ export default function AnswerSheetEditor() {
   
   // Initialize questions based on real-time database data OR fallback parameters
   useEffect(() => {
+    // ALWAYS wait for database data if sheetId is provided
+    if (params.sheetId && !answerSheetQuery.data) {
+      console.log('Waiting for database data for sheet ID:', params.sheetId);
+      return;
+    }
+    
     // Use database data if available, otherwise use parameters as fallback
     let currentMcqQuestions: number;
     let currentTextQuestions: number;
     let currentTotalQuestions: number;
     
     if (answerSheetQuery.data) {
-      // Use database data when available
+      // Use database data when available - this is the REAL-TIME source of truth
       currentMcqQuestions = answerSheetQuery.data.mcq_questions || answerSheetQuery.data.total_questions;
       currentTextQuestions = answerSheetQuery.data.text_questions || 0;
       currentTotalQuestions = answerSheetQuery.data.total_questions;
-      console.log('Using database data for answer sheet editor');
+      console.log('✅ Using REAL-TIME database data for answer sheet editor');
     } else {
       // Fallback to parameters when no database data (e.g., new subjects)
       currentMcqQuestions = mcqQuestions;
       currentTextQuestions = textQuestions;
       currentTotalQuestions = totalQuestions;
-      console.log('Using parameter fallback data for answer sheet editor');
+      console.log('⚠️ Using parameter fallback data for answer sheet editor');
     }
     
-
-    
-    console.log('=== ANSWER SHEET EDITOR UPDATE ===');
-    console.log(`Data source: ${answerSheetQuery.data ? 'Database' : 'Parameters'}`);
+    console.log('=== ANSWER SHEET EDITOR REAL-TIME UPDATE ===');
+    console.log(`Data source: ${answerSheetQuery.data ? '🔄 DATABASE (Real-time)' : '📋 PARAMETERS (Fallback)'}`);
     if (answerSheetQuery.data) {
-      console.log(`Database sheet ID: ${answerSheetQuery.data.id}`);
+      console.log(`🆔 Database sheet ID: ${answerSheetQuery.data.id}`);
+      console.log(`📊 Database raw data:`, {
+        total_questions: answerSheetQuery.data.total_questions,
+        mcq_questions: answerSheetQuery.data.mcq_questions,
+        text_questions: answerSheetQuery.data.text_questions
+      });
     }
-    console.log(`- Total Questions: ${currentTotalQuestions}`);
-    console.log(`- MCQ Questions: ${currentMcqQuestions}`);
-    console.log(`- Text Questions: ${currentTextQuestions}`);
-    console.log(`- Subject: ${config.name}`);
+    console.log(`📝 Final calculated values:`);
+    console.log(`  - Total Questions: ${currentTotalQuestions}`);
+    console.log(`  - MCQ Questions: ${currentMcqQuestions}`);
+    console.log(`  - Text Questions: ${currentTextQuestions}`);
+    console.log(`  - Subject: ${config.name}`);
     
     const initialQuestions: Question[] = [];
     
     if (dynamicQuestionConfig && dynamicQuestionConfig.length > 0) {
       // Use dynamic configuration if available
-      console.log('Using dynamic question configuration:', dynamicQuestionConfig);
+      console.log('🎯 Using dynamic question configuration:', dynamicQuestionConfig);
       for (const questionConfig of dynamicQuestionConfig) {
         initialQuestions.push({
           number: questionConfig.number,
@@ -184,7 +194,8 @@ export default function AnswerSheetEditor() {
         });
       }
     } else {
-      // Use ONLY the real-time configuration from database
+      // Use the real-time configuration from database
+      console.log(`🔢 Generating ${currentTotalQuestions} questions (${currentMcqQuestions} MCQ + ${currentTextQuestions} Text)`);
       for (let i = 1; i <= currentTotalQuestions; i++) {
         const questionType: AnswerType = i <= currentMcqQuestions ? 'mcq' : 'text';
         
@@ -196,8 +207,8 @@ export default function AnswerSheetEditor() {
     }
     
     console.log(`✅ Created ${initialQuestions.length} questions with REAL-TIME database config`);
-    console.log('Question types:', initialQuestions.map(q => `${q.number}:${q.type}`).join(', '));
-    console.log('Real-time MCQ/Text breakdown:', {
+    console.log('📋 Question types:', initialQuestions.map(q => `${q.number}:${q.type}`).join(', '));
+    console.log('📊 Real-time MCQ/Text breakdown:', {
       mcq: initialQuestions.filter(q => q.type === 'mcq').length,
       text: initialQuestions.filter(q => q.type === 'text').length,
       total: initialQuestions.length,
@@ -208,7 +219,7 @@ export default function AnswerSheetEditor() {
     console.log('=== END REAL-TIME UPDATE ===');
     
     setQuestions(initialQuestions);
-  }, [answerSheetQuery.data, config.name, dynamicQuestionConfig, mcqQuestions, textQuestions, totalQuestions]);
+  }, [answerSheetQuery.data, params.sheetId, dynamicQuestionConfig]);
 
   const handleMCQSelect = (questionNumber: number, option: MCQOption) => {
     setQuestions(prev => prev.map(q => 
