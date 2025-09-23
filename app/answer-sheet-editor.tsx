@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useLanguage } from '@/hooks/language-context';
+import { trpc } from '@/lib/trpc';
 
 type AnswerType = 'mcq' | 'text';
 type MCQOption = 1 | 2 | 3 | 4 | 5;
@@ -73,7 +74,19 @@ const SUBJECT_CONFIGS: Record<string, SubjectConfig> = {
 
 export default function AnswerSheetEditor() {
   const { language } = useLanguage();
-  const params = useLocalSearchParams();
+  const params = useLocalSearchParams<{
+    sheetId?: string;
+    subject?: string;
+    name?: string;
+    subjectId?: string;
+    subjectName?: string;
+    subjectColor?: string;
+    mcqQuestions?: string;
+    textQuestions?: string;
+    totalQuestions?: string;
+    questionConfig?: string;
+  }>();
+  
   const subject = params.subject as string || 'custom';
   const sheetName = params.name as string || 'New Answer Sheet';
   const mcqQuestions = parseInt(params.mcqQuestions as string) || 20;
@@ -81,6 +94,15 @@ export default function AnswerSheetEditor() {
   const totalQuestions = parseInt(params.totalQuestions as string) || 20;
   const subjectName = params.subjectName as string || 'Custom Subject';
   const questionConfigParam = params.questionConfig as string;
+  
+  console.log('Answer Sheet Editor Params:', {
+    sheetId: params.sheetId,
+    mcqQuestions,
+    textQuestions,
+    totalQuestions,
+    subjectName,
+    questionConfig: questionConfigParam
+  });
   
   // Parse dynamic question configuration if provided
   let dynamicQuestionConfig: QuestionConfig[] | undefined;
@@ -92,21 +114,40 @@ export default function AnswerSheetEditor() {
     console.warn('Failed to parse questionConfig:', error);
   }
   
-  // Create dynamic config based on parameters
+  // Fetch answer sheet data from database for real-time updates
+  const answerSheetQuery = trpc.answerSheets.getAnswerSheetById.useQuery(
+    { sheetId: params.sheetId || '' },
+    { 
+      enabled: !!params.sheetId,
+      refetchInterval: 2000, // Real-time updates every 2 seconds
+    }
+  );
+  
+  // Create dynamic config based on real-time database data or parameters
   const config: SubjectConfig = {
     name: subjectName,
-    commonQuestions: mcqQuestions,
-    electiveQuestions: textQuestions,
-    totalQuestions: totalQuestions,
-    mcqEnd: mcqQuestions,
+    commonQuestions: answerSheetQuery.data?.mcq_questions || mcqQuestions,
+    electiveQuestions: answerSheetQuery.data?.text_questions || textQuestions,
+    totalQuestions: answerSheetQuery.data?.total_questions || totalQuestions,
+    mcqEnd: answerSheetQuery.data?.mcq_questions || mcqQuestions,
   };
+  
+  console.log('Real-time config from database:', {
+    databaseData: answerSheetQuery.data,
+    finalConfig: config
+  });
   
   const [questions, setQuestions] = useState<Question[]>([]);
   
-  // Initialize questions based on custom configuration with real-time updates
+  // Initialize questions based on real-time database data or parameters
   useEffect(() => {
-    console.log(`Initializing ${config.totalQuestions} questions for subject: ${config.name}`);
-    console.log(`MCQ: ${mcqQuestions}, Text: ${textQuestions}`);
+    // Use real-time data from database if available, otherwise fall back to parameters
+    const currentMcqQuestions = answerSheetQuery.data?.mcq_questions || mcqQuestions;
+    const currentTextQuestions = answerSheetQuery.data?.text_questions || textQuestions;
+    const currentTotalQuestions = answerSheetQuery.data?.total_questions || totalQuestions;
+    
+    console.log(`Initializing ${currentTotalQuestions} questions for subject: ${config.name}`);
+    console.log(`Real-time MCQ: ${currentMcqQuestions}, Text: ${currentTextQuestions}`);
     
     const initialQuestions: Question[] = [];
     
@@ -120,9 +161,9 @@ export default function AnswerSheetEditor() {
         });
       }
     } else {
-      // Use current configuration for real-time updates
-      for (let i = 1; i <= config.totalQuestions; i++) {
-        const questionType: AnswerType = i <= mcqQuestions ? 'mcq' : 'text';
+      // Use real-time configuration from database for accurate updates
+      for (let i = 1; i <= currentTotalQuestions; i++) {
+        const questionType: AnswerType = i <= currentMcqQuestions ? 'mcq' : 'text';
         
         initialQuestions.push({
           number: i,
@@ -131,15 +172,18 @@ export default function AnswerSheetEditor() {
       }
     }
     
-    console.log(`Created ${initialQuestions.length} questions with real-time config`);
+    console.log(`Created ${initialQuestions.length} questions with REAL-TIME config`);
     console.log('Question types:', initialQuestions.map(q => `${q.number}:${q.type}`).join(', '));
     console.log('Real-time MCQ/Text breakdown:', {
       mcq: initialQuestions.filter(q => q.type === 'mcq').length,
       text: initialQuestions.filter(q => q.type === 'text').length,
-      total: initialQuestions.length
+      total: initialQuestions.length,
+      databaseMcq: currentMcqQuestions,
+      databaseText: currentTextQuestions,
+      databaseTotal: currentTotalQuestions
     });
     setQuestions(initialQuestions);
-  }, [mcqQuestions, textQuestions, config.totalQuestions, config.name, dynamicQuestionConfig]);
+  }, [answerSheetQuery.data, mcqQuestions, textQuestions, totalQuestions, config.totalQuestions, config.name, dynamicQuestionConfig]);
 
   const handleMCQSelect = (questionNumber: number, option: MCQOption) => {
     setQuestions(prev => prev.map(q => 
@@ -268,9 +312,14 @@ export default function AnswerSheetEditor() {
             </Text>
           ) : (
             <Text style={styles.pageDescription}>
-              {mcqQuestions > 0 && `문제 1-${mcqQuestions}: 객관식 (MCQ)`}
-              {textQuestions > 0 && mcqQuestions > 0 && ' | '}
-              {textQuestions > 0 && `문제 ${mcqQuestions + 1}-${config.totalQuestions}: 주관식 (Text)`}
+              {config.commonQuestions > 0 && `문제 1-${config.commonQuestions}: 객관식 (MCQ)`}
+              {config.electiveQuestions > 0 && config.commonQuestions > 0 && ' | '}
+              {config.electiveQuestions > 0 && `문제 ${config.commonQuestions + 1}-${config.totalQuestions}: 주관식 (Text)`}
+            </Text>
+          )}
+          {answerSheetQuery.data && (
+            <Text style={[styles.pageDescription, { color: '#007AFF', fontWeight: '600' }]}>
+              실시간 업데이트: DB에서 {answerSheetQuery.data.total_questions}문제 ({answerSheetQuery.data.mcq_questions}개 MCQ, {answerSheetQuery.data.text_questions}개 Text)
             </Text>
           )}
         </View>
