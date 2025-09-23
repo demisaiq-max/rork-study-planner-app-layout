@@ -60,7 +60,7 @@ export default function MockTestsScreen() {
   
   const subjectKey = getSubjectKey(params.subjectName || '');
   
-  // Fetch answer sheets from database
+  // Fetch answer sheets from database with real-time updates
   const answerSheetsQuery = trpc.answerSheets.getAnswerSheets.useQuery(
     {
       userId: user?.id || '',
@@ -70,6 +70,7 @@ export default function MockTestsScreen() {
     {
       enabled: !!user?.id,
       refetchOnWindowFocus: false,
+      refetchInterval: 3000, // Refetch every 3 seconds for real-time updates
     }
   );
   
@@ -88,12 +89,13 @@ export default function MockTestsScreen() {
   
   const updateAnswerSheetMutation = trpc.answerSheets.updateAnswerSheet.useMutation({
     onSuccess: () => {
+      // Force refetch to get updated data immediately
       answerSheetsQuery.refetch();
       setEditingSheet(null);
       setShowAddModal(false);
       setNewSheetName('');
       setNewSheetQuestions('20');
-      Alert.alert('Success', 'Answer sheet updated successfully!');
+      Alert.alert('Success', 'Answer sheet updated successfully! Changes will be reflected in real-time.');
     },
     onError: (error) => {
       Alert.alert('Error', error.message || 'Failed to update answer sheet');
@@ -134,14 +136,42 @@ export default function MockTestsScreen() {
       return;
     }
 
-    // Determine MCQ and text questions based on subject
+    // Determine MCQ and text questions based on subject with proper defaults
     let mcqQuestions = questionsNum;
     let textQuestions = 0;
     
     if (subjectKey === 'korean') {
-      mcqQuestions = Math.floor(questionsNum * 0.75); // 75% MCQ
-      textQuestions = questionsNum - mcqQuestions;
+      // Korean: 34 common (MCQ) + 11 elective (text) = 45 total
+      if (questionsNum === 45) {
+        mcqQuestions = 34;
+        textQuestions = 11;
+      } else {
+        mcqQuestions = Math.floor(questionsNum * 0.75); // 75% MCQ
+        textQuestions = questionsNum - mcqQuestions;
+      }
+    } else if (subjectKey === 'mathematics') {
+      // Mathematics: All MCQ (30 total)
+      mcqQuestions = questionsNum;
+      textQuestions = 0;
+    } else if (subjectKey === 'english') {
+      // English: All MCQ (45 total)
+      mcqQuestions = questionsNum;
+      textQuestions = 0;
+    } else if (subjectKey === 'others') {
+      // Others: All MCQ (20 total)
+      mcqQuestions = questionsNum;
+      textQuestions = 0;
     }
+
+    console.log('Creating answer sheet with:', {
+      userId: user.id,
+      subject: subjectKey,
+      sheetName: newSheetName,
+      testType: 'mock',
+      totalQuestions: questionsNum,
+      mcqQuestions,
+      textQuestions
+    });
 
     createAnswerSheetMutation.mutate({
       userId: user.id,
@@ -173,14 +203,41 @@ export default function MockTestsScreen() {
       return;
     }
 
-    // Determine MCQ and text questions based on subject
+    // Determine MCQ and text questions based on subject with proper defaults
     let mcqQuestions = questionsNum;
     let textQuestions = 0;
     
     if (subjectKey === 'korean') {
-      mcqQuestions = Math.floor(questionsNum * 0.75); // 75% MCQ
-      textQuestions = questionsNum - mcqQuestions;
+      // Korean: 34 common (MCQ) + 11 elective (text) = 45 total
+      if (questionsNum === 45) {
+        mcqQuestions = 34;
+        textQuestions = 11;
+      } else {
+        mcqQuestions = Math.floor(questionsNum * 0.75); // 75% MCQ
+        textQuestions = questionsNum - mcqQuestions;
+      }
+    } else if (subjectKey === 'mathematics') {
+      // Mathematics: All MCQ (30 total)
+      mcqQuestions = questionsNum;
+      textQuestions = 0;
+    } else if (subjectKey === 'english') {
+      // English: All MCQ (45 total)
+      mcqQuestions = questionsNum;
+      textQuestions = 0;
+    } else if (subjectKey === 'others') {
+      // Others: All MCQ (20 total)
+      mcqQuestions = questionsNum;
+      textQuestions = 0;
     }
+
+    console.log('Updating answer sheet with:', {
+      sheetId: editingSheet.id,
+      sheetName: newSheetName,
+      totalQuestions: questionsNum,
+      mcqQuestions,
+      textQuestions,
+      subjectKey
+    });
 
     updateAnswerSheetMutation.mutate({
       sheetId: editingSheet.id,
@@ -269,7 +326,7 @@ export default function MockTestsScreen() {
                   <View style={styles.sheetInfo}>
                     <Text style={styles.sheetName}>{sheet.sheet_name}</Text>
                     <Text style={styles.sheetMeta}>
-                      {sheet.total_questions} questions • {sheet.answered_questions || 0} answered ({Math.round(sheet.completion_percentage || 0)}%)
+                      {sheet.total_questions} questions ({sheet.mcq_questions || 0} MCQ, {sheet.text_questions || 0} Text) • {sheet.answered_questions || 0} answered ({Math.round(sheet.completion_percentage || 0)}%)
                     </Text>
                     <Text style={styles.sheetDate}>
                       {new Date(sheet.created_at).toLocaleDateString()}

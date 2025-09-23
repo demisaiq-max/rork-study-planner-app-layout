@@ -93,11 +93,23 @@ export default function MathematicsAnswerSheet() {
     },
   });
   
-  // Initialize questions and load existing responses
+  // Initialize questions and load existing responses with real-time updates
   useEffect(() => {
     console.log('Initializing questions with params:', { totalQuestions, mcqQuestions, textQuestions });
+    console.log('Answer sheet data:', answerSheetQuery.data);
     
     const initialQuestions: Question[] = [];
+    
+    // Use the latest data from the database if available
+    const latestTotalQuestions = answerSheetQuery.data?.total_questions || totalQuestions;
+    const latestMcqQuestions = answerSheetQuery.data?.mcq_questions || mcqQuestions;
+    const latestTextQuestions = answerSheetQuery.data?.text_questions || textQuestions;
+    
+    console.log('Using latest configuration:', {
+      latestTotalQuestions,
+      latestMcqQuestions,
+      latestTextQuestions
+    });
     
     // Parse dynamic question configuration if provided
     let dynamicQuestionConfig: any[] | undefined;
@@ -119,9 +131,9 @@ export default function MathematicsAnswerSheet() {
         });
       }
     } else {
-      // Fallback to default configuration (MCQ first, then text)
-      for (let i = 1; i <= totalQuestions; i++) {
-        const questionType: AnswerType = i <= mcqQuestions ? 'mcq' : 'text';
+      // Use the latest configuration from database or fallback to params
+      for (let i = 1; i <= latestTotalQuestions; i++) {
+        const questionType: AnswerType = i <= latestMcqQuestions ? 'mcq' : 'text';
         initialQuestions.push({
           number: i,
           type: questionType,
@@ -218,11 +230,12 @@ export default function MathematicsAnswerSheet() {
     
     const stats = answerSheetStatsQuery.data;
     const totalAnswered = stats?.total_answered || 0;
-    const completionPercentage = Math.round((totalAnswered / totalQuestions) * 100);
+    const currentTotalQuestions = answerSheetQuery.data?.total_questions || totalQuestions;
+    const completionPercentage = Math.round((totalAnswered / currentTotalQuestions) * 100);
     
     Alert.alert(
       '답안지 제출',
-      `Mathematics (수학)\n총 ${totalQuestions}문제 중 ${totalAnswered}문제 답변완료 (${completionPercentage}%)\n\n제출하시겠습니까?\n\n제출 후에는 답안을 수정할 수 없습니다.`,
+      `Mathematics (수학)\n총 ${currentTotalQuestions}문제 중 ${totalAnswered}문제 답변완료 (${completionPercentage}%)\n\n제출하시겠습니까?\n\n제출 후에는 답안을 수정할 수 없습니다.`,
       [
         { text: '취소', style: 'cancel' },
         {
@@ -324,12 +337,13 @@ export default function MathematicsAnswerSheet() {
           headerRight: () => {
             const stats = answerSheetStatsQuery.data;
             const totalAnswered = stats?.total_answered || 0;
-            const completionPercentage = Math.round((totalAnswered / totalQuestions) * 100);
+            const currentTotalQuestions = answerSheetQuery.data?.total_questions || totalQuestions;
+            const completionPercentage = Math.round((totalAnswered / currentTotalQuestions) * 100);
             
             return (
               <View style={styles.headerStats}>
                 <Text style={styles.headerStatsText}>
-                  {totalAnswered}/{totalQuestions} ({completionPercentage}%)
+                  {totalAnswered}/{currentTotalQuestions} ({completionPercentage}%)
                 </Text>
               </View>
             );
@@ -341,11 +355,11 @@ export default function MathematicsAnswerSheet() {
         <Text style={styles.subjectTitle}>Mathematics (수학)</Text>
         <View style={styles.statsContainer}>
           <Text style={styles.questionCount}>
-            총 {totalQuestions}문제 (객관식 {questions.filter(q => q.type === 'mcq').length}문제, 주관식 {questions.filter(q => q.type === 'text').length}문제)
+            총 {answerSheetQuery.data?.total_questions || totalQuestions}문제 (객관식 {questions.filter(q => q.type === 'mcq').length}문제, 주관식 {questions.filter(q => q.type === 'text').length}문제)
           </Text>
           {answerSheetStatsQuery.data && (
             <Text style={styles.progressText}>
-              {answerSheetStatsQuery.data.total_answered}개 답변완료 ({Math.round((answerSheetStatsQuery.data.total_answered / totalQuestions) * 100)}%)
+              {answerSheetStatsQuery.data.total_answered}개 답변완료 ({Math.round((answerSheetStatsQuery.data.total_answered / (answerSheetQuery.data?.total_questions || totalQuestions)) * 100)}%)
             </Text>
           )}
         </View>
