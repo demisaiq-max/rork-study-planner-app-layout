@@ -22,6 +22,8 @@ interface AnswerSheet {
   test_type: 'practice' | 'mock' | 'midterm' | 'final';
   created_at: string;
   total_questions: number;
+  mcq_questions?: number;
+  text_questions?: number;
   answered_questions: number;
   completion_percentage: number;
   status: 'draft' | 'submitted' | 'graded';
@@ -336,8 +338,8 @@ export default function MockTestsScreen() {
                         subjectId: params.subjectId,
                         subjectName: params.subjectName,
                         subjectColor: params.subjectColor,
-                        mcqQuestions: sheet.total_questions.toString(),
-                        textQuestions: '0',
+                        mcqQuestions: (sheet.mcq_questions || sheet.total_questions).toString(),
+                        textQuestions: (sheet.text_questions || 0).toString(),
                         totalQuestions: sheet.total_questions.toString(),
                         questionConfig: params.questionConfig,
                       }
