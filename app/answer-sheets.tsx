@@ -325,24 +325,37 @@ export default function AnswerSheetsScreen() {
     setNewSubjectName(subject.name);
     setNewSubjectColor(DEFAULT_COLORS[0]);
     
-    // Set subject-specific values based on subject name
-    const subjectName = subject.name.toLowerCase();
-    if (subjectName.includes('korean') || subjectName.includes('국어')) {
-      setNewSubjectMCQ('34'); // Common: 34 (Problem 1 ~ 34)
-      setNewSubjectText('11'); // Elective: 11 (Problem 35 ~ 45)
-    } else if (subjectName.includes('mathematics') || subjectName.includes('수학')) {
-      setNewSubjectMCQ('30'); // All questions are MCQ (Common: 22, Elective: 8)
-      setNewSubjectText('0');
-    } else if (subjectName.includes('english') || subjectName.includes('영어')) {
-      setNewSubjectMCQ('45'); // Common: 45 (Problem 1 ~ 45)
-      setNewSubjectText('0'); // Elective: 0
-    } else if (subjectName.includes('others') || subjectName.includes('그외')) {
-      setNewSubjectMCQ('20'); // Common: 20 (Problem 1 ~ 20)
-      setNewSubjectText('0'); // Elective: 0
+    // Use actual values from database if available, otherwise use subject-specific defaults
+    if (subject.mcqQuestions !== undefined && subject.textQuestions !== undefined) {
+      // Use the actual saved values from the database
+      console.log('Using saved values from database:', {
+        mcq: subject.mcqQuestions,
+        text: subject.textQuestions,
+        total: subject.totalQuestions
+      });
+      setNewSubjectMCQ(subject.mcqQuestions.toString());
+      setNewSubjectText(subject.textQuestions.toString());
     } else {
-      // Default values for custom subjects
-      setNewSubjectMCQ('20');
-      setNewSubjectText('0');
+      // Fallback to subject-specific defaults if no saved values
+      const subjectName = subject.name.toLowerCase();
+      console.log('Using default values for subject:', subjectName);
+      if (subjectName.includes('korean') || subjectName.includes('국어')) {
+        setNewSubjectMCQ('34'); // Common: 34 (Problem 1 ~ 34)
+        setNewSubjectText('11'); // Elective: 11 (Problem 35 ~ 45)
+      } else if (subjectName.includes('mathematics') || subjectName.includes('수학')) {
+        setNewSubjectMCQ('30'); // All questions are MCQ (Common: 22, Elective: 8)
+        setNewSubjectText('0');
+      } else if (subjectName.includes('english') || subjectName.includes('영어')) {
+        setNewSubjectMCQ('45'); // Common: 45 (Problem 1 ~ 45)
+        setNewSubjectText('0'); // Elective: 0
+      } else if (subjectName.includes('others') || subjectName.includes('그외')) {
+        setNewSubjectMCQ('20'); // Common: 20 (Problem 1 ~ 20)
+        setNewSubjectText('0'); // Elective: 0
+      } else {
+        // Default values for custom subjects
+        setNewSubjectMCQ('20');
+        setNewSubjectText('0');
+      }
     }
     
     setShowSubjectModal(true);
@@ -359,10 +372,38 @@ export default function AnswerSheetsScreen() {
       return;
     }
 
+    const mcqCount = parseInt(newSubjectMCQ) || 0;
+    const textCount = parseInt(newSubjectText) || 0;
+    const totalCount = mcqCount + textCount;
+
+    if (totalCount === 0) {
+      Alert.alert('Error', 'Total questions must be greater than 0');
+      return;
+    }
+
+    if (totalCount > 200) {
+      Alert.alert('Error', 'Total questions cannot exceed 200');
+      return;
+    }
+
+    console.log('Updating subject with real-time configuration:', {
+      id: editingSubject.id,
+      name: newSubjectName,
+      mcqQuestions: mcqCount,
+      textQuestions: textCount,
+      totalQuestions: totalCount,
+      questionConfig: showDynamicConfig ? questionConfig : undefined
+    });
+
     updateSubjectMutation.mutate({
       id: editingSubject.id,
       userId: authUser.id,
       name: newSubjectName,
+      color: newSubjectColor,
+      mcqQuestions: mcqCount,
+      textQuestions: textCount,
+      totalQuestions: totalCount,
+      questionConfig: showDynamicConfig ? questionConfig : undefined,
     });
   };
 
@@ -1290,20 +1331,7 @@ export default function AnswerSheetsScreen() {
                                 {sheetCount} {language === 'ko' ? '개 답안지' : 'answer sheets'}
                               </Text>
                               <Text style={styles.subjectItemConfig}>
-                                {(() => {
-                                  const subjectName = subject.name.toLowerCase();
-                                  if (subjectName.includes('korean') || subjectName.includes('국어')) {
-                                    return 'MCQ: 34 | Text: 11 | Total: 45';
-                                  } else if (subjectName.includes('mathematics') || subjectName.includes('수학')) {
-                                    return 'MCQ: 30 | Text: 0 | Total: 30';
-                                  } else if (subjectName.includes('english') || subjectName.includes('영어')) {
-                                    return 'MCQ: 45 | Text: 0 | Total: 45';
-                                  } else if (subjectName.includes('others') || subjectName.includes('그외')) {
-                                    return 'MCQ: 20 | Text: 0 | Total: 20';
-                                  } else {
-                                    return 'MCQ: 20 | Text: 0 | Total: 20';
-                                  }
-                                })()}
+                                MCQ: {subject.mcqQuestions || 0} | Text: {subject.textQuestions || 0} | Total: {subject.totalQuestions || 0}
                               </Text>
                             </View>
                           </View>

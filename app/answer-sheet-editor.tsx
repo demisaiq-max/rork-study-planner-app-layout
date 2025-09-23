@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useLanguage } from '@/hooks/language-context';
+import { useUser } from '@/hooks/user-context';
+import { trpc } from '@/lib/trpc';
 
 type AnswerType = 'mcq' | 'text';
 type MCQOption = 1 | 2 | 3 | 4 | 5;
@@ -73,14 +75,27 @@ const SUBJECT_CONFIGS: Record<string, SubjectConfig> = {
 
 export default function AnswerSheetEditor() {
   const { language } = useLanguage();
+  const { user } = useUser();
   const params = useLocalSearchParams();
   const subject = params.subject as string || 'custom';
   const sheetName = params.name as string || 'New Answer Sheet';
-  const mcqQuestions = parseInt(params.mcqQuestions as string) || 20;
-  const textQuestions = parseInt(params.textQuestions as string) || 0;
-  const totalQuestions = parseInt(params.totalQuestions as string) || 20;
+  const sheetId = params.sheetId as string;
   const subjectName = params.subjectName as string || 'Custom Subject';
   const questionConfigParam = params.questionConfig as string;
+  
+  // Fetch real-time answer sheet data from database
+  const answerSheetQuery = trpc.answerSheets.getAnswerSheetById.useQuery(
+    { sheetId: sheetId || '' },
+    { 
+      enabled: !!sheetId,
+      refetchInterval: 2000, // Refetch every 2 seconds for real-time updates
+    }
+  );
+  
+  // Use database values if available, otherwise fallback to URL params
+  const mcqQuestions = answerSheetQuery.data?.mcq_questions || parseInt(params.mcqQuestions as string) || 20;
+  const textQuestions = answerSheetQuery.data?.text_questions || parseInt(params.textQuestions as string) || 0;
+  const totalQuestions = answerSheetQuery.data?.total_questions || parseInt(params.totalQuestions as string) || 20;
   
   // Parse dynamic question configuration if provided
   let dynamicQuestionConfig: QuestionConfig[] | undefined;
@@ -103,10 +118,16 @@ export default function AnswerSheetEditor() {
   
   const [questions, setQuestions] = useState<Question[]>([]);
   
-  // Initialize questions based on custom configuration
+  // Initialize questions based on real-time database configuration
   useEffect(() => {
+    // Wait for database data if we have a sheetId
+    if (sheetId && !answerSheetQuery.data) {
+      console.log('Waiting for answer sheet data from database...');
+      return;
+    }
+    
     console.log(`Initializing ${config.totalQuestions} questions for subject: ${config.name}`);
-    console.log(`MCQ: ${mcqQuestions}, Text: ${textQuestions}`);
+    console.log(`Real-time MCQ: ${mcqQuestions}, Text: ${textQuestions}, Total: ${totalQuestions}`);
     
     const initialQuestions: Question[] = [];
     
@@ -131,10 +152,10 @@ export default function AnswerSheetEditor() {
       }
     }
     
-    console.log(`Created ${initialQuestions.length} questions`);
+    console.log(`Created ${initialQuestions.length} questions with REAL-TIME data`);
     console.log('Question types:', initialQuestions.map(q => `${q.number}:${q.type}`).join(', '));
     setQuestions(initialQuestions);
-  }, [mcqQuestions, textQuestions, config.totalQuestions, config.name, dynamicQuestionConfig]);
+  }, [mcqQuestions, textQuestions, config.totalQuestions, config.name, dynamicQuestionConfig, answerSheetQuery.data]);
 
   const handleMCQSelect = (questionNumber: number, option: MCQOption) => {
     setQuestions(prev => prev.map(q => 
@@ -255,7 +276,7 @@ export default function AnswerSheetEditor() {
           <Text style={styles.pageSubtitle}>
             MCQ: {questions.filter(q => q.type === 'mcq').length}문제 | 
             Text: {questions.filter(q => q.type === 'text').length}문제 | 
-            Total: {config.totalQuestions}문제
+            Total: {totalQuestions}문제 {sheetId ? '(실시간 업데이트됨)' : ''}
           </Text>
           {dynamicQuestionConfig ? (
             <Text style={styles.pageDescription}>

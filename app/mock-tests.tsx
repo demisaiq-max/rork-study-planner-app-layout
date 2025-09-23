@@ -373,19 +373,25 @@ export default function MockTestsScreen() {
                 <TouchableOpacity 
                   style={[styles.openSheetButton, { backgroundColor: (params.subjectColor || '#4ECDC4') + '20' }]}
                   onPress={() => {
-                    // Navigate to subject-specific answer sheet based on subject name
-                    const subjectName = params.subjectName?.toLowerCase() || '';
-                    let pathname = '/answer-sheet-editor'; // Default fallback
+                    // Always navigate to subject-specific answer sheet based on subject key
+                    let pathname = '/others-answer-sheet'; // Default fallback
                     
-                    if (subjectName.includes('korean') || subjectName.includes('국어')) {
+                    if (subjectKey === 'korean') {
                       pathname = '/korean-answer-sheet';
-                    } else if (subjectName.includes('mathematics') || subjectName.includes('수학')) {
+                    } else if (subjectKey === 'mathematics') {
                       pathname = '/mathematics-answer-sheet';
-                    } else if (subjectName.includes('english') || subjectName.includes('영어')) {
+                    } else if (subjectKey === 'english') {
                       pathname = '/english-answer-sheet';
-                    } else if (subjectName.includes('others') || subjectName.includes('그외')) {
+                    } else if (subjectKey === 'others') {
                       pathname = '/others-answer-sheet';
                     }
+                    
+                    console.log('Navigating to:', pathname, 'with sheet data:', {
+                      sheetId: sheet.id,
+                      mcqQuestions: sheet.mcq_questions,
+                      textQuestions: sheet.text_questions,
+                      totalQuestions: sheet.total_questions
+                    });
                     
                     router.push({
                       pathname,
