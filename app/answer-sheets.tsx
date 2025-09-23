@@ -324,8 +324,27 @@ export default function AnswerSheetsScreen() {
     setEditingSubject(subject);
     setNewSubjectName(subject.name);
     setNewSubjectColor(DEFAULT_COLORS[0]);
-    setNewSubjectMCQ('20');
-    setNewSubjectText('0');
+    
+    // Set subject-specific values based on subject name
+    const subjectName = subject.name.toLowerCase();
+    if (subjectName.includes('korean') || subjectName.includes('국어')) {
+      setNewSubjectMCQ('34'); // Common: 34 (Problem 1 ~ 34)
+      setNewSubjectText('11'); // Elective: 11 (Problem 35 ~ 45)
+    } else if (subjectName.includes('mathematics') || subjectName.includes('수학')) {
+      setNewSubjectMCQ('30'); // All questions are MCQ (Common: 22, Elective: 8)
+      setNewSubjectText('0');
+    } else if (subjectName.includes('english') || subjectName.includes('영어')) {
+      setNewSubjectMCQ('45'); // Common: 45 (Problem 1 ~ 45)
+      setNewSubjectText('0'); // Elective: 0
+    } else if (subjectName.includes('others') || subjectName.includes('그외')) {
+      setNewSubjectMCQ('20'); // Common: 20 (Problem 1 ~ 20)
+      setNewSubjectText('0'); // Elective: 0
+    } else {
+      // Default values for custom subjects
+      setNewSubjectMCQ('20');
+      setNewSubjectText('0');
+    }
+    
     setShowSubjectModal(true);
   };
 
@@ -1271,7 +1290,20 @@ export default function AnswerSheetsScreen() {
                                 {sheetCount} {language === 'ko' ? '개 답안지' : 'answer sheets'}
                               </Text>
                               <Text style={styles.subjectItemConfig}>
-                                MCQ: 20 | Text: 0 | Total: 20
+                                {(() => {
+                                  const subjectName = subject.name.toLowerCase();
+                                  if (subjectName.includes('korean') || subjectName.includes('국어')) {
+                                    return 'MCQ: 34 | Text: 11 | Total: 45';
+                                  } else if (subjectName.includes('mathematics') || subjectName.includes('수학')) {
+                                    return 'MCQ: 30 | Text: 0 | Total: 30';
+                                  } else if (subjectName.includes('english') || subjectName.includes('영어')) {
+                                    return 'MCQ: 45 | Text: 0 | Total: 45';
+                                  } else if (subjectName.includes('others') || subjectName.includes('그외')) {
+                                    return 'MCQ: 20 | Text: 0 | Total: 20';
+                                  } else {
+                                    return 'MCQ: 20 | Text: 0 | Total: 20';
+                                  }
+                                })()}
                               </Text>
                             </View>
                           </View>
