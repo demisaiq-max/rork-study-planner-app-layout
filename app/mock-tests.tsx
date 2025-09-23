@@ -47,6 +47,8 @@ export default function MockTestsScreen() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newSheetName, setNewSheetName] = useState('');
   const [newSheetQuestions, setNewSheetQuestions] = useState('20');
+  const [newMcqQuestions, setNewMcqQuestions] = useState('20');
+  const [newTextQuestions, setNewTextQuestions] = useState('0');
   const [editingSheet, setEditingSheet] = useState<AnswerSheet | null>(null);
   
   // Get subject name mapping
@@ -80,6 +82,8 @@ export default function MockTestsScreen() {
       setShowAddModal(false);
       setNewSheetName('');
       setNewSheetQuestions('20');
+      setNewMcqQuestions('20');
+      setNewTextQuestions('0');
       Alert.alert('Success', 'Answer sheet created successfully!');
     },
     onError: (error) => {
@@ -95,6 +99,8 @@ export default function MockTestsScreen() {
       setShowAddModal(false);
       setNewSheetName('');
       setNewSheetQuestions('20');
+      setNewMcqQuestions('20');
+      setNewTextQuestions('0');
       Alert.alert('Success', 'Answer sheet updated successfully! Changes will be reflected in real-time.');
     },
     onError: (error) => {
@@ -188,6 +194,8 @@ export default function MockTestsScreen() {
     setEditingSheet(sheet);
     setNewSheetName(sheet.sheet_name);
     setNewSheetQuestions(sheet.total_questions.toString());
+    setNewMcqQuestions((sheet.mcq_questions || sheet.total_questions).toString());
+    setNewTextQuestions((sheet.text_questions || 0).toString());
     setShowAddModal(true);
   };
 
@@ -198,36 +206,17 @@ export default function MockTestsScreen() {
     }
     
     const questionsNum = parseInt(newSheetQuestions) || 20;
+    const mcqQuestions = parseInt(newMcqQuestions) || 0;
+    const textQuestions = parseInt(newTextQuestions) || 0;
+    
     if (questionsNum < 1 || questionsNum > 200) {
       Alert.alert('Error', 'Questions must be between 1 and 200');
       return;
     }
-
-    // Determine MCQ and text questions based on subject with proper defaults
-    let mcqQuestions = questionsNum;
-    let textQuestions = 0;
     
-    if (subjectKey === 'korean') {
-      // Korean: 34 common (MCQ) + 11 elective (text) = 45 total
-      if (questionsNum === 45) {
-        mcqQuestions = 34;
-        textQuestions = 11;
-      } else {
-        mcqQuestions = Math.floor(questionsNum * 0.75); // 75% MCQ
-        textQuestions = questionsNum - mcqQuestions;
-      }
-    } else if (subjectKey === 'mathematics') {
-      // Mathematics: All MCQ (30 total)
-      mcqQuestions = questionsNum;
-      textQuestions = 0;
-    } else if (subjectKey === 'english') {
-      // English: All MCQ (45 total)
-      mcqQuestions = questionsNum;
-      textQuestions = 0;
-    } else if (subjectKey === 'others') {
-      // Others: All MCQ (20 total)
-      mcqQuestions = questionsNum;
-      textQuestions = 0;
+    if (mcqQuestions + textQuestions !== questionsNum) {
+      Alert.alert('Error', 'MCQ + Text questions must equal total questions');
+      return;
     }
 
     console.log('Updating answer sheet with:', {
@@ -270,6 +259,8 @@ export default function MockTestsScreen() {
     setEditingSheet(null);
     setNewSheetName('');
     setNewSheetQuestions('20');
+    setNewMcqQuestions('20');
+    setNewTextQuestions('0');
   };
 
   return (
@@ -462,13 +453,79 @@ export default function MockTestsScreen() {
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>
-                {language === 'ko' ? '문제 수' : 'Number of Questions'}
+                {language === 'ko' ? '총 문제 수' : 'Total Questions'}
               </Text>
               <TextInput
                 style={styles.textInput}
                 value={newSheetQuestions}
-                onChangeText={setNewSheetQuestions}
+                onChangeText={(text) => {
+                  setNewSheetQuestions(text);
+                  // Auto-calculate MCQ and text questions based on subject
+                  const questionsNum = parseInt(text) || 20;
+                  let mcqQuestions = questionsNum;
+                  let textQuestions = 0;
+                  
+                  if (subjectKey === 'korean') {
+                    if (questionsNum === 45) {
+                      mcqQuestions = 34;
+                      textQuestions = 11;
+                    } else {
+                      mcqQuestions = Math.floor(questionsNum * 0.75);
+                      textQuestions = questionsNum - mcqQuestions;
+                    }
+                  } else if (subjectKey === 'mathematics') {
+                    mcqQuestions = questionsNum;
+                    textQuestions = 0;
+                  } else if (subjectKey === 'english') {
+                    mcqQuestions = questionsNum;
+                    textQuestions = 0;
+                  } else if (subjectKey === 'others') {
+                    mcqQuestions = questionsNum;
+                    textQuestions = 0;
+                  }
+                  
+                  setNewMcqQuestions(mcqQuestions.toString());
+                  setNewTextQuestions(textQuestions.toString());
+                }}
                 placeholder="20"
+                placeholderTextColor="#8E8E93"
+                keyboardType="numeric"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>
+                {language === 'ko' ? 'MCQ 문제 수' : 'MCQ Questions'}
+              </Text>
+              <TextInput
+                style={styles.textInput}
+                value={newMcqQuestions}
+                onChangeText={(text) => {
+                  setNewMcqQuestions(text);
+                  const mcq = parseInt(text) || 0;
+                  const textQ = parseInt(newTextQuestions) || 0;
+                  setNewSheetQuestions((mcq + textQ).toString());
+                }}
+                placeholder="20"
+                placeholderTextColor="#8E8E93"
+                keyboardType="numeric"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>
+                {language === 'ko' ? '주관식 문제 수' : 'Text Questions'}
+              </Text>
+              <TextInput
+                style={styles.textInput}
+                value={newTextQuestions}
+                onChangeText={(text) => {
+                  setNewTextQuestions(text);
+                  const textQ = parseInt(text) || 0;
+                  const mcq = parseInt(newMcqQuestions) || 0;
+                  setNewSheetQuestions((mcq + textQ).toString());
+                }}
+                placeholder="0"
                 placeholderTextColor="#8E8E93"
                 keyboardType="numeric"
               />
