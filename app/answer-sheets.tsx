@@ -122,6 +122,10 @@ export default function AnswerSheetsScreen() {
   const createSubjectMutation = trpc.tests.createSubject.useMutation({
     onSuccess: () => {
       subjectsQuery.refetch();
+      // Add a small delay to ensure database transaction is complete
+      setTimeout(() => {
+        answerSheetsQuery.refetch();
+      }, 500);
       closeSubjectModal();
     },
     onError: (error) => {
@@ -132,6 +136,10 @@ export default function AnswerSheetsScreen() {
   const updateSubjectMutation = trpc.tests.updateSubject.useMutation({
     onSuccess: () => {
       subjectsQuery.refetch();
+      // Add a small delay to ensure database transaction is complete
+      setTimeout(() => {
+        answerSheetsQuery.refetch();
+      }, 500);
       closeSubjectModal();
     },
     onError: (error) => {

@@ -12,9 +12,25 @@ export const getAnswerSheetsProcedure = publicProcedure
   .query(async ({ input }) => {
     console.log('Getting answer sheets for user:', input.userId);
     
+    // Use the answer_sheets table directly instead of the view to ensure real-time data
     let query = supabase
-      .from('answer_sheet_summary')
-      .select('*')
+      .from('answer_sheets')
+      .select(`
+        id,
+        user_id,
+        subject,
+        subject_id,
+        sheet_name,
+        test_type,
+        total_questions,
+        mcq_questions,
+        text_questions,
+        status,
+        score,
+        grade,
+        submitted_at,
+        created_at
+      `)
       .eq('user_id', input.userId)
       .order('created_at', { ascending: false });
 
