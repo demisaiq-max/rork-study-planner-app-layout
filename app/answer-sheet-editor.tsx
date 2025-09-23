@@ -139,21 +139,34 @@ export default function AnswerSheetEditor() {
   
   const [questions, setQuestions] = useState<Question[]>([]);
   
-  // Initialize questions based on real-time database data ONLY
+  // Initialize questions based on real-time database data OR fallback parameters
   useEffect(() => {
-    // ONLY proceed if we have database data - don't use fallback parameters
-    if (!answerSheetQuery.data) {
-      console.log('No database data available yet, waiting for real-time data...');
-      return;
+    // Use database data if available, otherwise use parameters as fallback
+    let currentMcqQuestions: number;
+    let currentTextQuestions: number;
+    let currentTotalQuestions: number;
+    
+    if (answerSheetQuery.data) {
+      // Use database data when available
+      currentMcqQuestions = answerSheetQuery.data.mcq_questions || answerSheetQuery.data.total_questions;
+      currentTextQuestions = answerSheetQuery.data.text_questions || 0;
+      currentTotalQuestions = answerSheetQuery.data.total_questions;
+      console.log('Using database data for answer sheet editor');
+    } else {
+      // Fallback to parameters when no database data (e.g., new subjects)
+      currentMcqQuestions = mcqQuestions;
+      currentTextQuestions = textQuestions;
+      currentTotalQuestions = totalQuestions;
+      console.log('Using parameter fallback data for answer sheet editor');
     }
     
-    // ALWAYS use the latest data from the database for real-time updates
-    const currentMcqQuestions = answerSheetQuery.data.mcq_questions || answerSheetQuery.data.total_questions;
-    const currentTextQuestions = answerSheetQuery.data.text_questions || 0;
-    const currentTotalQuestions = answerSheetQuery.data.total_questions;
+
     
-    console.log('=== REAL-TIME ANSWER SHEET EDITOR UPDATE ===');
-    console.log(`Database data for sheet ${answerSheetQuery.data.id}:`);
+    console.log('=== ANSWER SHEET EDITOR UPDATE ===');
+    console.log(`Data source: ${answerSheetQuery.data ? 'Database' : 'Parameters'}`);
+    if (answerSheetQuery.data) {
+      console.log(`Database sheet ID: ${answerSheetQuery.data.id}`);
+    }
     console.log(`- Total Questions: ${currentTotalQuestions}`);
     console.log(`- MCQ Questions: ${currentMcqQuestions}`);
     console.log(`- Text Questions: ${currentTextQuestions}`);
@@ -195,7 +208,7 @@ export default function AnswerSheetEditor() {
     console.log('=== END REAL-TIME UPDATE ===');
     
     setQuestions(initialQuestions);
-  }, [answerSheetQuery.data, config.name, dynamicQuestionConfig]);
+  }, [answerSheetQuery.data, config.name, dynamicQuestionConfig, mcqQuestions, textQuestions, totalQuestions]);
 
   const handleMCQSelect = (questionNumber: number, option: MCQOption) => {
     setQuestions(prev => prev.map(q => 

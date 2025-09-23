@@ -563,42 +563,138 @@ export default function AnswerSheetsScreen() {
                   ]}
                   onPress={() => {
                     if (testType === 'mock') {
+                      // Get actual subject configuration from database or defaults
+                      const subjectName = selectedSubjectInfo?.name?.toLowerCase() || '';
+                      let mcqQuestions = 20;
+                      let textQuestions = 0;
+                      let totalQuestions = 20;
+                      
+                      // Use database values if available, otherwise use subject-specific defaults
+                      if (selectedSubjectInfo?.mcqQuestions !== undefined && selectedSubjectInfo?.textQuestions !== undefined) {
+                        mcqQuestions = selectedSubjectInfo.mcqQuestions;
+                        textQuestions = selectedSubjectInfo.textQuestions;
+                        totalQuestions = selectedSubjectInfo.totalQuestions || (mcqQuestions + textQuestions);
+                      } else {
+                        // Apply subject-specific defaults
+                        if (subjectName.includes('korean') || subjectName.includes('국어')) {
+                          mcqQuestions = 34; // Common: 34 (Problem 1 ~ 34)
+                          textQuestions = 11; // Elective: 11 (Problem 35 ~ 45)
+                          totalQuestions = 45;
+                        } else if (subjectName.includes('mathematics') || subjectName.includes('수학')) {
+                          mcqQuestions = 30; // All questions are MCQ (Common: 22, Elective: 8)
+                          textQuestions = 0;
+                          totalQuestions = 30;
+                        } else if (subjectName.includes('english') || subjectName.includes('영어')) {
+                          mcqQuestions = 45; // Common: 45 (Problem 1 ~ 45)
+                          textQuestions = 0; // Elective: 0
+                          totalQuestions = 45;
+                        } else if (subjectName.includes('others') || subjectName.includes('그외')) {
+                          mcqQuestions = 20; // Common: 20 (Problem 1 ~ 20)
+                          textQuestions = 0; // Elective: 0
+                          totalQuestions = 20;
+                        }
+                      }
+                      
                       router.push({
                         pathname: '/mock-tests',
                         params: {
                           subjectId: selectedSubjectId,
                           subjectName: selectedSubjectInfo?.name || '',
                           subjectColor: '#4ECDC4',
-                          mcqQuestions: 20,
-                          textQuestions: 0,
-                          totalQuestions: 20,
-                          questionConfig: undefined,
+                          mcqQuestions: mcqQuestions.toString(),
+                          textQuestions: textQuestions.toString(),
+                          totalQuestions: totalQuestions.toString(),
+                          questionConfig: selectedSubjectInfo?.questionConfig ? JSON.stringify(selectedSubjectInfo.questionConfig) : undefined,
                         }
                       });
                     } else if (testType === 'midterm') {
+                      // Get actual subject configuration from database or defaults
+                      const subjectName = selectedSubjectInfo?.name?.toLowerCase() || '';
+                      let mcqQuestions = 20;
+                      let textQuestions = 0;
+                      let totalQuestions = 20;
+                      
+                      // Use database values if available, otherwise use subject-specific defaults
+                      if (selectedSubjectInfo?.mcqQuestions !== undefined && selectedSubjectInfo?.textQuestions !== undefined) {
+                        mcqQuestions = selectedSubjectInfo.mcqQuestions;
+                        textQuestions = selectedSubjectInfo.textQuestions;
+                        totalQuestions = selectedSubjectInfo.totalQuestions || (mcqQuestions + textQuestions);
+                      } else {
+                        // Apply subject-specific defaults
+                        if (subjectName.includes('korean') || subjectName.includes('국어')) {
+                          mcqQuestions = 34; // Common: 34 (Problem 1 ~ 34)
+                          textQuestions = 11; // Elective: 11 (Problem 35 ~ 45)
+                          totalQuestions = 45;
+                        } else if (subjectName.includes('mathematics') || subjectName.includes('수학')) {
+                          mcqQuestions = 30; // All questions are MCQ (Common: 22, Elective: 8)
+                          textQuestions = 0;
+                          totalQuestions = 30;
+                        } else if (subjectName.includes('english') || subjectName.includes('영어')) {
+                          mcqQuestions = 45; // Common: 45 (Problem 1 ~ 45)
+                          textQuestions = 0; // Elective: 0
+                          totalQuestions = 45;
+                        } else if (subjectName.includes('others') || subjectName.includes('그외')) {
+                          mcqQuestions = 20; // Common: 20 (Problem 1 ~ 20)
+                          textQuestions = 0; // Elective: 0
+                          totalQuestions = 20;
+                        }
+                      }
+                      
                       router.push({
                         pathname: '/midterm-tests',
                         params: {
                           subjectId: selectedSubjectId,
                           subjectName: selectedSubjectInfo?.name || '',
                           subjectColor: '#FF9500',
-                          mcqQuestions: 20,
-                          textQuestions: 0,
-                          totalQuestions: 20,
-                          questionConfig: undefined,
+                          mcqQuestions: mcqQuestions.toString(),
+                          textQuestions: textQuestions.toString(),
+                          totalQuestions: totalQuestions.toString(),
+                          questionConfig: selectedSubjectInfo?.questionConfig ? JSON.stringify(selectedSubjectInfo.questionConfig) : undefined,
                         }
                       });
                     } else if (testType === 'final') {
+                      // Get actual subject configuration from database or defaults
+                      const subjectName = selectedSubjectInfo?.name?.toLowerCase() || '';
+                      let mcqQuestions = 20;
+                      let textQuestions = 0;
+                      let totalQuestions = 20;
+                      
+                      // Use database values if available, otherwise use subject-specific defaults
+                      if (selectedSubjectInfo?.mcqQuestions !== undefined && selectedSubjectInfo?.textQuestions !== undefined) {
+                        mcqQuestions = selectedSubjectInfo.mcqQuestions;
+                        textQuestions = selectedSubjectInfo.textQuestions;
+                        totalQuestions = selectedSubjectInfo.totalQuestions || (mcqQuestions + textQuestions);
+                      } else {
+                        // Apply subject-specific defaults
+                        if (subjectName.includes('korean') || subjectName.includes('국어')) {
+                          mcqQuestions = 34; // Common: 34 (Problem 1 ~ 34)
+                          textQuestions = 11; // Elective: 11 (Problem 35 ~ 45)
+                          totalQuestions = 45;
+                        } else if (subjectName.includes('mathematics') || subjectName.includes('수학')) {
+                          mcqQuestions = 30; // All questions are MCQ (Common: 22, Elective: 8)
+                          textQuestions = 0;
+                          totalQuestions = 30;
+                        } else if (subjectName.includes('english') || subjectName.includes('영어')) {
+                          mcqQuestions = 45; // Common: 45 (Problem 1 ~ 45)
+                          textQuestions = 0; // Elective: 0
+                          totalQuestions = 45;
+                        } else if (subjectName.includes('others') || subjectName.includes('그외')) {
+                          mcqQuestions = 20; // Common: 20 (Problem 1 ~ 20)
+                          textQuestions = 0; // Elective: 0
+                          totalQuestions = 20;
+                        }
+                      }
+                      
                       router.push({
                         pathname: '/final-tests',
                         params: {
                           subjectId: selectedSubjectId,
                           subjectName: selectedSubjectInfo?.name || '',
                           subjectColor: '#AF52DE',
-                          mcqQuestions: 20,
-                          textQuestions: 0,
-                          totalQuestions: 20,
-                          questionConfig: undefined,
+                          mcqQuestions: mcqQuestions.toString(),
+                          textQuestions: textQuestions.toString(),
+                          totalQuestions: totalQuestions.toString(),
+                          questionConfig: selectedSubjectInfo?.questionConfig ? JSON.stringify(selectedSubjectInfo.questionConfig) : undefined,
                         }
                       });
                     }
