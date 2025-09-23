@@ -9,6 +9,8 @@ import {
   Alert,
 } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { useUser } from '@/hooks/user-context';
+import { trpc } from '@/lib/trpc';
 
 type MCQOption = 1 | 2 | 3 | 4 | 5;
 
@@ -18,44 +20,158 @@ interface Question {
 }
 
 export default function MathematicsAnswerSheet() {
-  const params = useLocalSearchParams();
-  const sheetName = params.name as string || 'Mathematics Answer Sheet';
+  const { user } = useUser();
+  const params = useLocalSearchParams<{
+    sheetId: string;
+    name: string;
+    subjectId: string;
+    subjectName: string;
+    subjectColor: string;
+    mcqQuestions: string;
+    textQuestions: string;
+    totalQuestions: string;
+    questionConfig?: string;
+  }>();
+  
+  const sheetName = params.name || 'Mathematics Answer Sheet';
+  const totalQuestions = parseInt(params.totalQuestions || '30');
   
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
+  
+  // Fetch answer sheet data including existing responses
+  const answerSheetQuery = trpc.answerSheets.getAnswerSheetById.useQuery(
+    { sheetId: params.sheetId || '' },
+    { 
+      enabled: !!params.sheetId,
+      refetchInterval: 2000,
+    }
+  );
+  
+  // Fetch answer sheet stats for real-time tracking
+  const answerSheetStatsQuery = trpc.answerSheets.getAnswerSheetStats.useQuery(
+    { sheetId: params.sheetId || '' },
+    { 
+      enabled: !!params.sheetId,
+      refetchInterval: 2000,
+    }
+  );
+  
+  // Save answer mutation
+  const saveAnswerMutation = trpc.answerSheets.saveAnswer.useMutation({
+    onSuccess: () => {
+      answerSheetStatsQuery.refetch();
+      answerSheetQuery.refetch();
+    },
+    onError: (error) => {
+      console.error('Error saving answer:', error);
+    },
+  });
+  
+  // Submit answer sheet mutation
+  const submitAnswerSheetMutation = trpc.answerSheets.submitAnswerSheet.useMutation({
+    onSuccess: () => {
+      setIsSubmitted(true);
+      answerSheetQuery.refetch();
+    },
+    onError: (error) => {
+      console.error('Error submitting answer sheet:', error);
+      Alert.alert('오류', '답안지 제출 중 오류가 발생했습니다.');
+    },
+  });
   
   // Initialize Mathematics questions: 1-30 all MCQ
   useEffect(() => {
     const initialQuestions: Question[] = [];
-    for (let i = 1; i <= 30; i++) {
+    for (let i = 1; i <= totalQuestions; i++) {
       initialQuestions.push({
         number: i,
       });
     }
+    
+    // Load existing responses if available
+    if (answerSheetQuery.data?.responses) {
+      const responsesMap = new Map();
+      answerSheetQuery.data.responses.forEach((response: any) => {
+        responsesMap.set(response.question_number, response);
+      });
+      
+      initialQuestions.forEach(question => {
+        const existingResponse = responsesMap.get(question.number);
+        if (existingResponse && existingResponse.mcq_option) {
+          question.selectedOption = existingResponse.mcq_option as MCQOption;
+        }
+      });
+    }
+    
     setQuestions(initialQuestions);
+    
+    // Check if answer sheet is already submitted
+    if (answerSheetQuery.data?.status === 'submitted' || answerSheetQuery.data?.status === 'graded') {
+      setIsSubmitted(true);
+    }
+    
     console.log('Mathematics Answer Sheet initialized with', initialQuestions.length, 'questions');
-  }, []);
+  }, [totalQuestions, answerSheetQuery.data]);
 
   const handleMCQSelect = (questionNumber: number, option: MCQOption) => {
+    if (isSubmitted) return;
+    
+    const question = questions.find(q => q.number === questionNumber);
+    if (!question || !params.sheetId) return;
+    
+    const newOption = question.selectedOption === option ? undefined : option;
+    
     setQuestions(prev => prev.map(q => 
       q.number === questionNumber 
-        ? { ...q, selectedOption: q.selectedOption === option ? undefined : option }
+        ? { ...q, selectedOption: newOption }
         : q
     ));
+    
+    // Save to database if option is selected
+    if (newOption && user?.id) {
+      saveAnswerMutation.mutate({
+        sheetId: params.sheetId,
+        questionNumber,
+        questionType: 'mcq',
+        mcqOption: newOption,
+      });
+    }
   };
 
   const handleSubmit = () => {
-    const answeredQuestions = questions.filter(q => q.selectedOption);
+    if (isSubmitted) {
+      router.back();
+      return;
+    }
+    
+    const stats = answerSheetStatsQuery.data;
+    const totalAnswered = stats?.total_answered || 0;
+    const completionPercentage = Math.round((totalAnswered / totalQuestions) * 100);
     
     Alert.alert(
-      '제출 결과 보기',
-      `Mathematics (수학)\n총 30문제 중 ${answeredQuestions.length}문제 답변완료\n\n제출하시겠습니까?`,
+      '답안지 제출',
+      `Mathematics (수학)\n총 ${totalQuestions}문제 중 ${totalAnswered}문제 답변완료 (${completionPercentage}%)\n\n제출하시겠습니까?\n\n제출 후에는 답안을 수정할 수 없습니다.`,
       [
         { text: '취소', style: 'cancel' },
         {
           text: '제출',
           onPress: () => {
-            Alert.alert('제출 완료', 'Mathematics 답안지가 제출되었습니다.');
-            router.back();
+            if (params.sheetId) {
+              const currentAnswers = questions
+                .filter(q => q.selectedOption)
+                .map(q => ({
+                  questionNumber: q.number,
+                  questionType: 'mcq' as const,
+                  mcqOption: q.selectedOption,
+                  textAnswer: undefined,
+                }));
+              
+              submitAnswerSheetMutation.mutate({ 
+                sheetId: params.sheetId,
+                answers: currentAnswers
+              });
+            }
           }
         }
       ]
@@ -74,10 +190,12 @@ export default function MathematicsAnswerSheet() {
               key={option}
               style={[
                 styles.bubble,
-                question.selectedOption === option && styles.bubbleSelected
+                question.selectedOption === option && styles.bubbleSelected,
+                isSubmitted && styles.bubbleDisabled
               ]}
               onPress={() => handleMCQSelect(question.number, option as MCQOption)}
-              activeOpacity={0.7}
+              activeOpacity={isSubmitted ? 1 : 0.7}
+              disabled={isSubmitted}
             >
               <Text style={[
                 styles.bubbleText,
@@ -100,12 +218,32 @@ export default function MathematicsAnswerSheet() {
           headerStyle: { backgroundColor: '#FFFFFF' },
           headerTintColor: '#000000',
           headerTitleStyle: { fontWeight: '600' },
+          headerRight: () => {
+            const stats = answerSheetStatsQuery.data;
+            const totalAnswered = stats?.total_answered || 0;
+            const completionPercentage = Math.round((totalAnswered / totalQuestions) * 100);
+            
+            return (
+              <View style={styles.headerStats}>
+                <Text style={styles.headerStatsText}>
+                  {totalAnswered}/{totalQuestions} ({completionPercentage}%)
+                </Text>
+              </View>
+            );
+          },
         }} 
       />
       
       <View style={styles.headerInfo}>
         <Text style={styles.subjectTitle}>Mathematics (수학)</Text>
-        <Text style={styles.questionCount}>총 30문제 (객관식)</Text>
+        <View style={styles.statsContainer}>
+          <Text style={styles.questionCount}>총 {totalQuestions}문제 (객관식)</Text>
+          {answerSheetStatsQuery.data && (
+            <Text style={styles.progressText}>
+              {answerSheetStatsQuery.data.total_answered}개 답변완료 ({Math.round((answerSheetStatsQuery.data.total_answered / totalQuestions) * 100)}%)
+            </Text>
+          )}
+        </View>
       </View>
       
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={true}>
@@ -115,8 +253,19 @@ export default function MathematicsAnswerSheet() {
       </ScrollView>
 
       <View style={styles.submitContainer}>
-        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-          <Text style={styles.submitButtonText}>제출 결과 보기</Text>
+        <TouchableOpacity 
+          style={[
+            styles.submitButton,
+            isSubmitted && styles.submitButtonDisabled
+          ]} 
+          onPress={handleSubmit}
+        >
+          <Text style={[
+            styles.submitButtonText,
+            isSubmitted && styles.submitButtonTextDisabled
+          ]}>
+            {isSubmitted ? '제출 완료' : '답안지 제출'}
+          </Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -127,6 +276,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  headerStats: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#F0F0F0',
+    borderRadius: 12,
+  },
+  headerStatsText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666666',
   },
   headerInfo: {
     backgroundColor: '#4ECDC4',
@@ -139,10 +299,19 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     marginBottom: 4,
   },
+  statsContainer: {
+    gap: 4,
+  },
   questionCount: {
     fontSize: 14,
     color: '#FFFFFF',
     opacity: 0.9,
+  },
+  progressText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '500',
+    opacity: 0.8,
   },
   scrollView: {
     flex: 1,
@@ -225,5 +394,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  
+  // Disabled states
+  bubbleDisabled: {
+    opacity: 0.6,
+  },
+  submitButtonDisabled: {
+    backgroundColor: '#CCCCCC',
+  },
+  submitButtonTextDisabled: {
+    color: '#666666',
   },
 });

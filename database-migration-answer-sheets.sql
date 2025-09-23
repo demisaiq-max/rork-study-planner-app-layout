@@ -248,9 +248,20 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Function to update answer sheet stats (called after saving answers)
+CREATE OR REPLACE FUNCTION update_answer_sheet_stats(sheet_id UUID)
+RETURNS BOOLEAN AS $
+BEGIN
+    -- This function can be used to trigger any additional processing
+    -- after an answer is saved, such as updating cached statistics
+    -- For now, it just returns true as the stats are calculated on-demand
+    RETURN true;
+END;
+$ LANGUAGE plpgsql;
+
 -- Function to submit an answer sheet (change status and set submitted_at)
 CREATE OR REPLACE FUNCTION submit_answer_sheet(sheet_id UUID)
-RETURNS BOOLEAN AS $$
+RETURNS BOOLEAN AS $
 BEGIN
     UPDATE answer_sheets
     SET status = 'submitted', submitted_at = NOW()
@@ -258,7 +269,7 @@ BEGIN
 
     RETURN FOUND;
 END;
-$$ LANGUAGE plpgsql;
+$ LANGUAGE plpgsql;
 
 -- Function to grade an answer sheet (for future auto-grading functionality)
 CREATE OR REPLACE FUNCTION grade_answer_sheet(sheet_id UUID, correct_answers JSONB)

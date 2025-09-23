@@ -25,7 +25,7 @@ interface Question {
 }
 
 export default function KoreanAnswerSheet() {
-  const { language } = useLanguage();
+  // const { language } = useLanguage();
   const { user } = useUser();
   const params = useLocalSearchParams<{
     sheetId: string;
@@ -45,28 +45,51 @@ export default function KoreanAnswerSheet() {
   const textQuestions = parseInt(params.textQuestions || '11');
   
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
+  
+  // Fetch answer sheet data including existing responses
+  const answerSheetQuery = trpc.answerSheets.getAnswerSheetById.useQuery(
+    { sheetId: params.sheetId || '' },
+    { 
+      enabled: !!params.sheetId,
+      refetchInterval: 2000, // Refetch every 2 seconds for real-time updates
+    }
+  );
   
   // Fetch answer sheet stats for real-time tracking
   const answerSheetStatsQuery = trpc.answerSheets.getAnswerSheetStats.useQuery(
     { sheetId: params.sheetId || '' },
     { 
       enabled: !!params.sheetId,
-      refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
+      refetchInterval: 2000, // Refetch every 2 seconds for real-time updates
     }
   );
   
   // Save answer mutation
   const saveAnswerMutation = trpc.answerSheets.saveAnswer.useMutation({
     onSuccess: () => {
-      // Refetch stats after saving answer
+      // Refetch stats and data after saving answer
       answerSheetStatsQuery.refetch();
+      answerSheetQuery.refetch();
     },
     onError: (error) => {
       console.error('Error saving answer:', error);
     },
   });
+  
+  // Submit answer sheet mutation
+  const submitAnswerSheetMutation = trpc.answerSheets.submitAnswerSheet.useMutation({
+    onSuccess: () => {
+      setIsSubmitted(true);
+      answerSheetQuery.refetch();
+    },
+    onError: (error) => {
+      console.error('Error submitting answer sheet:', error);
+      Alert.alert('오류', '답안지 제출 중 오류가 발생했습니다.');
+    },
+  });
 
-  // Initialize questions based on configuration
+  // Initialize questions and load existing responses
   useEffect(() => {
     const initialQuestions: Question[] = [];
     for (let i = 1; i <= totalQuestions; i++) {
@@ -76,11 +99,39 @@ export default function KoreanAnswerSheet() {
         type: questionType,
       });
     }
+    
+    // Load existing responses if available
+    if (answerSheetQuery.data?.responses) {
+      const responsesMap = new Map();
+      answerSheetQuery.data.responses.forEach((response: any) => {
+        responsesMap.set(response.question_number, response);
+      });
+      
+      initialQuestions.forEach(question => {
+        const existingResponse = responsesMap.get(question.number);
+        if (existingResponse) {
+          if (question.type === 'mcq' && existingResponse.mcq_option) {
+            question.selectedOption = existingResponse.mcq_option as MCQOption;
+          } else if (question.type === 'text' && existingResponse.text_answer) {
+            question.textAnswer = existingResponse.text_answer;
+          }
+        }
+      });
+    }
+    
     setQuestions(initialQuestions);
+    
+    // Check if answer sheet is already submitted
+    if (answerSheetQuery.data?.status === 'submitted' || answerSheetQuery.data?.status === 'graded') {
+      setIsSubmitted(true);
+    }
+    
     console.log('Korean Answer Sheet initialized with', initialQuestions.length, 'questions');
-  }, [totalQuestions, mcqQuestions]);
+  }, [totalQuestions, mcqQuestions, answerSheetQuery.data]);
 
   const handleMCQSelect = (questionNumber: number, option: MCQOption) => {
+    if (isSubmitted) return; // Prevent editing if submitted
+    
     const question = questions.find(q => q.number === questionNumber);
     if (!question || !params.sheetId) return;
     
@@ -104,6 +155,8 @@ export default function KoreanAnswerSheet() {
   };
 
   const handleTextAnswer = (questionNumber: number, text: string) => {
+    if (isSubmitted) return; // Prevent editing if submitted
+    
     setQuestions(prev => prev.map(q => 
       q.number === questionNumber 
         ? { ...q, textAnswer: text }
@@ -128,24 +181,43 @@ export default function KoreanAnswerSheet() {
   };
 
   const handleSubmit = () => {
-    const answeredQuestions = questions.filter(q => 
-      q.type === 'mcq' ? q.selectedOption : q.textAnswer?.trim()
-    );
+    if (isSubmitted) {
+      // If already submitted, just show results
+      router.back();
+      return;
+    }
     
     const stats = answerSheetStatsQuery.data;
-    const totalAnswered = stats?.total_answered || answeredQuestions.length;
+    const totalAnswered = stats?.total_answered || 0;
     const completionPercentage = Math.round((totalAnswered / totalQuestions) * 100);
     
     Alert.alert(
-      '제출 결과 보기',
-      `Korean (국어)\n총 ${totalQuestions}문제 중 ${totalAnswered}문제 답변완료 (${completionPercentage}%)\n\n제출하시겠습니까?`,
+      '답안지 제출',
+      `Korean (국어)\n총 ${totalQuestions}문제 중 ${totalAnswered}문제 답변완료 (${completionPercentage}%)\n\n제출하시겠습니까?\n\n제출 후에는 답안을 수정할 수 없습니다.`,
       [
         { text: '취소', style: 'cancel' },
         {
           text: '제출',
           onPress: () => {
-            Alert.alert('제출 완료', 'Korean 답안지가 제출되었습니다.');
-            router.back();
+            if (params.sheetId) {
+              // Collect all current answers
+              const currentAnswers = questions
+                .filter(q => 
+                  (q.type === 'mcq' && q.selectedOption) || 
+                  (q.type === 'text' && q.textAnswer?.trim())
+                )
+                .map(q => ({
+                  questionNumber: q.number,
+                  questionType: q.type,
+                  mcqOption: q.type === 'mcq' ? q.selectedOption : undefined,
+                  textAnswer: q.type === 'text' ? q.textAnswer : undefined,
+                }));
+              
+              submitAnswerSheetMutation.mutate({ 
+                sheetId: params.sheetId,
+                answers: currentAnswers
+              });
+            }
           }
         }
       ]
@@ -164,10 +236,12 @@ export default function KoreanAnswerSheet() {
               key={option}
               style={[
                 styles.bubble,
-                question.selectedOption === option && styles.bubbleSelected
+                question.selectedOption === option && styles.bubbleSelected,
+                isSubmitted && styles.bubbleDisabled
               ]}
               onPress={() => handleMCQSelect(question.number, option as MCQOption)}
-              activeOpacity={0.7}
+              activeOpacity={isSubmitted ? 1 : 0.7}
+              disabled={isSubmitted}
             >
               <Text style={[
                 styles.bubbleText,
@@ -190,16 +264,20 @@ export default function KoreanAnswerSheet() {
         </View>
         <View style={styles.textInputContainer}>
           <TextInput
-            style={styles.textInput}
+            style={[
+              styles.textInput,
+              isSubmitted && styles.textInputDisabled
+            ]}
             value={question.textAnswer || ''}
             onChangeText={(text) => handleTextAnswer(question.number, text)}
-            placeholder="답안을 입력하세요"
+            placeholder={isSubmitted ? "제출된 답안" : "답안을 입력하세요"}
             placeholderTextColor="#999999"
             multiline={true}
             numberOfLines={3}
             textAlignVertical="top"
             autoCorrect={false}
             autoCapitalize="none"
+            editable={!isSubmitted}
           />
         </View>
       </View>
@@ -253,8 +331,19 @@ export default function KoreanAnswerSheet() {
       </ScrollView>
 
       <View style={styles.submitContainer}>
-        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-          <Text style={styles.submitButtonText}>제출 결과 보기</Text>
+        <TouchableOpacity 
+          style={[
+            styles.submitButton,
+            isSubmitted && styles.submitButtonDisabled
+          ]} 
+          onPress={handleSubmit}
+        >
+          <Text style={[
+            styles.submitButtonText,
+            isSubmitted && styles.submitButtonTextDisabled
+          ]}>
+            {isSubmitted ? '제출 완료' : '답안지 제출'}
+          </Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -412,5 +501,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  
+  // Disabled states
+  bubbleDisabled: {
+    opacity: 0.6,
+  },
+  textInputDisabled: {
+    backgroundColor: '#F5F5F5',
+    color: '#666666',
+  },
+  submitButtonDisabled: {
+    backgroundColor: '#CCCCCC',
+  },
+  submitButtonTextDisabled: {
+    color: '#666666',
   },
 });
