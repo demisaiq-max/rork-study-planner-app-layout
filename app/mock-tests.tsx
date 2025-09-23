@@ -142,31 +142,14 @@ export default function MockTestsScreen() {
       return;
     }
 
-    // Determine MCQ and text questions based on subject with proper defaults
-    let mcqQuestions = questionsNum;
-    let textQuestions = 0;
+    // Use the manually entered values from the form
+    const mcqQuestions = parseInt(newMcqQuestions) || 0;
+    const textQuestions = parseInt(newTextQuestions) || 0;
     
-    if (subjectKey === 'korean') {
-      // Korean: 34 common (MCQ) + 11 elective (text) = 45 total
-      if (questionsNum === 45) {
-        mcqQuestions = 34;
-        textQuestions = 11;
-      } else {
-        mcqQuestions = Math.floor(questionsNum * 0.75); // 75% MCQ
-        textQuestions = questionsNum - mcqQuestions;
-      }
-    } else if (subjectKey === 'mathematics') {
-      // Mathematics: All MCQ (30 total)
-      mcqQuestions = questionsNum;
-      textQuestions = 0;
-    } else if (subjectKey === 'english') {
-      // English: All MCQ (45 total)
-      mcqQuestions = questionsNum;
-      textQuestions = 0;
-    } else if (subjectKey === 'others') {
-      // Others: All MCQ (20 total)
-      mcqQuestions = questionsNum;
-      textQuestions = 0;
+    // Validate that MCQ + Text = Total
+    if (mcqQuestions + textQuestions !== questionsNum) {
+      Alert.alert('Error', `MCQ questions (${mcqQuestions}) + Text questions (${textQuestions}) must equal total questions (${questionsNum})`);
+      return;
     }
 
     console.log('Creating answer sheet with:', {
@@ -458,34 +441,36 @@ export default function MockTestsScreen() {
               <TextInput
                 style={styles.textInput}
                 value={newSheetQuestions}
-                onChangeText={(text) => {
+onChangeText={(text) => {
                   setNewSheetQuestions(text);
-                  // Auto-calculate MCQ and text questions based on subject
-                  const questionsNum = parseInt(text) || 20;
-                  let mcqQuestions = questionsNum;
-                  let textQuestions = 0;
-                  
-                  if (subjectKey === 'korean') {
-                    if (questionsNum === 45) {
-                      mcqQuestions = 34;
-                      textQuestions = 11;
-                    } else {
-                      mcqQuestions = Math.floor(questionsNum * 0.75);
-                      textQuestions = questionsNum - mcqQuestions;
+                  // Only auto-calculate if creating a new sheet (not editing)
+                  if (!editingSheet) {
+                    const questionsNum = parseInt(text) || 20;
+                    let mcqQuestions = questionsNum;
+                    let textQuestions = 0;
+                    
+                    if (subjectKey === 'korean') {
+                      if (questionsNum === 45) {
+                        mcqQuestions = 34;
+                        textQuestions = 11;
+                      } else {
+                        mcqQuestions = Math.floor(questionsNum * 0.75);
+                        textQuestions = questionsNum - mcqQuestions;
+                      }
+                    } else if (subjectKey === 'mathematics') {
+                      mcqQuestions = questionsNum;
+                      textQuestions = 0;
+                    } else if (subjectKey === 'english') {
+                      mcqQuestions = questionsNum;
+                      textQuestions = 0;
+                    } else if (subjectKey === 'others') {
+                      mcqQuestions = questionsNum;
+                      textQuestions = 0;
                     }
-                  } else if (subjectKey === 'mathematics') {
-                    mcqQuestions = questionsNum;
-                    textQuestions = 0;
-                  } else if (subjectKey === 'english') {
-                    mcqQuestions = questionsNum;
-                    textQuestions = 0;
-                  } else if (subjectKey === 'others') {
-                    mcqQuestions = questionsNum;
-                    textQuestions = 0;
+                    
+                    setNewMcqQuestions(mcqQuestions.toString());
+                    setNewTextQuestions(textQuestions.toString());
                   }
-                  
-                  setNewMcqQuestions(mcqQuestions.toString());
-                  setNewTextQuestions(textQuestions.toString());
                 }}
                 placeholder="20"
                 placeholderTextColor="#8E8E93"

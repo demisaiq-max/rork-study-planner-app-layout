@@ -134,7 +134,10 @@ export default function AnswerSheetEditor() {
   
   console.log('Real-time config from database:', {
     databaseData: answerSheetQuery.data,
-    finalConfig: config
+    finalConfig: config,
+    rawMcqQuestions: answerSheetQuery.data?.mcq_questions,
+    rawTextQuestions: answerSheetQuery.data?.text_questions,
+    rawTotalQuestions: answerSheetQuery.data?.total_questions
   });
   
   const [questions, setQuestions] = useState<Question[]>([]);

@@ -145,8 +145,15 @@ export default function MathematicsAnswerSheet() {
       }
     } else {
       // Use ONLY the real-time configuration from database
+      console.log('🔢 Creating questions with database config:', {
+        total: latestTotalQuestions,
+        mcq: latestMcqQuestions,
+        text: latestTextQuestions
+      });
+      
       for (let i = 1; i <= latestTotalQuestions; i++) {
         const questionType: AnswerType = i <= latestMcqQuestions ? 'mcq' : 'text';
+        console.log(`Question ${i}: type = ${questionType} (i <= ${latestMcqQuestions} = ${i <= latestMcqQuestions})`);
         initialQuestions.push({
           number: i,
           type: questionType,
