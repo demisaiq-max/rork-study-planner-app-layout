@@ -95,20 +95,26 @@ export default function MathematicsAnswerSheet() {
   
   // Initialize questions and load existing responses with real-time updates
   useEffect(() => {
-    console.log('Initializing questions with params:', { totalQuestions, mcqQuestions, textQuestions });
-    console.log('Answer sheet data:', answerSheetQuery.data);
+    // Only proceed if we have answer sheet data from the database
+    if (!answerSheetQuery.data) {
+      console.log('No answer sheet data yet, waiting...');
+      return;
+    }
+    
+    console.log('Initializing questions with database data:', answerSheetQuery.data);
     
     const initialQuestions: Question[] = [];
     
-    // Use the latest data from the database if available
-    const latestTotalQuestions = answerSheetQuery.data?.total_questions || totalQuestions;
-    const latestMcqQuestions = answerSheetQuery.data?.mcq_questions || mcqQuestions;
-    const latestTextQuestions = answerSheetQuery.data?.text_questions || textQuestions;
+    // ALWAYS use the latest data from the database for real-time updates
+    const latestTotalQuestions = answerSheetQuery.data.total_questions;
+    const latestMcqQuestions = answerSheetQuery.data.mcq_questions || answerSheetQuery.data.total_questions;
+    const latestTextQuestions = answerSheetQuery.data.text_questions || 0;
     
-    console.log('Using latest configuration:', {
+    console.log('Using REAL-TIME configuration from database:', {
       latestTotalQuestions,
       latestMcqQuestions,
-      latestTextQuestions
+      latestTextQuestions,
+      sheetId: answerSheetQuery.data.id
     });
     
     // Parse dynamic question configuration if provided
@@ -131,7 +137,7 @@ export default function MathematicsAnswerSheet() {
         });
       }
     } else {
-      // Use the latest configuration from database or fallback to params
+      // Use the latest configuration from database for real-time updates
       for (let i = 1; i <= latestTotalQuestions; i++) {
         const questionType: AnswerType = i <= latestMcqQuestions ? 'mcq' : 'text';
         initialQuestions.push({
@@ -142,7 +148,7 @@ export default function MathematicsAnswerSheet() {
     }
     
     // Load existing responses if available
-    if (answerSheetQuery.data?.responses) {
+    if (answerSheetQuery.data.responses) {
       const responsesMap = new Map();
       answerSheetQuery.data.responses.forEach((response: any) => {
         responsesMap.set(response.question_number, response);
@@ -160,16 +166,43 @@ export default function MathematicsAnswerSheet() {
       });
     }
     
-    setQuestions(initialQuestions);
+    // Only update questions if the configuration has actually changed
+    const currentQuestionCount = questions.length;
+    const currentMcqCount = questions.filter(q => q.type === 'mcq').length;
+    const currentTextCount = questions.filter(q => q.type === 'text').length;
     
-    // Check if answer sheet is already submitted
-    if (answerSheetQuery.data?.status === 'submitted' || answerSheetQuery.data?.status === 'graded') {
-      setIsSubmitted(true);
+    if (currentQuestionCount !== latestTotalQuestions || 
+        currentMcqCount !== latestMcqQuestions || 
+        currentTextCount !== latestTextQuestions) {
+      console.log('Question configuration changed, updating questions:', {
+        from: { total: currentQuestionCount, mcq: currentMcqCount, text: currentTextCount },
+        to: { total: latestTotalQuestions, mcq: latestMcqQuestions, text: latestTextQuestions }
+      });
+      setQuestions(initialQuestions);
+    } else {
+      // Just update existing answers without changing structure
+      setQuestions(prev => {
+        const updated = [...prev];
+        initialQuestions.forEach(newQ => {
+          const existingIndex = updated.findIndex(q => q.number === newQ.number);
+          if (existingIndex >= 0) {
+            updated[existingIndex] = { ...updated[existingIndex], ...newQ };
+          }
+        });
+        return updated;
+      });
     }
     
-    console.log('Mathematics Answer Sheet initialized with', initialQuestions.length, 'questions');
+    // Check if answer sheet is already submitted
+    if (answerSheetQuery.data.status === 'submitted' || answerSheetQuery.data.status === 'graded') {
+      setIsSubmitted(true);
+    } else {
+      setIsSubmitted(false);
+    }
+    
+    console.log('Mathematics Answer Sheet updated with', initialQuestions.length, 'questions');
     console.log('Question types:', initialQuestions.map(q => `${q.number}:${q.type}`).join(', '));
-  }, [totalQuestions, mcqQuestions, textQuestions, params.questionConfig, answerSheetQuery.data]);
+  }, [answerSheetQuery.data, params.questionConfig]);
 
   const handleMCQSelect = (questionNumber: number, option: MCQOption) => {
     if (isSubmitted) return;
