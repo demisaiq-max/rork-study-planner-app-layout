@@ -52,12 +52,16 @@ export default function MathematicsAnswerSheet() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   
-  // Fetch answer sheet data including existing responses
+  // Fetch answer sheet data including existing responses with aggressive real-time updates
   const answerSheetQuery = trpc.answerSheets.getAnswerSheetById.useQuery(
     { sheetId: params.sheetId || '' },
     { 
       enabled: !!params.sheetId,
-      refetchInterval: 2000,
+      refetchInterval: 1000, // More frequent updates
+      refetchOnMount: true,
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+      staleTime: 0, // Always consider data stale for real-time updates
     }
   );
   
@@ -66,7 +70,11 @@ export default function MathematicsAnswerSheet() {
     { sheetId: params.sheetId || '' },
     { 
       enabled: !!params.sheetId,
-      refetchInterval: 2000,
+      refetchInterval: 1000, // More frequent updates
+      refetchOnMount: true,
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+      staleTime: 0, // Always consider data stale for real-time updates
     }
   );
   
@@ -98,12 +106,24 @@ export default function MathematicsAnswerSheet() {
     // ALWAYS wait for database data if sheetId is provided - this ensures real-time updates
     if (params.sheetId && !answerSheetQuery.data) {
       console.log('⏳ Waiting for database data for sheet ID:', params.sheetId);
+      console.log('Query status:', {
+        isLoading: answerSheetQuery.isLoading,
+        isFetching: answerSheetQuery.isFetching,
+        error: answerSheetQuery.error?.message,
+        dataExists: !!answerSheetQuery.data
+      });
       return;
     }
     
     // If no sheetId, we can't proceed without database data
     if (!answerSheetQuery.data) {
       console.log('❌ No database data available and no sheet ID provided');
+      console.log('Params received:', {
+        sheetId: params.sheetId,
+        totalQuestions,
+        mcqQuestions,
+        textQuestions
+      });
       return;
     }
     
@@ -382,6 +402,72 @@ export default function MathematicsAnswerSheet() {
     );
   };
 
+  // Show loading state while waiting for database data
+  if (params.sheetId && answerSheetQuery.isLoading) {
+    return (
+      <View style={styles.container}>
+        <Stack.Screen 
+          options={{
+            title: 'Loading...',
+            headerStyle: { backgroundColor: '#FFFFFF' },
+            headerTintColor: '#000000',
+            headerTitleStyle: { fontWeight: '600' },
+          }} 
+        />
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading answer sheet...</Text>
+          <Text style={styles.loadingSubtext}>Fetching real-time data from database</Text>
+        </View>
+      </View>
+    );
+  }
+  
+  // Show error state if there's an error loading data
+  if (params.sheetId && answerSheetQuery.error) {
+    return (
+      <View style={styles.container}>
+        <Stack.Screen 
+          options={{
+            title: 'Error',
+            headerStyle: { backgroundColor: '#FFFFFF' },
+            headerTintColor: '#000000',
+            headerTitleStyle: { fontWeight: '600' },
+          }} 
+        />
+        <View style={styles.loadingContainer}>
+          <Text style={styles.errorText}>Failed to load answer sheet</Text>
+          <Text style={styles.loadingSubtext}>{answerSheetQuery.error.message}</Text>
+          <TouchableOpacity 
+            style={styles.retryButton}
+            onPress={() => answerSheetQuery.refetch()}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+  
+  // Show empty state if no questions are loaded yet
+  if (questions.length === 0) {
+    return (
+      <View style={styles.container}>
+        <Stack.Screen 
+          options={{
+            title: sheetName,
+            headerStyle: { backgroundColor: '#FFFFFF' },
+            headerTintColor: '#000000',
+            headerTitleStyle: { fontWeight: '600' },
+          }} 
+        />
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Preparing answer sheet...</Text>
+          <Text style={styles.loadingSubtext}>Setting up questions from database</Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <Stack.Screen 
@@ -617,5 +703,42 @@ const styles = StyleSheet.create({
   },
   submitButtonTextDisabled: {
     color: '#666666',
+  },
+  
+  // Loading and Error States
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  loadingText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333333',
+    marginBottom: 8,
+  },
+  loadingSubtext: {
+    fontSize: 14,
+    color: '#8E8E93',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  errorText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FF3B30',
+    marginBottom: 8,
+  },
+  retryButton: {
+    backgroundColor: '#4ECDC4',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

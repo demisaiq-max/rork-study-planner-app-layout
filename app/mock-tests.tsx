@@ -60,7 +60,7 @@ export default function MockTestsScreen() {
   
   const subjectKey = getSubjectKey(params.subjectName || '');
   
-  // Fetch answer sheets from database with real-time updates
+  // Fetch answer sheets from database with aggressive real-time updates
   const answerSheetsQuery = trpc.answerSheets.getAnswerSheets.useQuery(
     {
       userId: user?.id || '',
@@ -69,22 +69,37 @@ export default function MockTestsScreen() {
     },
     {
       enabled: !!user?.id,
-      refetchOnWindowFocus: false,
-      refetchInterval: 3000, // Refetch every 3 seconds for real-time updates
+      refetchOnWindowFocus: true,
+      refetchOnMount: true,
+      refetchOnReconnect: true,
+      refetchInterval: 1000, // More frequent updates for real-time sync
+      staleTime: 0, // Always consider data stale for immediate updates
     }
   );
   
   const createAnswerSheetMutation = trpc.answerSheets.createAnswerSheet.useMutation({
     onSuccess: (data) => {
-      console.log('✅ Answer sheet created successfully:', data);
-      // Force immediate refetch to get the latest data
+      console.log('✅ Answer sheet created successfully with REAL-TIME database support:', data);
+      console.log('📊 Created sheet details:', {
+        id: data.id,
+        total_questions: data.total_questions,
+        mcq_questions: data.mcq_questions,
+        text_questions: data.text_questions,
+        subject: data.subject,
+        status: data.status
+      });
+      
+      // Force multiple immediate refetches to ensure real-time sync
       answerSheetsQuery.refetch();
+      setTimeout(() => answerSheetsQuery.refetch(), 500);
+      setTimeout(() => answerSheetsQuery.refetch(), 1000);
+      
       setShowAddModal(false);
       setNewSheetName('');
       setNewSheetQuestions('20');
       setNewMcqQuestions('20');
       setNewTextQuestions('0');
-      Alert.alert('Success', `Answer sheet created successfully with ${data.total_questions} questions (${data.mcq_questions} MCQ, ${data.text_questions} Text)!`);
+      Alert.alert('Success', `Answer sheet created successfully with ${data.total_questions} questions (${data.mcq_questions} MCQ, ${data.text_questions} Text)! Real-time updates enabled.`);
     },
     onError: (error) => {
       console.error('❌ Failed to create answer sheet:', error);
@@ -93,16 +108,21 @@ export default function MockTestsScreen() {
   });
   
   const updateAnswerSheetMutation = trpc.answerSheets.updateAnswerSheet.useMutation({
-    onSuccess: () => {
-      // Force refetch to get updated data immediately
+    onSuccess: (data) => {
+      console.log('✅ Answer sheet updated successfully with REAL-TIME support:', data);
+      
+      // Force multiple immediate refetches to ensure real-time sync
       answerSheetsQuery.refetch();
+      setTimeout(() => answerSheetsQuery.refetch(), 500);
+      setTimeout(() => answerSheetsQuery.refetch(), 1000);
+      
       setEditingSheet(null);
       setShowAddModal(false);
       setNewSheetName('');
       setNewSheetQuestions('20');
       setNewMcqQuestions('20');
       setNewTextQuestions('0');
-      Alert.alert('Success', 'Answer sheet updated successfully! Changes will be reflected in real-time.');
+      Alert.alert('Success', 'Answer sheet updated successfully! Changes are now live in real-time database.');
     },
     onError: (error) => {
       Alert.alert('Error', error.message || 'Failed to update answer sheet');
@@ -111,8 +131,13 @@ export default function MockTestsScreen() {
   
   const deleteAnswerSheetMutation = trpc.answerSheets.deleteAnswerSheet.useMutation({
     onSuccess: () => {
+      console.log('✅ Answer sheet deleted successfully with REAL-TIME sync');
+      
+      // Force multiple immediate refetches to ensure real-time sync
       answerSheetsQuery.refetch();
-      Alert.alert('Success', 'Answer sheet deleted successfully!');
+      setTimeout(() => answerSheetsQuery.refetch(), 500);
+      
+      Alert.alert('Success', 'Answer sheet deleted successfully! Changes synced in real-time.');
     },
     onError: (error) => {
       Alert.alert('Error', error.message || 'Failed to delete answer sheet');
