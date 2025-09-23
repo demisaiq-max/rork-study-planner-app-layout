@@ -13,6 +13,7 @@ export const updateAnswerSheetProcedure = publicProcedure
     status: z.enum(['draft', 'submitted', 'graded']).optional(),
     score: z.number().optional(),
     grade: z.string().optional(),
+    questionConfig: z.string().optional(), // JSON string of question configuration
   }))
   .mutation(async ({ input }) => {
     console.log('Updating answer sheet:', input.sheetId);
@@ -24,6 +25,40 @@ export const updateAnswerSheetProcedure = publicProcedure
     if (input.totalQuestions !== undefined) updateData.total_questions = input.totalQuestions;
     if (input.mcqQuestions !== undefined) updateData.mcq_questions = input.mcqQuestions;
     if (input.textQuestions !== undefined) updateData.text_questions = input.textQuestions;
+    
+    // Update total questions if mcq or text questions are provided
+    if (input.mcqQuestions !== undefined || input.textQuestions !== undefined) {
+      const currentMcq = input.mcqQuestions !== undefined ? input.mcqQuestions : 0;
+      const currentText = input.textQuestions !== undefined ? input.textQuestions : 0;
+      
+      // If only one is provided, we need to get the current value of the other
+      if (input.mcqQuestions !== undefined && input.textQuestions === undefined) {
+        // Get current text questions count
+        const { data: currentSheet } = await supabase
+          .from('answer_sheets')
+          .select('text_questions')
+          .eq('id', input.sheetId)
+          .single();
+        
+        if (currentSheet) {
+          updateData.total_questions = currentMcq + (currentSheet.text_questions || 0);
+        }
+      } else if (input.textQuestions !== undefined && input.mcqQuestions === undefined) {
+        // Get current mcq questions count
+        const { data: currentSheet } = await supabase
+          .from('answer_sheets')
+          .select('mcq_questions')
+          .eq('id', input.sheetId)
+          .single();
+        
+        if (currentSheet) {
+          updateData.total_questions = (currentSheet.mcq_questions || 0) + currentText;
+        }
+      } else {
+        // Both are provided
+        updateData.total_questions = currentMcq + currentText;
+      }
+    }
     if (input.status !== undefined) {
       updateData.status = input.status;
       if (input.status === 'submitted') {

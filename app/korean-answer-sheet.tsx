@@ -44,6 +44,13 @@ export default function KoreanAnswerSheet() {
   const mcqQuestions = parseInt(params.mcqQuestions || '34');
   const textQuestions = parseInt(params.textQuestions || '11');
   
+  console.log('Korean Answer Sheet Params:', {
+    totalQuestions,
+    mcqQuestions,
+    textQuestions,
+    sheetId: params.sheetId
+  });
+  
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   
@@ -91,13 +98,38 @@ export default function KoreanAnswerSheet() {
 
   // Initialize questions and load existing responses
   useEffect(() => {
+    console.log('Initializing questions with params:', { totalQuestions, mcqQuestions, textQuestions });
+    
     const initialQuestions: Question[] = [];
-    for (let i = 1; i <= totalQuestions; i++) {
-      const questionType: AnswerType = i <= mcqQuestions ? 'mcq' : 'text';
-      initialQuestions.push({
-        number: i,
-        type: questionType,
-      });
+    
+    // Parse dynamic question configuration if provided
+    let dynamicQuestionConfig: any[] | undefined;
+    try {
+      if (params.questionConfig) {
+        dynamicQuestionConfig = JSON.parse(params.questionConfig);
+        console.log('Using dynamic question config:', dynamicQuestionConfig);
+      }
+    } catch (error) {
+      console.warn('Failed to parse questionConfig:', error);
+    }
+    
+    if (dynamicQuestionConfig && dynamicQuestionConfig.length > 0) {
+      // Use dynamic configuration if available
+      for (const questionConfig of dynamicQuestionConfig) {
+        initialQuestions.push({
+          number: questionConfig.number,
+          type: questionConfig.type,
+        });
+      }
+    } else {
+      // Fallback to default configuration (MCQ first, then text)
+      for (let i = 1; i <= totalQuestions; i++) {
+        const questionType: AnswerType = i <= mcqQuestions ? 'mcq' : 'text';
+        initialQuestions.push({
+          number: i,
+          type: questionType,
+        });
+      }
     }
     
     // Load existing responses if available
@@ -127,7 +159,8 @@ export default function KoreanAnswerSheet() {
     }
     
     console.log('Korean Answer Sheet initialized with', initialQuestions.length, 'questions');
-  }, [totalQuestions, mcqQuestions, answerSheetQuery.data]);
+    console.log('Question types:', initialQuestions.map(q => `${q.number}:${q.type}`).join(', '));
+  }, [totalQuestions, mcqQuestions, textQuestions, params.questionConfig, answerSheetQuery.data]);
 
   const handleMCQSelect = (questionNumber: number, option: MCQOption) => {
     if (isSubmitted) return; // Prevent editing if submitted
@@ -311,7 +344,9 @@ export default function KoreanAnswerSheet() {
       <View style={styles.headerInfo}>
         <Text style={styles.subjectTitle}>Korean (국어)</Text>
         <View style={styles.statsContainer}>
-          <Text style={styles.questionCount}>총 {totalQuestions}문제 (객관식 {mcqQuestions}문제, 주관식 {textQuestions}문제)</Text>
+          <Text style={styles.questionCount}>
+          총 {totalQuestions}문제 (객관식 {questions.filter(q => q.type === 'mcq').length}문제, 주관식 {questions.filter(q => q.type === 'text').length}문제)
+        </Text>
           {answerSheetStatsQuery.data && (
             <Text style={styles.progressText}>
               {answerSheetStatsQuery.data.total_answered}개 답변완료 ({Math.round((answerSheetStatsQuery.data.total_answered / totalQuestions) * 100)}%)
