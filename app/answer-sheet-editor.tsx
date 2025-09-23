@@ -103,7 +103,7 @@ export default function AnswerSheetEditor() {
   
   const [questions, setQuestions] = useState<Question[]>([]);
   
-  // Initialize questions based on custom configuration
+  // Initialize questions based on custom configuration with real-time updates
   useEffect(() => {
     console.log(`Initializing ${config.totalQuestions} questions for subject: ${config.name}`);
     console.log(`MCQ: ${mcqQuestions}, Text: ${textQuestions}`);
@@ -120,7 +120,7 @@ export default function AnswerSheetEditor() {
         });
       }
     } else {
-      // Fallback to default configuration (MCQ first, then text)
+      // Use current configuration for real-time updates
       for (let i = 1; i <= config.totalQuestions; i++) {
         const questionType: AnswerType = i <= mcqQuestions ? 'mcq' : 'text';
         
@@ -131,8 +131,13 @@ export default function AnswerSheetEditor() {
       }
     }
     
-    console.log(`Created ${initialQuestions.length} questions`);
+    console.log(`Created ${initialQuestions.length} questions with real-time config`);
     console.log('Question types:', initialQuestions.map(q => `${q.number}:${q.type}`).join(', '));
+    console.log('Real-time MCQ/Text breakdown:', {
+      mcq: initialQuestions.filter(q => q.type === 'mcq').length,
+      text: initialQuestions.filter(q => q.type === 'text').length,
+      total: initialQuestions.length
+    });
     setQuestions(initialQuestions);
   }, [mcqQuestions, textQuestions, config.totalQuestions, config.name, dynamicQuestionConfig]);
 

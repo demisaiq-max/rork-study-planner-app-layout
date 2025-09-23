@@ -181,32 +181,14 @@ export default function EnglishAnswerSheet() {
       });
     }
     
-    // Only update questions if the configuration has actually changed
-    const currentQuestionCount = questions.length;
-    const currentMcqCount = questions.filter(q => q.type === 'mcq').length;
-    const currentTextCount = questions.filter(q => q.type === 'text').length;
-    
-    if (currentQuestionCount !== latestTotalQuestions || 
-        currentMcqCount !== latestMcqQuestions || 
-        currentTextCount !== latestTextQuestions) {
-      console.log('Question configuration changed, updating questions:', {
-        from: { total: currentQuestionCount, mcq: currentMcqCount, text: currentTextCount },
-        to: { total: latestTotalQuestions, mcq: latestMcqQuestions, text: latestTextQuestions }
-      });
-      setQuestions(initialQuestions);
-    } else {
-      // Just update existing answers without changing structure
-      setQuestions(prev => {
-        const updated = [...prev];
-        initialQuestions.forEach(newQ => {
-          const existingIndex = updated.findIndex(q => q.number === newQ.number);
-          if (existingIndex >= 0) {
-            updated[existingIndex] = { ...updated[existingIndex], ...newQ };
-          }
-        });
-        return updated;
-      });
-    }
+    // ALWAYS update questions to reflect real-time changes from database
+    console.log('Updating questions with real-time data:', {
+      total: latestTotalQuestions,
+      mcq: latestMcqQuestions,
+      text: latestTextQuestions,
+      questionsLength: initialQuestions.length
+    });
+    setQuestions(initialQuestions);
     
     // Check if answer sheet is already submitted
     if (answerSheetQuery.data.status === 'submitted' || answerSheetQuery.data.status === 'graded') {
