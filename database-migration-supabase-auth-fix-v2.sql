@@ -11,44 +11,44 @@ DROP VIEW IF EXISTS answer_sheet_summary;
 ALTER TABLE answer_sheets DROP CONSTRAINT IF EXISTS answer_sheets_user_id_fkey;
 -- Convert UUID to VARCHAR(255) by casting to text first
 ALTER TABLE answer_sheets ALTER COLUMN user_id TYPE VARCHAR(255) USING user_id::text;
-ALTER TABLE answer_sheets ADD CONSTRAINT answer_sheets_user_id_fkey 
+ALTER TABLE answer_sheets ADD CONSTRAINT answer_sheets_user_id_fkey
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 -- Fix answer_key_templates table to reference the custom users table
 ALTER TABLE answer_key_templates DROP CONSTRAINT IF EXISTS answer_key_templates_created_by_fkey;
 -- Convert UUID to VARCHAR(255) by casting to text first
 ALTER TABLE answer_key_templates ALTER COLUMN created_by TYPE VARCHAR(255) USING created_by::text;
-ALTER TABLE answer_key_templates ADD CONSTRAINT answer_key_templates_created_by_fkey 
+ALTER TABLE answer_key_templates ADD CONSTRAINT answer_key_templates_created_by_fkey
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE;
 
 -- Fix answer_key_usage_logs table to reference the custom users table
 ALTER TABLE answer_key_usage_logs DROP CONSTRAINT IF EXISTS answer_key_usage_logs_graded_by_fkey;
 -- Convert UUID to VARCHAR(255) by casting to text first
 ALTER TABLE answer_key_usage_logs ALTER COLUMN graded_by TYPE VARCHAR(255) USING graded_by::text;
-ALTER TABLE answer_key_usage_logs ADD CONSTRAINT answer_key_usage_logs_graded_by_fkey 
+ALTER TABLE answer_key_usage_logs ADD CONSTRAINT answer_key_usage_logs_graded_by_fkey
     FOREIGN KEY (graded_by) REFERENCES users(id) ON DELETE CASCADE;
 
 -- Fix answer_comments table if it exists
-DO $
+DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'answer_comments') THEN
         ALTER TABLE answer_comments DROP CONSTRAINT IF EXISTS answer_comments_user_id_fkey;
         ALTER TABLE answer_comments ALTER COLUMN user_id TYPE VARCHAR(255) USING user_id::text;
-        ALTER TABLE answer_comments ADD CONSTRAINT answer_comments_user_id_fkey 
+        ALTER TABLE answer_comments ADD CONSTRAINT answer_comments_user_id_fkey
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
     END IF;
-END $;
+END $$;
 
 -- Fix answer_comment_likes table if it exists
-DO $
+DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'answer_comment_likes') THEN
         ALTER TABLE answer_comment_likes DROP CONSTRAINT IF EXISTS answer_comment_likes_user_id_fkey;
         ALTER TABLE answer_comment_likes ALTER COLUMN user_id TYPE VARCHAR(255) USING user_id::text;
-        ALTER TABLE answer_comment_likes ADD CONSTRAINT answer_comment_likes_user_id_fkey 
+        ALTER TABLE answer_comment_likes ADD CONSTRAINT answer_comment_likes_user_id_fkey
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
     END IF;
-END $;
+END $$;
 
 -- Ensure all other tables use VARCHAR(255) for user_id (should already be done by Clerk migration)
 -- But let's double-check the most important ones
@@ -58,14 +58,14 @@ DO $$
 BEGIN
     -- Check if subjects.user_id is UUID type and convert if needed
     IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'subjects' 
-        AND column_name = 'user_id' 
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'subjects'
+        AND column_name = 'user_id'
         AND data_type = 'uuid'
     ) THEN
         ALTER TABLE subjects DROP CONSTRAINT IF EXISTS subjects_user_id_fkey;
         ALTER TABLE subjects ALTER COLUMN user_id TYPE VARCHAR(255);
-        ALTER TABLE subjects ADD CONSTRAINT subjects_user_id_fkey 
+        ALTER TABLE subjects ADD CONSTRAINT subjects_user_id_fkey
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
     END IF;
 END $$;
@@ -75,118 +75,118 @@ DO $$
 BEGIN
     -- Fix exams table if needed
     IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'exams' 
-        AND column_name = 'user_id' 
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'exams'
+        AND column_name = 'user_id'
         AND data_type = 'uuid'
     ) THEN
         ALTER TABLE exams DROP CONSTRAINT IF EXISTS exams_user_id_fkey;
         ALTER TABLE exams ALTER COLUMN user_id TYPE VARCHAR(255);
-        ALTER TABLE exams ADD CONSTRAINT exams_user_id_fkey 
+        ALTER TABLE exams ADD CONSTRAINT exams_user_id_fkey
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
     END IF;
 
     -- Fix brain_dumps table if needed
     IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'brain_dumps' 
-        AND column_name = 'user_id' 
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'brain_dumps'
+        AND column_name = 'user_id'
         AND data_type = 'uuid'
     ) THEN
         ALTER TABLE brain_dumps DROP CONSTRAINT IF EXISTS brain_dumps_user_id_fkey;
         ALTER TABLE brain_dumps ALTER COLUMN user_id TYPE VARCHAR(255);
-        ALTER TABLE brain_dumps ADD CONSTRAINT brain_dumps_user_id_fkey 
+        ALTER TABLE brain_dumps ADD CONSTRAINT brain_dumps_user_id_fkey
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
     END IF;
 
     -- Fix priority_tasks table if needed
     IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'priority_tasks' 
-        AND column_name = 'user_id' 
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'priority_tasks'
+        AND column_name = 'user_id'
         AND data_type = 'uuid'
     ) THEN
         ALTER TABLE priority_tasks DROP CONSTRAINT IF EXISTS priority_tasks_user_id_fkey;
         ALTER TABLE priority_tasks ALTER COLUMN user_id TYPE VARCHAR(255);
-        ALTER TABLE priority_tasks ADD CONSTRAINT priority_tasks_user_id_fkey 
+        ALTER TABLE priority_tasks ADD CONSTRAINT priority_tasks_user_id_fkey
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
     END IF;
 
     -- Fix study_sessions table if needed
     IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'study_sessions' 
-        AND column_name = 'user_id' 
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'study_sessions'
+        AND column_name = 'user_id'
         AND data_type = 'uuid'
     ) THEN
         ALTER TABLE study_sessions DROP CONSTRAINT IF EXISTS study_sessions_user_id_fkey;
         ALTER TABLE study_sessions ALTER COLUMN user_id TYPE VARCHAR(255);
-        ALTER TABLE study_sessions ADD CONSTRAINT study_sessions_user_id_fkey 
+        ALTER TABLE study_sessions ADD CONSTRAINT study_sessions_user_id_fkey
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
     END IF;
 
     -- Fix subject_grades table if needed
     IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'subject_grades' 
-        AND column_name = 'user_id' 
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'subject_grades'
+        AND column_name = 'user_id'
         AND data_type = 'uuid'
     ) THEN
         ALTER TABLE subject_grades DROP CONSTRAINT IF EXISTS subject_grades_user_id_fkey;
         ALTER TABLE subject_grades ALTER COLUMN user_id TYPE VARCHAR(255);
-        ALTER TABLE subject_grades ADD CONSTRAINT subject_grades_user_id_fkey 
+        ALTER TABLE subject_grades ADD CONSTRAINT subject_grades_user_id_fkey
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
     END IF;
 
     -- Fix user_settings table if needed
     IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'user_settings' 
-        AND column_name = 'user_id' 
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'user_settings'
+        AND column_name = 'user_id'
         AND data_type = 'uuid'
     ) THEN
         ALTER TABLE user_settings DROP CONSTRAINT IF EXISTS user_settings_user_id_fkey;
         ALTER TABLE user_settings ALTER COLUMN user_id TYPE VARCHAR(255);
-        ALTER TABLE user_settings ADD CONSTRAINT user_settings_user_id_fkey 
+        ALTER TABLE user_settings ADD CONSTRAINT user_settings_user_id_fkey
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
     END IF;
 
     -- Fix timer_sessions table if needed
     IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'timer_sessions' 
-        AND column_name = 'user_id' 
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'timer_sessions'
+        AND column_name = 'user_id'
         AND data_type = 'uuid'
     ) THEN
         ALTER TABLE timer_sessions DROP CONSTRAINT IF EXISTS timer_sessions_user_id_fkey;
         ALTER TABLE timer_sessions ALTER COLUMN user_id TYPE VARCHAR(255);
-        ALTER TABLE timer_sessions ADD CONSTRAINT timer_sessions_user_id_fkey 
+        ALTER TABLE timer_sessions ADD CONSTRAINT timer_sessions_user_id_fkey
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
     END IF;
 
     -- Fix study_notes table if needed
     IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'study_notes' 
-        AND column_name = 'user_id' 
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'study_notes'
+        AND column_name = 'user_id'
         AND data_type = 'uuid'
     ) THEN
         ALTER TABLE study_notes DROP CONSTRAINT IF EXISTS study_notes_user_id_fkey;
         ALTER TABLE study_notes ALTER COLUMN user_id TYPE VARCHAR(255);
-        ALTER TABLE study_notes ADD CONSTRAINT study_notes_user_id_fkey 
+        ALTER TABLE study_notes ADD CONSTRAINT study_notes_user_id_fkey
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
     END IF;
 
     -- Fix calendar_events table if needed
     IF EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'calendar_events' 
-        AND column_name = 'user_id' 
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'calendar_events'
+        AND column_name = 'user_id'
         AND data_type = 'uuid'
     ) THEN
         ALTER TABLE calendar_events DROP CONSTRAINT IF EXISTS calendar_events_user_id_fkey;
         ALTER TABLE calendar_events ALTER COLUMN user_id TYPE VARCHAR(255);
-        ALTER TABLE calendar_events ADD CONSTRAINT calendar_events_user_id_fkey 
+        ALTER TABLE calendar_events ADD CONSTRAINT calendar_events_user_id_fkey
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
     END IF;
 END $$;
@@ -228,7 +228,7 @@ BEGIN
         (p_user_id, 'English', '#45B7D1', 45, 0, 45, '{"1-45": "mcq"}'),
         (p_user_id, 'Others', '#96CEB4', 20, 0, 20, '{"1-20": "mcq"}')
     ON CONFLICT (user_id, name) DO NOTHING;
-    
+
     RETURN TRUE;
 END;
 $$ LANGUAGE plpgsql;
@@ -287,7 +287,7 @@ BEGIN
         name = COALESCE(EXCLUDED.name, users.name),
         profile_picture_url = COALESCE(EXCLUDED.profile_picture_url, users.profile_picture_url),
         updated_at = NOW();
-    
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -301,7 +301,7 @@ CREATE TRIGGER sync_auth_user_trigger
 
 -- Manually sync any existing auth users to the custom users table
 INSERT INTO users (id, email, name, profile_picture_url, created_at, updated_at)
-SELECT 
+SELECT
     id::TEXT,
     email,
     COALESCE(raw_user_meta_data->>'name', raw_user_meta_data->>'full_name', split_part(email, '@', 1)),
