@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { trpc } from '@/lib/trpc';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import { useLanguage } from '@/hooks/language-context';
 
 interface ResponseItem {
   questionNumber: number;
@@ -19,6 +20,7 @@ export default function AnswerKeyEditor() {
   const params = useLocalSearchParams();
   const id = typeof params.id === 'string' ? params.id : '';
   const { data, isLoading, error } = trpc.answerKeys.getAnswerKeyById.useQuery({ id }, { enabled: !!id });
+  const { t } = useLanguage();
   const upsertMutation = trpc.answerKeys.upsertResponses.useMutation();
   const updateMeta = trpc.answerKeys.updateAnswerKey.useMutation();
 
@@ -68,18 +70,18 @@ export default function AnswerKeyEditor() {
         difficultyLevel: r.difficultyLevel ?? 'medium',
       }));
       await upsertMutation.mutateAsync({ answerKeyId: id, responses: payload });
-      Alert.alert('Saved', 'Answer key responses saved');
+      Alert.alert(t('success'), t('answerKeySaved') || 'Saved');
     } catch (e: any) {
-      Alert.alert('Error', e?.message || 'Failed to save');
+      Alert.alert(t('error'), e?.message || 'Failed to save');
     }
   };
 
   const onSaveMeta = async () => {
     try {
       await updateMeta.mutateAsync({ id, templateName: templateName.trim(), testType });
-      Alert.alert('Updated', 'Template updated');
+      Alert.alert(t('success'), t('templateUpdated') || 'Updated');
     } catch (e: any) {
-      Alert.alert('Error', e?.message || 'Failed to update template');
+      Alert.alert(t('error'), e?.message || 'Failed to update template');
     }
   };
 
@@ -88,10 +90,10 @@ export default function AnswerKeyEditor() {
       <Text style={styles.qn}>#{item.questionNumber}</Text>
       <View style={styles.typeSwitch}>
         <TouchableOpacity style={[styles.chip, item.questionType === 'mcq' && styles.chipActive]} onPress={() => updateRow(index, { questionType: 'mcq' })}>
-          <Text style={[styles.chipText, item.questionType === 'mcq' && styles.chipTextActive]}>MCQ</Text>
+          <Text style={[styles.chipText, item.questionType === 'mcq' && styles.chipTextActive]}>{t('mcq')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.chip, item.questionType === 'text' && styles.chipActive]} onPress={() => updateRow(index, { questionType: 'text' })}>
-          <Text style={[styles.chipText, item.questionType === 'text' && styles.chipTextActive]}>Text</Text>
+          <Text style={[styles.chipText, item.questionType === 'text' && styles.chipTextActive]}>{t('textQuestion')}</Text>
         </TouchableOpacity>
       </View>
       {item.questionType === 'mcq' ? (
@@ -100,7 +102,7 @@ export default function AnswerKeyEditor() {
         <TextInput style={styles.textInput} placeholder="Accepted answers (comma separated)" value={(item.correctTextAnswers ?? []).join(', ')} onChangeText={(v) => updateRow(index, { correctTextAnswers: v.split(',').map((s) => s.trim()).filter(Boolean) })} />
       )}
     </View>
-  ), [updateRow]);
+  ), [updateRow, t]);
 
   if (isLoading) {
     return <View style={styles.center}><ActivityIndicator /></View>;
@@ -115,18 +117,18 @@ export default function AnswerKeyEditor() {
         <Stack.Screen options={{ title: data?.template_name || 'Answer Key', headerShown: true }} />
 
         <View style={styles.headerCard}>
-          <Text style={styles.headerLabel}>Template Name</Text>
-          <TextInput value={templateName} onChangeText={setTemplateName} style={styles.headerInput} placeholder="Template name" placeholderTextColor="#9CA3AF" testID="template-name-edit" />
-          <Text style={[styles.headerLabel, { marginTop: 10 }]}>Test Type</Text>
+          <Text style={styles.headerLabel}>{t('templateName')}</Text>
+          <TextInput value={templateName} onChangeText={setTemplateName} style={styles.headerInput} placeholder={t('templateName')} placeholderTextColor="#9CA3AF" testID="template-name-edit" />
+          <Text style={[styles.headerLabel, { marginTop: 10 }]}>{t('answerKeyTestType')}</Text>
           <View style={styles.typeSwitch}>
-            {(['mock','midterm','final'] as const).map((t) => (
-              <TouchableOpacity key={t} style={[styles.chip, testType === t && styles.chipActive]} onPress={() => setTestType(t)} testID={`meta-type-${t}`}>
-                <Text style={[styles.chipText, testType === t && styles.chipTextActive]}>{t}</Text>
+            {(['mock','midterm','final'] as const).map((opt) => (
+              <TouchableOpacity key={opt} style={[styles.chip, testType === opt && styles.chipActive]} onPress={() => setTestType(opt)} testID={`meta-type-${opt}`}>
+                <Text style={[styles.chipText, testType === opt && styles.chipTextActive]}>{opt === 'mock' ? t('mock') : opt === 'midterm' ? t('midterm') : t('final')}</Text>
               </TouchableOpacity>
             ))}
           </View>
           <TouchableOpacity style={styles.updateBtn} onPress={onSaveMeta} testID="save-meta">
-            {updateMeta.isPending ? <ActivityIndicator color="#fff" /> : <Text style={styles.updateBtnText}>Save Template</Text>}
+            {updateMeta.isPending ? <ActivityIndicator color="#fff" /> : <Text style={styles.updateBtnText}>{t('saveTemplate') || 'Save Template'}</Text>}
           </TouchableOpacity>
         </View>
 
@@ -138,7 +140,7 @@ export default function AnswerKeyEditor() {
         />
 
         <TouchableOpacity style={styles.primary} onPress={onSave} testID="save-responses">
-          {upsertMutation.isPending ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Save</Text>}
+          {upsertMutation.isPending ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>{t('save') || 'Save'}</Text>}
         </TouchableOpacity>
       </SafeAreaView>
     </ErrorBoundary>

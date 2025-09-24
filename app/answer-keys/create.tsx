@@ -5,9 +5,11 @@ import { Stack, router } from 'expo-router';
 import { trpc } from '@/lib/trpc';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { useAuth } from '@/hooks/auth-context';
+import { useLanguage } from '@/hooks/language-context';
 
 export default function CreateAnswerKey() {
   const { isLoading: authLoading } = useAuth();
+  const { t } = useLanguage();
   const [templateName, setTemplateName] = useState<string>('');
   const [subject, setSubject] = useState<'korean' | 'mathematics' | 'english' | 'others'>('mathematics');
   const [testType, setTestType] = useState<'mock' | 'midterm' | 'final'>('mock');
@@ -40,47 +42,47 @@ export default function CreateAnswerKey() {
     <ErrorBoundary>
       <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
         <ScrollView contentContainerStyle={styles.container}>
-        <Stack.Screen options={{ title: 'New Answer Key', headerShown: true }} />
-        <Text style={styles.label}>Template Name</Text>
-        <TextInput value={templateName} onChangeText={setTemplateName} placeholder="e.g. Math Mock Test A" style={styles.input} placeholderTextColor="#8E8E93" testID="template-name" />
+        <Stack.Screen options={{ title: t('newAnswerKeyTitle'), headerShown: true }} />
+        <Text style={styles.label}>{t('templateName')}</Text>
+        <TextInput value={templateName} onChangeText={setTemplateName} placeholder={t('templateNamePlaceholder')} style={styles.input} placeholderTextColor="#8E8E93" testID="template-name" />
 
-        <Text style={styles.label}>Subject</Text>
+        <Text style={styles.label}>{t('subjectLabel')}</Text>
         <View style={styles.row}>
           {(['korean','mathematics','english','others'] as const).map(s => (
             <TouchableOpacity key={s} style={[styles.chip, subject === s && styles.chipActive]} onPress={() => setSubject(s)} testID={`subject-${s}`}>
-              <Text style={[styles.chipText, subject === s && styles.chipTextActive]}>{s}</Text>
+              <Text style={[styles.chipText, subject === s && styles.chipTextActive]}>{t(s)}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        <Text style={styles.label}>Test Type</Text>
+        <Text style={styles.label}>{t('answerKeyTestType')}</Text>
         <View style={styles.row}>
           {(['mock','midterm','final'] as const).map(s => (
             <TouchableOpacity key={s} style={[styles.chip, testType === s && styles.chipActive]} onPress={() => setTestType(s)} testID={`type-${s}`}>
-              <Text style={[styles.chipText, testType === s && styles.chipTextActive]}>{s}</Text>
+              <Text style={[styles.chipText, testType === s && styles.chipTextActive]}>{t(s)}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        <Text style={styles.label}>Questions</Text>
+        <Text style={styles.label}>{t('questions')}</Text>
         <View style={styles.split}>
           <View style={styles.flex1}>
-            <Text style={styles.sublabel}>MCQ</Text>
+            <Text style={styles.sublabel}>{t('mcq')}</Text>
             <TextInput value={mcq} onChangeText={setMcq} keyboardType="number-pad" style={styles.input} testID="mcq-count" />
           </View>
           <View style={styles.spacer} />
           <View style={styles.flex1}>
-            <Text style={styles.sublabel}>Text</Text>
+            <Text style={styles.sublabel}>{t('textQuestion')}</Text>
             <TextInput value={textQ} onChangeText={setTextQ} keyboardType="number-pad" style={styles.input} testID="text-count" />
           </View>
         </View>
-        <Text style={styles.total}>Total: {total}</Text>
+        <Text style={styles.total}>{t('total')}: {total}</Text>
 
-        <Text style={styles.label}>Description</Text>
-        <TextInput value={desc} onChangeText={setDesc} placeholder="Optional" style={[styles.input, { height: 90 }]} multiline placeholderTextColor="#8E8E93" />
+        <Text style={styles.label}>{t('description')}</Text>
+        <TextInput value={desc} onChangeText={setDesc} placeholder={t('optional')} style={[styles.input, { height: 90 }]} multiline placeholderTextColor="#8E8E93" />
 
         <TouchableOpacity style={styles.primary} onPress={onCreate} disabled={createMutation.isPending} testID="create-submit">
-          {createMutation.isPending ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Create</Text>}
+          {createMutation.isPending ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>{t('create')}</Text>}
         </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>

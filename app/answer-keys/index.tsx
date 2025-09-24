@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/auth-context';
 import { useUser } from '@/hooks/user-context';
 import { Plus, Lock, KeyRound } from 'lucide-react-native';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import { useLanguage } from '@/hooks/language-context';
 
 interface AnswerKeySummary {
   id: string;
@@ -35,6 +36,7 @@ const TEST_LABEL: Record<AnswerKeySummary['test_type'], string> = {
 export default function AnswerKeysHome() {
   const { user } = useUser();
   const { isLoading: authLoading } = useAuth();
+  const { t } = useLanguage();
   const [search, setSearch] = useState<string>('');
   const query = trpc.answerKeys.getAnswerKeys.useQuery({ includeStats: true, search, limit: 50 }, { enabled: !authLoading });
 
@@ -51,26 +53,26 @@ export default function AnswerKeysHome() {
     >
       <View style={styles.cardHeader}>
         <Text style={styles.cardTitle}>{item.template_name}</Text>
-        <Text style={styles.badge}>{SUBJECT_LABEL[item.subject]}</Text>
+        <Text style={styles.badge}>{t(item.subject)}</Text>
       </View>
       <View style={styles.cardRow}>
-        <Text style={styles.meta}>{TEST_LABEL[item.test_type]}</Text>
-        <Text style={styles.meta}>{item.total_questions} Qs • {item.mcq_questions} MCQ • {item.text_questions} Text</Text>
+        <Text style={styles.meta}>{t(item.test_type)}</Text>
+        <Text style={styles.meta}>{item.total_questions} {t('qsShort')} • {item.mcq_questions} {t('mcq')} • {item.text_questions} {t('textQuestion')}</Text>
       </View>
     </TouchableOpacity>
-  ), []);
+  ), [t]);
 
   return (
     <ErrorBoundary>
       <SafeAreaView style={styles.container} edges={['bottom']}>
-        <Stack.Screen options={{ title: 'Answer Keys', headerShown: true }} />
+        <Stack.Screen options={{ title: t('answerKeys'), headerShown: true }} />
 
         <View style={styles.toolbar}>
           <View style={styles.searchWrap}>
             <TextInput
               value={search}
               onChangeText={setSearch}
-              placeholder="Search templates"
+              placeholder={t('searchTemplates')}
               placeholderTextColor="#8E8E93"
               style={styles.searchInput}
               testID="search-input"
@@ -101,7 +103,7 @@ export default function AnswerKeysHome() {
         {!isAdmin && (
           <View style={styles.adminHint}>
             <Lock size={14} color="#6B7280" />
-            <Text style={styles.adminHintText}>Admin-only creation. Please sign in with admin.</Text>
+            <Text style={styles.adminHintText}>{t('adminOnlyCreationHint')}</Text>
           </View>
         )}
 
