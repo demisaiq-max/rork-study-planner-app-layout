@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, router } from 'expo-router';
-import { ArrowLeft, Camera, User, Check, KeyRound } from 'lucide-react-native';
+import { ArrowLeft, Camera, User, Check, KeyRound, Lock } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useUser } from '@/hooks/user-context';
 import { useLanguage, Language } from '@/hooks/language-context';
@@ -297,6 +297,23 @@ export default function SettingsScreen() {
             <View style={styles.listTextWrap}>
               <Text style={styles.listTitle}>{language === 'ko' ? '정답 키 관리' : 'Answer Key Management'}</Text>
               <Text style={styles.listSubtitle}>{language === 'ko' ? '시험 정답 키 생성/편집' : 'Create and edit answer keys'}</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.listItem}
+            onPress={() => {
+              console.log('[Settings] Navigate -> /(auth)/sign-in');
+              router.push('/(auth)/sign-in' as any);
+            }}
+            testID="nav-admin-login"
+          >
+            <View style={styles.listIconWrap}>
+              <Lock color="#2563EB" size={20} />
+            </View>
+            <View style={styles.listTextWrap}>
+              <Text style={styles.listTitle}>{language === 'ko' ? '관리자 로그인' : 'Admin Login'}</Text>
+              <Text style={styles.listSubtitle}>{language === 'ko' ? '관리자 권한으로 로그인' : 'Sign in with admin privileges'}</Text>
             </View>
           </TouchableOpacity>
 
