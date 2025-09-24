@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, router } from 'expo-router';
-import { ArrowLeft, Camera, User, Check, KeyRound, Shield } from 'lucide-react-native';
+import { ArrowLeft, Camera, User, Check, KeyRound } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useUser } from '@/hooks/user-context';
 import { useLanguage, Language } from '@/hooks/language-context';
@@ -300,22 +300,6 @@ export default function SettingsScreen() {
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.listItem}
-            onPress={() => {
-              console.log('[Settings] Navigate -> /answer-keys/categories');
-              router.push('/answer-keys/categories' as any);
-            }}
-            testID="nav-answer-key-categories"
-          >
-            <View style={styles.listIconWrap}>
-              <Shield color="#059669" size={20} />
-            </View>
-            <View style={styles.listTextWrap}>
-              <Text style={styles.listTitle}>{language === 'ko' ? '정답 키 카테고리' : 'Answer Key Categories'}</Text>
-              <Text style={styles.listSubtitle}>{language === 'ko' ? '카테고리 보기/관리' : 'View and manage categories'}</Text>
-            </View>
-          </TouchableOpacity>
         </View>
 
         {/* App Info Section */}
