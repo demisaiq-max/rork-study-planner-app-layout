@@ -1,14 +1,7 @@
 import { publicProcedure } from '@/backend/trpc/create-context';
 import { supabase } from '@/backend/lib/supabase';
 import { z } from 'zod';
-
-function mapSubjectNameToEnum(name: string): 'korean' | 'mathematics' | 'english' | 'others' {
-  const n = name.toLowerCase();
-  if (n.includes('korean') || n.includes('국어')) return 'korean';
-  if (n.includes('math') || n.includes('mathematics') || n.includes('수학')) return 'mathematics';
-  if (n.includes('english') || n.includes('영어')) return 'english';
-  return 'others';
-}
+import { mapSubjectNameToEnum } from '@/backend/lib/subjects';
 
 export const createAnswerSheetProcedure = publicProcedure
   .input(z.object({
