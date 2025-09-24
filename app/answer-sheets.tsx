@@ -16,6 +16,7 @@ import { Plus, X, Edit2, Trash2, FileText, Settings } from 'lucide-react-native'
 import { useLanguage } from '@/hooks/language-context';
 import { useAuth } from '@/hooks/auth-context';
 import { trpc } from '@/lib/trpc';
+import { mapSubjectNameToEnum, SubjectEnum } from '@/backend/lib/subjects';
 
 interface QuestionConfig {
   number: number;
@@ -222,13 +223,6 @@ export default function AnswerSheetsScreen() {
     }
   };
 
-  const nameToSubjectEnum = (name: string): 'korean' | 'mathematics' | 'english' | 'others' => {
-    const n = name.toLowerCase();
-    if (n.includes('korean') || n.includes('국어')) return 'korean';
-    if (n.includes('math') || n.includes('mathematics') || n.includes('수학')) return 'mathematics';
-    if (n.includes('english') || n.includes('영어')) return 'english';
-    return 'others';
-  };
 
   const handleAddSheet = () => {
     if (!newSheetName.trim()) {
@@ -248,7 +242,7 @@ export default function AnswerSheetsScreen() {
     }
 
     const subjInfo = subjects.find(s => s.id === selectedSubjectId);
-    const subjectEnum = subjInfo?.name ? nameToSubjectEnum(subjInfo.name) : 'others';
+    const subjectEnum: SubjectEnum = subjInfo?.name ? mapSubjectNameToEnum(subjInfo.name) : 'others';
 
     createAnswerSheetMutation.mutate({
       userId: authUser.id,

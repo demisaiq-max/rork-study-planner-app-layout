@@ -1,6 +1,7 @@
 import { publicProcedure } from '@/backend/trpc/create-context';
 import { supabase } from '@/backend/lib/supabase';
 import { z } from 'zod';
+import { mapSubjectNameToEnum, isValidRawScore, SubjectEnum } from '@/backend/lib/subjects';
 
 export const submitTestResult = publicProcedure
   .input(z.object({
@@ -20,33 +21,15 @@ export const submitTestResult = publicProcedure
       .from('tests')
       .select('id, subject, test_type, test_name')
       .eq('id', input.testId)
-      .single<{ id: string; subject: 'korean' | 'mathematics' | 'english' | 'others' | string; test_type: string; test_name: string }>();
+      .single<{ id: string; subject: SubjectEnum | string; test_type: string; test_name: string }>();
 
     if (testErr || !testRow) {
       console.error('[tests/submit-test-result] failed to load test', testErr);
       throw new Error('Unable to find the referenced test');
     }
 
-    const subjectEnum = ((): 'korean' | 'mathematics' | 'english' | 'others' => {
-      const s = (testRow.subject || '').toString().toLowerCase();
-      if (s === 'korean' || s.includes('국어')) return 'korean';
-      if (s === 'mathematics' || s.includes('수학') || s === 'math') return 'mathematics';
-      if (s === 'english' || s.includes('영어')) return 'english';
-      return 'others';
-    })();
+    const subjectEnum: SubjectEnum = mapSubjectNameToEnum(String(testRow.subject ?? ''));
 
-    const isInteger = (n: unknown) => typeof n === 'number' && Number.isInteger(n);
-
-    const isValidRawScore = (subj: 'korean' | 'mathematics' | 'english' | 'others', value: number): boolean => {
-      if (!Number.isFinite(value)) return false;
-      if (!isInteger(value)) return false;
-      if (subj === 'korean' || subj === 'mathematics' || subj === 'english') {
-        // 0-100, excluding 1 and 99
-        return value >= 0 && value <= 100 && value !== 1 && value !== 99;
-      }
-      // others: treat as Korean History/Exploration/Second Language: 0-50, excluding 1 and 49
-      return value >= 0 && value <= 50 && value !== 1 && value !== 49;
-    };
 
     if (input.rawScore !== undefined && input.rawScore !== null) {
       if (!isValidRawScore(subjectEnum, input.rawScore)) {

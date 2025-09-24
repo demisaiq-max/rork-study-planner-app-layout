@@ -6,12 +6,13 @@ import { trpc } from '@/lib/trpc';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { useAuth } from '@/hooks/auth-context';
 import { useLanguage } from '@/hooks/language-context';
+import { mapSubjectNameToEnum, SubjectEnum } from '@/backend/lib/subjects';
 
 export default function CreateAnswerKey() {
   const { isLoading: authLoading } = useAuth();
   const { t } = useLanguage();
   const [templateName, setTemplateName] = useState<string>('');
-  const [subject, setSubject] = useState<'korean' | 'mathematics' | 'english' | 'others'>('mathematics');
+  const [subject, setSubject] = useState<SubjectEnum>('mathematics');
   const [testType, setTestType] = useState<'mock' | 'midterm' | 'final'>('mock');
   const [mcq, setMcq] = useState<string>('20');
   const [textQ, setTextQ] = useState<string>('0');
@@ -49,13 +50,7 @@ export default function CreateAnswerKey() {
     );
     const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
 
-    const mapNameToSubjectEnum = (name: string): 'korean' | 'mathematics' | 'english' | 'others' => {
-      const n = name.toLowerCase();
-      if (n.includes('국어') || n.includes('korean')) return 'korean';
-      if (n.includes('수학') || n.includes('math')) return 'mathematics';
-      if (n.includes('영어') || n.includes('english')) return 'english';
-      return 'others';
-    };
+    const mapNameToSubjectEnum = (name: string): SubjectEnum => mapSubjectNameToEnum(name);
 
     const subjects = (subjectsQuery.data as Array<{ id: string; name: string; color?: string }> | undefined) ?? [];
 
