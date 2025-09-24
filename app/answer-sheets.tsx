@@ -80,7 +80,7 @@ export default function AnswerSheetsScreen() {
   const subjectsQuery = trpc.tests.getUserSubjects.useQuery({
     userId: authUser?.id || ""
   }, {
-    enabled: !!authUser?.id
+    enabled: true
   });
   
   // Fetch answer sheets from database

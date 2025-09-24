@@ -32,7 +32,7 @@ export default function AllSubjectsScreen() {
   // Fetch all user subjects
   const subjectsQuery = trpc.tests.getUserSubjects.useQuery(
     { userId: user?.id || '' },
-    { enabled: !!user?.id }
+    { enabled: true }
   );
 
   // Mutations
