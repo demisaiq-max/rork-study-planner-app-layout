@@ -16,8 +16,8 @@ export default function CreateAnswerKey() {
   const [mcq, setMcq] = useState<string>('20');
   const [textQ, setTextQ] = useState<string>('0');
   const [desc, setDesc] = useState<string>('');
-  const categoriesQuery = trpc.answerKeys.getCategories.useQuery();
-  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  
+  
 
   const total = useMemo(() => Number(mcq || '0') + Number(textQ || '0'), [mcq, textQ]);
   const createMutation = trpc.answerKeys.createAnswerKey.useMutation();
@@ -33,7 +33,7 @@ export default function CreateAnswerKey() {
         textQuestions: Number(textQ || '0'),
         description: desc.trim() || undefined,
         isActive: true,
-        categoryIds: selectedCategoryIds,
+        
       });
       router.replace(`/answer-keys/${res.id}` as any);
     } catch (e: any) {
@@ -41,7 +41,25 @@ export default function CreateAnswerKey() {
     }
   };
 
-  return (
+  // Unified Subject Management: load user's subjects so key management stays in sync
+    const { user } = useAuth();
+    const subjectsQuery = trpc.tests.getUserSubjects.useQuery(
+      { userId: String((user as any)?.id ?? '') },
+      { enabled: !!(user as any)?.id }
+    );
+    const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
+
+    const mapNameToSubjectEnum = (name: string): 'korean' | 'mathematics' | 'english' | 'others' => {
+      const n = name.toLowerCase();
+      if (n.includes('국어') || n.includes('korean')) return 'korean';
+      if (n.includes('수학') || n.includes('math')) return 'mathematics';
+      if (n.includes('영어') || n.includes('english')) return 'english';
+      return 'others';
+    };
+
+    const subjects = (subjectsQuery.data as Array<{ id: string; name: string; color?: string }> | undefined) ?? [];
+
+    return (
     <ErrorBoundary>
       <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
         <ScrollView contentContainerStyle={styles.container}>
@@ -50,13 +68,31 @@ export default function CreateAnswerKey() {
         <TextInput value={templateName} onChangeText={setTemplateName} placeholder={t('templateNamePlaceholder')} style={styles.input} placeholderTextColor="#8E8E93" testID="template-name" />
 
         <Text style={styles.label}>{t('subjectLabel')}</Text>
-        <View style={styles.row}>
-          {(['korean','mathematics','english','others'] as const).map(s => (
-            <TouchableOpacity key={s} style={[styles.chip, subject === s && styles.chipActive]} onPress={() => setSubject(s)} testID={`subject-${s}`}>
-              <Text style={[styles.chipText, subject === s && styles.chipTextActive]}>{t(s)}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        {subjectsQuery.isLoading ? (
+          <View style={styles.chipsWrap}><ActivityIndicator /></View>
+        ) : subjectsQuery.error ? (
+          <Text style={styles.error}>{t('failedToLoad')}</Text>
+        ) : (
+          <View style={styles.row}>
+            {subjects.map((s) => {
+              const active = selectedSubjectId === s.id;
+              return (
+                <TouchableOpacity
+                  key={s.id}
+                  style={[styles.chip, active && styles.chipActive, { borderColor: s.color ?? '#E5E7EB' }]}
+                  onPress={() => {
+                    setSelectedSubjectId(s.id);
+                    setSubject(mapNameToSubjectEnum(s.name));
+                  }}
+                  testID={`subject-${s.id}`}
+                >
+                  <View style={[styles.catDot, { backgroundColor: s.color ?? '#CBD5E1' }]} />
+                  <Text style={[styles.chipText, active && styles.chipTextActive]}>{s.name}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
 
         <Text style={styles.label}>{t('answerKeyTestType')}</Text>
         <View style={styles.row}>
@@ -84,35 +120,7 @@ export default function CreateAnswerKey() {
         <Text style={styles.label}>{t('description')}</Text>
         <TextInput value={desc} onChangeText={setDesc} placeholder={t('optional')} style={[styles.input, { height: 90 }]} multiline placeholderTextColor="#8E8E93" />
 
-        <Text style={styles.label}>{t('categories')}</Text>
-        {categoriesQuery.isLoading ? (
-          <View style={styles.chipsWrap}><ActivityIndicator /></View>
-        ) : categoriesQuery.error ? (
-          <Text style={styles.error}>{t('failedToLoad')}</Text>
-        ) : (
-          <View style={styles.row}>
-            {(categoriesQuery.data as Array<{ id: string; name: string; color?: string }> | undefined)?.map((c) => {
-              const active = selectedCategoryIds.includes(c.id);
-              return (
-                <TouchableOpacity
-                  key={c.id}
-                  style={[styles.chip, active && styles.chipActive, { borderColor: c.color ?? '#E5E7EB' }]}
-                  onPress={() => {
-                    setSelectedCategoryIds((prev) =>
-                      prev.includes(c.id) ? prev.filter((id) => id !== c.id) : [...prev, c.id]
-                    );
-                  }}
-                  testID={`cat-${c.id}`}
-                >
-                  <View style={[styles.catDot, { backgroundColor: c.color ?? '#CBD5E1' }]} />
-                  <Text style={[styles.chipText, active && styles.chipTextActive]}>{c.name}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        )}
-
-        <TouchableOpacity style={styles.primary} onPress={onCreate} disabled={createMutation.isPending} testID="create-submit">
+        <TouchableOpacity style={styles.primary} onPress={onCreate} disabled={createMutation.isPending || !selectedSubjectId} testID="create-submit">
           {createMutation.isPending ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>{t('create')}</Text>}
         </TouchableOpacity>
         </ScrollView>
