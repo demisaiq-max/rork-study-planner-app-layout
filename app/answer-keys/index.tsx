@@ -20,18 +20,8 @@ interface AnswerKeySummary {
   created_at?: string | null;
 }
 
-const SUBJECT_LABEL: Record<AnswerKeySummary['subject'], string> = {
-  korean: 'Korean',
-  mathematics: 'Mathematics',
-  english: 'English',
-  others: 'Others',
-};
+type UserSubject = { id: string; name: string; color?: string | null };
 
-const TEST_LABEL: Record<AnswerKeySummary['test_type'], string> = {
-  mock: 'Mock',
-  midterm: 'Midterm',
-  final: 'Final',
-};
 
 export default function AnswerKeysHome() {
   const { user } = useUser();
@@ -40,27 +30,62 @@ export default function AnswerKeysHome() {
   const [search, setSearch] = useState<string>('');
   const query = trpc.answerKeys.getAnswerKeys.useQuery({ includeStats: true, search, limit: 50 }, { enabled: !authLoading });
 
+  // Load unified subjects for current user
+  const subjectsQuery = trpc.tests.getUserSubjects.useQuery(
+    { userId: String((user as any)?.id ?? '') },
+    { enabled: !!(user as any)?.id }
+  );
+  const subjects: UserSubject[] = (subjectsQuery.data as UserSubject[] | undefined) ?? [];
+
   const isAdmin = useMemo(() => {
-    // Basic heuristic: treat email domain or metadata; here just allow any signed-in user to attempt admin routes.
     return !!user;
   }, [user]);
 
-  const renderItem = useCallback(({ item }: { item: AnswerKeySummary }) => (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={() => router.push(`/answer-keys/${item.id}` as any)}
-      testID={`answer-key-${item.id}`}
-    >
-      <View style={styles.cardHeader}>
-        <Text style={styles.cardTitle}>{item.template_name}</Text>
-        <Text style={styles.badge}>{t(item.subject)}</Text>
-      </View>
-      <View style={styles.cardRow}>
-        <Text style={styles.meta}>{t(item.test_type)}</Text>
-        <Text style={styles.meta}>{item.total_questions} {t('qsShort')} • {item.mcq_questions} {t('mcq')} • {item.text_questions} {t('textQuestion')}</Text>
-      </View>
-    </TouchableOpacity>
-  ), [t]);
+  const subjectDisplay = useCallback((subjectEnum: AnswerKeySummary['subject']): { name: string; color: string } => {
+    const lower = (s: string) => s.toLowerCase();
+    const findByIncludes = (needles: string[]) =>
+      subjects.find(s => {
+        const n = lower(s.name);
+        return needles.some(nd => n.includes(nd));
+      });
+
+    let match: UserSubject | undefined;
+    if (subjectEnum === 'korean') match = findByIncludes(['국어','korean']);
+    else if (subjectEnum === 'mathematics') match = findByIncludes(['수학','math']);
+    else if (subjectEnum === 'english') match = findByIncludes(['영어','english']);
+    else match = undefined;
+
+    const defaultNames: Record<AnswerKeySummary['subject'], string> = {
+      korean: 'Korean',
+      mathematics: 'Mathematics',
+      english: 'English',
+      others: 'Others',
+    };
+
+    return { name: match?.name ?? defaultNames[subjectEnum], color: (match?.color as string) ?? '#EEF2FF' };
+  }, [subjects]);
+
+  const renderItem = useCallback(({ item }: { item: AnswerKeySummary }) => {
+    const disp = subjectDisplay(item.subject);
+    return (
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => router.push(`/answer-keys/${item.id}` as any)}
+        testID={`answer-key-${item.id}`}
+      >
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>{item.template_name}</Text>
+          <View style={[styles.badgeWrap, { backgroundColor: disp.color + '22', borderColor: disp.color }]}> 
+            <Text style={styles.badgeText}>{disp.name}</Text>
+          </View>
+        </View>
+        <View style={styles.cardRow}>
+          <Text style={styles.meta}>{t(item.test_type)}</Text>
+          <Text style={styles.meta}>{item.total_questions} {t('qsShort')} • {item.mcq_questions} {t('mcq')} • {item.text_questions} {t('textQuestion')}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  }, [subjectDisplay, t]);
 
   return (
     <ErrorBoundary>
@@ -83,13 +108,17 @@ export default function AnswerKeysHome() {
           </TouchableOpacity>
         </View>
 
-        {query.isLoading ? (
+        {query.isLoading || subjectsQuery.isLoading ? (
           <View style={styles.center}>
             <ActivityIndicator />
           </View>
         ) : query.error ? (
           <View style={styles.center}>
             <Text style={styles.errorText}>{String(query.error.message ?? 'Failed to load')}</Text>
+          </View>
+        ) : subjectsQuery.error ? (
+          <View style={styles.center}>
+            <Text style={styles.errorText}>{t('failedToLoad')}</Text>
           </View>
         ) : (
           <FlatList
@@ -127,7 +156,8 @@ const styles = StyleSheet.create({
   card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginVertical: 8, borderWidth: 1, borderColor: '#E5E7EB' },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cardTitle: { fontSize: 16, fontWeight: '700', color: '#111827' },
-  badge: { backgroundColor: '#EEF2FF', color: '#3730A3', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, fontSize: 12 },
+  badgeWrap: { backgroundColor: '#EEF2FF', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#EEF2FF' },
+  badgeText: { color: '#111827', fontSize: 12 },
   cardRow: { marginTop: 6, flexDirection: 'row', justifyContent: 'space-between' },
   meta: { color: '#6B7280', fontSize: 12 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
