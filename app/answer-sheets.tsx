@@ -222,6 +222,14 @@ export default function AnswerSheetsScreen() {
     }
   };
 
+  const nameToSubjectEnum = (name: string): 'korean' | 'mathematics' | 'english' | 'others' => {
+    const n = name.toLowerCase();
+    if (n.includes('korean') || n.includes('국어')) return 'korean';
+    if (n.includes('math') || n.includes('mathematics') || n.includes('수학')) return 'mathematics';
+    if (n.includes('english') || n.includes('영어')) return 'english';
+    return 'others';
+  };
+
   const handleAddSheet = () => {
     if (!newSheetName.trim()) {
       Alert.alert('Error', 'Please enter a sheet name');
@@ -239,9 +247,13 @@ export default function AnswerSheetsScreen() {
       return;
     }
 
+    const subjInfo = subjects.find(s => s.id === selectedSubjectId);
+    const subjectEnum = subjInfo?.name ? nameToSubjectEnum(subjInfo.name) : 'others';
+
     createAnswerSheetMutation.mutate({
       userId: authUser.id,
-      subject: 'korean', // Default subject
+      subject: subjectEnum,
+      subjectId: selectedSubjectId || undefined,
       sheetName: newSheetName,
       totalQuestions: questionsNum,
       testType: newTestType,
