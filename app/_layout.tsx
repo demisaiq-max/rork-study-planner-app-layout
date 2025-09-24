@@ -40,6 +40,10 @@ function RootLayoutNav() {
       <Stack.Screen name="question-detail" options={{ title: "Question Detail" }} />
       <Stack.Screen name="group-detail" options={{ title: "Group Detail" }} />
       <Stack.Screen name="oauth-native-callback" options={{ title: "OAuth Callback" }} />
+      <Stack.Screen name="answer-keys/index" options={{ title: "Answer Keys" }} />
+      <Stack.Screen name="answer-keys/create" options={{ title: "New Answer Key" }} />
+      <Stack.Screen name="answer-keys/[id]" options={{ title: "Edit Answer Key" }} />
+      <Stack.Screen name="answer-keys/categories" options={{ title: "Categories" }} />
     </Stack>
   );
 }
