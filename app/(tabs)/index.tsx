@@ -200,8 +200,8 @@ export default function HomeScreen() {
   const [showEditGradesModal, setShowEditGradesModal] = useState(false);
   const [editingGrades, setEditingGrades] = useState<Record<string, number>>({});
   const [currentStats, setCurrentStats] = useState({
-    targetPercentile: 140,
-    averagePercentile: 0,
+    topPercentile: 0,
+    averageStandardScore: 0,
     recentPercentile: 0,
   });
   const [selectedGradedExam, setSelectedGradedExam] = useState<any>(null);
@@ -219,67 +219,53 @@ export default function HomeScreen() {
     }
   }, [showEditGradesModal, subjectGrades]);
 
-  // Update stats when a graded exam is selected
+  // Update stats when graded exams change or selection changes
   useEffect(() => {
     if (selectedGradedExam && gradedExams) {
-      // When a specific exam is selected, show stats for that subject only
       const selectedSubject = selectedGradedExam.tests?.subject;
       const subjectExams = gradedExams.filter((exam: any) => exam.tests?.subject === selectedSubject);
-      
-      // Calculate stats for the selected subject
-      const subjectStandardScores = subjectExams.map((exam: any) => exam.standard_score || 0).filter(s => s > 0);
-      const subjectPercentiles = subjectExams.map((exam: any) => exam.percentile || 0).filter(p => p > 0);
-      
-      const averageStandardScore = subjectStandardScores.length > 0 
-        ? Math.round(subjectStandardScores.reduce((sum, score) => sum + score, 0) / subjectStandardScores.length)
+
+      const subjectStandardScores = subjectExams
+        .map((exam: any) => exam.standard_score ?? 0)
+        .filter((s: number) => s > 0);
+      const subjectPercentiles = subjectExams
+        .map((exam: any) => exam.percentile ?? 0)
+        .filter((p: number) => p > 0);
+
+      const averageStandardScore = subjectStandardScores.length > 0
+        ? Math.round(subjectStandardScores.reduce((sum: number, score: number) => sum + score, 0) / subjectStandardScores.length)
         : 0;
-      
-      const averagePercentile = subjectPercentiles.length > 0 
-        ? Math.round(subjectPercentiles.reduce((sum, percentile) => sum + percentile, 0) / subjectPercentiles.length)
-        : 0;
-      
-      // Target score: highest achieved standard score in this subject + 5, or 140 if no data
-      const maxStandardScore = subjectStandardScores.length > 0 ? Math.max(...subjectStandardScores) : 0;
-      const targetScore = maxStandardScore > 0 ? Math.min(maxStandardScore + 5, 150) : 140;
-      
-      // Recent percentile from the selected exam
-      const recentPercentile = selectedGradedExam.percentile || 0;
-      
+      const topPercentile = subjectPercentiles.length > 0 ? Math.max(...subjectPercentiles) : 0;
+      const recentPercentile = selectedGradedExam.percentile ?? 0;
+
       setCurrentStats({
-        targetPercentile: targetScore,
-        averagePercentile: averageStandardScore,
-        recentPercentile: recentPercentile,
+        topPercentile,
+        averageStandardScore,
+        recentPercentile,
       });
     } else if (gradedExams && gradedExams.length > 0) {
-      // Show overall stats when no specific exam is selected
-      const allStandardScores = gradedExams.map((exam: any) => exam.standard_score || 0).filter(s => s > 0);
-      const allPercentiles = gradedExams.map((exam: any) => exam.percentile || 0).filter(p => p > 0);
-      
-      const averageStandardScore = allStandardScores.length > 0 
-        ? Math.round(allStandardScores.reduce((sum, score) => sum + score, 0) / allStandardScores.length)
+      const allStandardScores = gradedExams
+        .map((exam: any) => exam.standard_score ?? 0)
+        .filter((s: number) => s > 0);
+      const allPercentiles = gradedExams
+        .map((exam: any) => exam.percentile ?? 0)
+        .filter((p: number) => p > 0);
+
+      const averageStandardScore = allStandardScores.length > 0
+        ? Math.round(allStandardScores.reduce((sum: number, score: number) => sum + score, 0) / allStandardScores.length)
         : 0;
-      
-      const averagePercentile = allPercentiles.length > 0 
-        ? Math.round(allPercentiles.reduce((sum, percentile) => sum + percentile, 0) / allPercentiles.length)
-        : 0;
-      
-      // Target score: highest achieved standard score across all subjects + 5, or 140 if no data
-      const maxStandardScore = allStandardScores.length > 0 ? Math.max(...allStandardScores) : 0;
-      const targetScore = maxStandardScore > 0 ? Math.min(maxStandardScore + 5, 150) : 140;
-      
-      // Most recent exam percentile (first in the sorted array)
-      const recentPercentile = gradedExams[0]?.percentile || 0;
-      
+      const topPercentile = allPercentiles.length > 0 ? Math.max(...allPercentiles) : 0;
+      const recentPercentile = gradedExams[0]?.percentile ?? 0;
+
       setCurrentStats({
-        targetPercentile: targetScore,
-        averagePercentile: averageStandardScore,
-        recentPercentile: recentPercentile,
+        topPercentile,
+        averageStandardScore,
+        recentPercentile,
       });
     } else {
-      // Reset to default stats when no data
       setCurrentStats({
-        targetPercentile: 140,
-        averagePercentile: 0,
+        topPercentile: 0,
+        averageStandardScore: 0,
         recentPercentile: 0,
       });
     }
@@ -444,22 +430,22 @@ export default function HomeScreen() {
             <View style={styles.circlesContainer}>
               <View style={styles.circleItem}>
                 <CircularProgress 
-                  percentage={Math.min((currentStats.targetPercentile / 150) * 100, 100)}
+                  percentage={Math.min(currentStats.topPercentile, 100)}
                   size={70}
                   strokeWidth={6}
                   color="#333333"
-                  centerText={currentStats.targetPercentile.toString()}
+                  centerText={currentStats.topPercentile.toString()}
                 />
-                <Text style={styles.circleLabel}>목표 표준점수</Text>
+                <Text style={styles.circleLabel}>최고 백분위</Text>
               </View>
               
               <View style={styles.circleItem}>
                 <CircularProgress 
-                  percentage={Math.min((currentStats.averagePercentile / 150) * 100, 100)}
+                  percentage={Math.min((currentStats.averageStandardScore / 150) * 100, 100)}
                   size={70}
                   strokeWidth={6}
                   color="#E5E5EA"
-                  centerText={currentStats.averagePercentile.toString()}
+                  centerText={currentStats.averageStandardScore.toString()}
                 />
                 <Text style={styles.circleLabel}>평균 표준점수</Text>
               </View>
@@ -559,7 +545,7 @@ export default function HomeScreen() {
                       styles.subjectTestName,
                       isSelected && styles.subjectTestNameSelected
                     ]}>
-                      {formatTestType(testType)}
+                      {testName}
                     </Text>
                     {isSelected && (
                       <View style={styles.subjectIndicatorSelected} />
