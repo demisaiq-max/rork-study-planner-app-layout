@@ -1,11 +1,11 @@
 import { publicProcedure } from '@/backend/trpc/create-context';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/backend/lib/supabase';
 import { z } from 'zod';
 
 export const getUserSubjects = publicProcedure
   .input(z.object({ userId: z.string() }))
   .query(async ({ input }) => {
-    // Get subjects from subjects table
+    console.log('[getUserSubjects] fetching for user', input.userId);
     const { data, error } = await supabase
       .from('subjects')
       .select('*')
