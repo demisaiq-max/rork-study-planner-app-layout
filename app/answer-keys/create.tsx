@@ -16,6 +16,8 @@ export default function CreateAnswerKey() {
   const [mcq, setMcq] = useState<string>('20');
   const [textQ, setTextQ] = useState<string>('0');
   const [desc, setDesc] = useState<string>('');
+  const categoriesQuery = trpc.answerKeys.getCategories.useQuery();
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
 
   const total = useMemo(() => Number(mcq || '0') + Number(textQ || '0'), [mcq, textQ]);
   const createMutation = trpc.answerKeys.createAnswerKey.useMutation();
@@ -31,6 +33,7 @@ export default function CreateAnswerKey() {
         textQuestions: Number(textQ || '0'),
         description: desc.trim() || undefined,
         isActive: true,
+        categoryIds: selectedCategoryIds,
       });
       router.replace(`/answer-keys/${res.id}` as any);
     } catch (e: any) {
@@ -81,6 +84,34 @@ export default function CreateAnswerKey() {
         <Text style={styles.label}>{t('description')}</Text>
         <TextInput value={desc} onChangeText={setDesc} placeholder={t('optional')} style={[styles.input, { height: 90 }]} multiline placeholderTextColor="#8E8E93" />
 
+        <Text style={styles.label}>{t('categories')}</Text>
+        {categoriesQuery.isLoading ? (
+          <View style={styles.chipsWrap}><ActivityIndicator /></View>
+        ) : categoriesQuery.error ? (
+          <Text style={styles.error}>{t('failedToLoad')}</Text>
+        ) : (
+          <View style={styles.row}>
+            {(categoriesQuery.data as Array<{ id: string; name: string; color?: string }> | undefined)?.map((c) => {
+              const active = selectedCategoryIds.includes(c.id);
+              return (
+                <TouchableOpacity
+                  key={c.id}
+                  style={[styles.chip, active && styles.chipActive, { borderColor: c.color ?? '#E5E7EB' }]}
+                  onPress={() => {
+                    setSelectedCategoryIds((prev) =>
+                      prev.includes(c.id) ? prev.filter((id) => id !== c.id) : [...prev, c.id]
+                    );
+                  }}
+                  testID={`cat-${c.id}`}
+                >
+                  <View style={[styles.catDot, { backgroundColor: c.color ?? '#CBD5E1' }]} />
+                  <Text style={[styles.chipText, active && styles.chipTextActive]}>{c.name}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+
         <TouchableOpacity style={styles.primary} onPress={onCreate} disabled={createMutation.isPending} testID="create-submit">
           {createMutation.isPending ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>{t('create')}</Text>}
         </TouchableOpacity>
@@ -100,10 +131,13 @@ const styles = StyleSheet.create({
   flex1: { flex: 1 },
   spacer: { width: 12 },
   total: { marginTop: 8, color: '#6B7280' },
-  chip: { backgroundColor: '#F3F4F6', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: '#E5E7EB' },
+  chip: { backgroundColor: '#F3F4F6', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: '#E5E7EB', flexDirection: 'row', alignItems: 'center', gap: 6 },
   chipActive: { backgroundColor: '#DBEAFE', borderColor: '#3B82F6' },
   chipText: { color: '#374151' },
   chipTextActive: { color: '#1D4ED8', fontWeight: '700' },
+  catDot: { width: 10, height: 10, borderRadius: 5 },
   primary: { backgroundColor: '#007AFF', marginTop: 16, paddingVertical: 14, alignItems: 'center', borderRadius: 12 },
   primaryText: { color: '#fff', fontWeight: '700' },
+  chipsWrap: { paddingVertical: 8 },
+  error: { color: '#B91C1C' },
 });
