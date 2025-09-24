@@ -6,7 +6,7 @@ export const getAnswerKeysProcedure = publicProcedure
   .input(
     z.object({
       subject: z.enum(['korean', 'mathematics', 'english', 'others']).optional(),
-      testType: z.enum(['mock', 'midterm', 'final']).optional(),
+      testType: z.enum(['practice', 'mock', 'midterm', 'final']).optional(),
       search: z.string().optional(),
       includeStats: z.boolean().optional(),
       limit: z.number().int().min(1).max(100).optional(),

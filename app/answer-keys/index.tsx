@@ -13,7 +13,7 @@ interface AnswerKeySummary {
   id: string;
   template_name: string;
   subject: 'korean' | 'mathematics' | 'english' | 'others';
-  test_type: 'mock' | 'midterm' | 'final';
+  test_type: 'practice' | 'mock' | 'midterm' | 'final';
   total_questions: number;
   mcq_questions: number;
   text_questions: number;

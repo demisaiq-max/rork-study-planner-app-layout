@@ -24,13 +24,12 @@ export const updateAnswerKeyProcedure = protectedProcedure
       id: z.string().uuid(),
       templateName: z.string().min(1).optional(),
       subject: z.enum(['korean', 'mathematics', 'english', 'others']).optional(),
-      testType: z.enum(['mock', 'midterm', 'final']).optional(),
+      testType: z.enum(['practice', 'mock', 'midterm', 'final']).optional(),
       totalQuestions: z.number().int().min(1).max(200).optional(),
       mcqQuestions: z.number().int().min(0).optional(),
       textQuestions: z.number().int().min(0).optional(),
       description: z.string().nullable().optional(),
       isActive: z.boolean().optional(),
-      categoryIds: z.array(z.string().uuid()).optional(),
     })
   )
   .mutation(async ({ input, ctx }) => {
@@ -60,21 +59,7 @@ export const updateAnswerKeyProcedure = protectedProcedure
       throw new Error(`Failed to update answer key: ${error.message}`);
     }
 
-    if (input.categoryIds) {
-      const { error: delErr } = await supabase
-        .from('answer_key_template_categories')
-        .delete()
-        .eq('answer_key_id', input.id);
-      if (delErr) console.error('Failed to clear categories', delErr);
 
-      if (input.categoryIds.length > 0) {
-        const rows = input.categoryIds.map((cid) => ({ answer_key_id: input.id, category_id: cid }));
-        const { error: linkErr } = await supabase
-          .from('answer_key_template_categories')
-          .insert(rows);
-        if (linkErr) console.error('Failed to link categories', linkErr);
-      }
-    }
 
     console.log('[answer-keys/update] updated id', data.id);
     return data;

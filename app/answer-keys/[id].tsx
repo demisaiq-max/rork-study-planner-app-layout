@@ -26,7 +26,7 @@ export default function AnswerKeyEditor() {
 
   const [rows, setRows] = useState<ResponseItem[]>([]);
   const [templateName, setTemplateName] = useState<string>('');
-  const [testType, setTestType] = useState<'mock' | 'midterm' | 'final'>('mock');
+  const [testType, setTestType] = useState<'practice' | 'mock' | 'midterm' | 'final'>('mock');
 
   React.useEffect(() => {
     if (data) {
@@ -121,9 +121,9 @@ export default function AnswerKeyEditor() {
           <TextInput value={templateName} onChangeText={setTemplateName} style={styles.headerInput} placeholder={t('templateName')} placeholderTextColor="#9CA3AF" testID="template-name-edit" />
           <Text style={[styles.headerLabel, { marginTop: 10 }]}>{t('answerKeyTestType')}</Text>
           <View style={styles.typeSwitch}>
-            {(['mock','midterm','final'] as const).map((opt) => (
+            {(['practice','mock','midterm','final'] as const).map((opt) => (
               <TouchableOpacity key={opt} style={[styles.chip, testType === opt && styles.chipActive]} onPress={() => setTestType(opt)} testID={`meta-type-${opt}`}>
-                <Text style={[styles.chipText, testType === opt && styles.chipTextActive]}>{opt === 'mock' ? t('mock') : opt === 'midterm' ? t('midterm') : t('final')}</Text>
+                <Text style={[styles.chipText, testType === opt && styles.chipTextActive]}>{t(opt)}</Text>
               </TouchableOpacity>
             ))}
           </View>

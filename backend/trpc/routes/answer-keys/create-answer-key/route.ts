@@ -23,13 +23,12 @@ export const createAnswerKeyProcedure = protectedProcedure
     z.object({
       templateName: z.string().min(1),
       subject: z.enum(['korean', 'mathematics', 'english', 'others']),
-      testType: z.enum(['mock', 'midterm', 'final']).default('mock'),
+      testType: z.enum(['practice', 'mock', 'midterm', 'final']).default('mock'),
       totalQuestions: z.number().int().min(1).max(200),
       mcqQuestions: z.number().int().min(0).default(0),
       textQuestions: z.number().int().min(0).default(0),
       description: z.string().optional(),
       isActive: z.boolean().optional(),
-      categoryIds: z.array(z.string().uuid()).optional(),
     })
   )
   .mutation(async ({ input, ctx }) => {
@@ -63,16 +62,7 @@ export const createAnswerKeyProcedure = protectedProcedure
       throw new Error(`Failed to create answer key: ${error.message}`);
     }
 
-    if (input.categoryIds && input.categoryIds.length > 0) {
-      const rows = input.categoryIds.map((cid) => ({ answer_key_id: data.id, category_id: cid }));
-      const { error: linkErr } = await supabase
-        .from('answer_key_template_categories')
-        .insert(rows)
-        .select('id');
-      if (linkErr) {
-        console.error('Warning: failed to link categories', linkErr);
-      }
-    }
+
 
     console.log('[answer-keys/create] created id', data.id);
     return data;
