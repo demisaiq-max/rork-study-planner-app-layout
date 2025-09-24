@@ -78,7 +78,7 @@ export default function AnswerSheetsScreen() {
   
   // Fetch subjects from database
   const subjectsQuery = trpc.tests.getUserSubjects.useQuery({
-    userId: authUser?.id || ""
+    userId: authUser?.id || null
   }, {
     enabled: true
   });

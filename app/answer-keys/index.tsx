@@ -32,8 +32,8 @@ export default function AnswerKeysHome() {
 
   // Load unified subjects for current user
   const subjectsQuery = trpc.tests.getUserSubjects.useQuery(
-    { userId: String((user as any)?.id ?? '') },
-    { enabled: !!(user as any)?.id }
+    { userId: (user as any)?.id || null },
+    { enabled: true }
   );
   const subjects: UserSubject[] = (subjectsQuery.data as UserSubject[] | undefined) ?? [];
 

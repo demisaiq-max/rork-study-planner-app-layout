@@ -31,7 +31,7 @@ export default function AllSubjectsScreen() {
 
   // Fetch all user subjects
   const subjectsQuery = trpc.tests.getUserSubjects.useQuery(
-    { userId: user?.id || '' },
+    { userId: user?.id || null },
     { enabled: true }
   );
 

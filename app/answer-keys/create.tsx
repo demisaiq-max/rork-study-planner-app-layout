@@ -45,8 +45,8 @@ export default function CreateAnswerKey() {
   // Unified Subject Management: load user's subjects so key management stays in sync
     const { user } = useAuth();
     const subjectsQuery = trpc.tests.getUserSubjects.useQuery(
-      { userId: String((user as any)?.id ?? '') },
-      { enabled: !!(user as any)?.id }
+      { userId: (user as any)?.id || null },
+      { enabled: true }
     );
     const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
 
