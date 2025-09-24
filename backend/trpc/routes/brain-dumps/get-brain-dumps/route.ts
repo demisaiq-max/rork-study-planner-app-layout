@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { protectedProcedure } from '@/backend/trpc/create-context';
-import { supabase } from '@/lib/supabase';
 
 export const getBrainDumpsProcedure = protectedProcedure
   .input(z.object({
@@ -11,7 +10,7 @@ export const getBrainDumpsProcedure = protectedProcedure
     const limit = input?.limit ?? 10;
     const offset = input?.offset ?? 0;
 
-    const { data, error } = await supabase
+    const { data, error } = await ctx.supabase
       .from('brain_dumps')
       .select('*')
       .eq('user_id', ctx.userId)
@@ -21,7 +20,7 @@ export const getBrainDumpsProcedure = protectedProcedure
 
     if (error) {
       console.error('Error fetching brain dumps:', error);
-      throw new Error('Failed to fetch brain dumps');
+      throw new Error(error.message || 'Failed to fetch brain dumps');
     }
 
     return data || [];

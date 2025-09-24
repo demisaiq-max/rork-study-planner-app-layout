@@ -1,23 +1,27 @@
 import { FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch";
 import { initTRPC } from "@trpc/server";
 import superjson from "superjson";
-import { supabase } from '../lib/supabase';
+import { createClient } from "@supabase/supabase-js";
+import { supabase as baseSupabase } from '../lib/supabase';
+
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://bmxtcqpuhfrvnajozzlw.supabase.co';
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJteHRjcXB1aGZydm5ham96emx3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY2NTQ4NDksImV4cCI6MjA3MjIzMDg0OX0.kDn1-ABfpKfUS7jBaUnSWuzNiUweiFp5dFzsOKNi0S0';
 
 // Context creation function
 export const createContext = async (opts: FetchCreateContextFnOptions) => {
   let userId: string | null = null;
-  let user = null;
+  let user: any = null;
+  let supabase = baseSupabase;
   
   try {
-    // Get the Authorization header
     const authHeader = opts.req.headers.get('authorization');
-    
+    let token: string | null = null;
+
     if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-      
-      // Verify the JWT token with Supabase
-      const { data: { user: authUser }, error } = await supabase.auth.getUser(token);
-      
+      token = authHeader.substring(7);
+
+      // Verify token using base client
+      const { data: { user: authUser }, error } = await baseSupabase.auth.getUser(token);
       if (error) {
         console.error('❌ Auth error in tRPC context:', error.message);
       } else if (authUser) {
@@ -25,6 +29,11 @@ export const createContext = async (opts: FetchCreateContextFnOptions) => {
         user = authUser;
         console.log('✅ Authenticated user in tRPC:', userId);
       }
+
+      // Create a per-request client that forwards the user's JWT for RLS
+      supabase = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+      });
     } else {
       console.log('⚠️ No authorization header found in tRPC request');
     }

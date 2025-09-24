@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { protectedProcedure } from '@/backend/trpc/create-context';
-import { supabase } from '@/lib/supabase';
 
 export const updateBrainDumpProcedure = protectedProcedure
   .input(z.object({
@@ -14,7 +13,7 @@ export const updateBrainDumpProcedure = protectedProcedure
   .mutation(async ({ ctx, input }) => {
     const { id, ...updateData } = input;
     
-    const { data, error } = await supabase
+    const { data, error } = await ctx.supabase
       .from('brain_dumps')
       .update(updateData)
       .eq('id', id)
@@ -24,7 +23,7 @@ export const updateBrainDumpProcedure = protectedProcedure
 
     if (error) {
       console.error('Error updating brain dump:', error);
-      throw new Error('Failed to update brain dump');
+      throw new Error(error.message || 'Failed to update brain dump');
     }
 
     return data;

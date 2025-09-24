@@ -76,7 +76,7 @@ export default function PriorityManagementScreen() {
   const t = translations[language];
 
   const { data: dbTasks, isLoading, error, refetch } = trpc.priorityTasks.getPriorityTasks.useQuery(
-    { userId: user?.id ?? '' },
+    undefined,
     { enabled: !!user?.id, staleTime: 60_000 }
   );
 
@@ -130,7 +130,7 @@ export default function PriorityManagementScreen() {
       }
     } else {
       if (isSignedIn && user?.id) {
-        createMutation.mutate({ userId: user.id, title: taskTitle, subject: taskSubject, priority: taskPriority, orderIndex: tasks.length, completed: false });
+        createMutation.mutate({ title: taskTitle, subject: taskSubject, priority: taskPriority, orderIndex: tasks.length, completed: false });
       } else {
         addPriorityTask({ title: taskTitle, subject: taskSubject, priority: taskPriority, completed: false });
       }

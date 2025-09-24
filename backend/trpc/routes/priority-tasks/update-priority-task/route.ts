@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { protectedProcedure } from '@/backend/trpc/create-context';
-import { supabase } from '@/lib/supabase';
 
 export const updatePriorityTaskProcedure = protectedProcedure
   .input(z.object({
@@ -11,19 +10,20 @@ export const updatePriorityTaskProcedure = protectedProcedure
     orderIndex: z.number().optional(),
     completed: z.boolean().optional(),
   }))
-  .mutation(async ({ input }) => {
+  .mutation(async ({ ctx, input }) => {
     const { id, ...updates } = input;
     
-    const { data, error } = await supabase
+    const { data, error } = await ctx.supabase
       .from('priority_tasks')
       .update(updates)
       .eq('id', id)
+      .eq('user_id', ctx.userId)
       .select()
       .single();
 
     if (error) {
       console.error('Error updating priority task:', error);
-      throw new Error('Failed to update priority task');
+      throw new Error(error.message || 'Failed to update priority task');
     }
 
     return data;
