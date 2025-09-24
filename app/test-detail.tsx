@@ -271,227 +271,86 @@ export default function TestDetailScreen() {
         {hasResult ? (
           /* Results Display */
           (() => {
-            // Parse analysis data to get subject-specific scores
             let analysisData: any = {};
             try {
               if (result?.analysis_data) {
                 analysisData = JSON.parse(result.analysis_data);
               }
             } catch {
-              // Use fallback data if parsing fails
               analysisData = {
                 korean: { rawScore: result?.raw_score || 80, standardScore: result?.standard_score || 131, percentile: result?.percentile || 93, grade: result?.grade || 2 },
                 math: { rawScore: 86, standardScore: 137, percentile: 95, grade: 2 }
               };
             }
 
-            const korean = analysisData.korean || {};
-            const math = analysisData.math || {};
-            const english = analysisData.english || {};
-            const koreanHistory = analysisData.koreanHistory || {};
-            const science = analysisData.science || {};
+            const mapSubjectToKey = (subject: string): 'korean' | 'math' | 'english' | 'koreanHistory' | 'science' => {
+              const s = subject?.toLowerCase() ?? '';
+              if (s.includes('국어') || s.includes('korean')) return 'korean';
+              if (s.includes('수학') || s.includes('math')) return 'math';
+              if (s.includes('영어') || s.includes('english')) return 'english';
+              if (s.includes('한국사') || s.includes('korean history') || s.includes('history')) return 'koreanHistory';
+              return 'science';
+            };
+
+            const subjectKey = mapSubjectToKey(String(currentTest.subject));
+            const subjectLabel = getSubjectName(String(currentTest.subject));
+            const subjectData = analysisData?.[subjectKey] ?? {
+              rawScore: result?.raw_score ?? null,
+              standardScore: result?.standard_score ?? null,
+              percentile: result?.percentile ?? null,
+              grade: result?.grade ?? null,
+            };
 
             return (
-              <View style={styles.resultsCard}>
+              <View style={styles.resultsCard} testID="singleSubjectReport">
                 <Text style={styles.reportTitle}>성적표</Text>
-                <Text style={styles.reportSubtitle}>고3 평가원 실전 2025년 3월 28일 학력평가</Text>
-                
-                {/* Grade Table */}
+                <Text style={styles.reportSubtitle}>
+                  {currentTest.test_name} • {subjectLabel}
+                </Text>
+
                 <View style={styles.gradeTable}>
-                  {/* Header Row */}
                   <View style={styles.tableRow}>
                     <View style={[styles.tableCell, styles.headerCell]}>
-                      <Text style={styles.headerText}>영역</Text>
+                      <Text style={styles.headerText}>항목</Text>
                     </View>
                     <View style={[styles.tableCell, styles.headerCell]}>
-                      <Text style={styles.headerText}>국어</Text>
-                    </View>
-                    <View style={[styles.tableCell, styles.headerCell]}>
-                      <Text style={styles.headerText}>수학</Text>
-                    </View>
-                    <View style={[styles.tableCell, styles.headerCell]}>
-                      <Text style={styles.headerText}>영어</Text>
-                    </View>
-                    <View style={[styles.tableCell, styles.headerCell]}>
-                      <Text style={styles.headerText}>한국사</Text>
-                    </View>
-                    <View style={[styles.tableCell, styles.headerCell]}>
-                      <Text style={styles.headerText}>탐구</Text>
+                      <Text style={styles.headerText}>{subjectLabel}</Text>
                     </View>
                   </View>
 
-                  {/* Subject Row */}
-                  <View style={styles.tableRow}>
-                    <View style={[styles.tableCell, styles.labelCell]}>
-                      <Text style={styles.labelText}>선택</Text>
-                      <Text style={styles.labelText}>과목</Text>
-                    </View>
-                    <View style={styles.tableCell}>
-                      <Text style={styles.cellText}>화법과</Text>
-                      <Text style={styles.cellText}>작문</Text>
-                    </View>
-                    <View style={styles.tableCell}>
-                      <Text style={styles.cellText}>미적분</Text>
-                    </View>
-                    <View style={styles.tableCell}>
-                      <View style={styles.diagonalCell}>
-                        <View style={styles.diagonalLine} />
-                      </View>
-                    </View>
-                    <View style={styles.tableCell}>
-                      <View style={styles.diagonalCell}>
-                        <View style={styles.diagonalLine} />
-                      </View>
-                    </View>
-                    <View style={styles.tableCell}>
-                      <Text style={styles.cellText}>생활과</Text>
-                      <Text style={styles.cellText}>윤리</Text>
-                      <Text style={styles.cellText}>세계사</Text>
-                    </View>
-                  </View>
-
-                  {/* Status Row */}
-                  <View style={styles.tableRow}>
-                    <View style={[styles.tableCell, styles.labelCell]}>
-                      <Text style={styles.labelText}>채점</Text>
-                    </View>
-                    <View style={styles.tableCell}>
-                      <Text style={korean.rawScore ? styles.completedText : styles.incompleteText}>
-                        {korean.rawScore ? '채점완' : '채점'}
-                      </Text>
-                    </View>
-                    <View style={styles.tableCell}>
-                      <Text style={math.rawScore ? styles.completedText : styles.incompleteText}>
-                        {math.rawScore ? '채점완' : '채점'}
-                      </Text>
-                    </View>
-                    <View style={styles.tableCell}>
-                      <Text style={english.rawScore ? styles.completedText : styles.incompleteText}>
-                        {english.rawScore ? '채점완' : '채점'}
-                      </Text>
-                    </View>
-                    <View style={styles.tableCell}>
-                      <Text style={koreanHistory.rawScore ? styles.completedText : styles.incompleteText}>
-                        {koreanHistory.rawScore ? '채점완' : '채점'}
-                      </Text>
-                    </View>
-                    <View style={styles.tableCell}>
-                      <Text style={science.rawScore ? styles.completedText : styles.incompleteText}>
-                        {science.rawScore ? '채점완' : '채점'}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Raw Score Row */}
                   <View style={styles.tableRow}>
                     <View style={[styles.tableCell, styles.labelCell]}>
                       <Text style={styles.labelText}>원점수</Text>
                     </View>
                     <View style={styles.tableCell}>
-                      <Text style={styles.scoreText}>{korean.rawScore || '-'}</Text>
-                    </View>
-                    <View style={styles.tableCell}>
-                      <Text style={styles.scoreText}>{math.rawScore || '-'}</Text>
-                    </View>
-                    <View style={styles.tableCell}>
-                      <Text style={styles.scoreText}>{english.rawScore || '-'}</Text>
-                    </View>
-                    <View style={styles.tableCell}>
-                      <Text style={styles.scoreText}>{koreanHistory.rawScore || '-'}</Text>
-                    </View>
-                    <View style={styles.tableCell}>
-                      <Text style={styles.scoreText}>{science.rawScore || '-'}</Text>
+                      <Text style={styles.scoreText}>{subjectData?.rawScore ?? '-'}</Text>
                     </View>
                   </View>
 
-                  {/* Standard Score Row */}
                   <View style={styles.tableRow}>
                     <View style={[styles.tableCell, styles.labelCell]}>
-                      <Text style={styles.labelText}>표준</Text>
-                      <Text style={styles.labelText}>점수</Text>
+                      <Text style={styles.labelText}>표준점수</Text>
                     </View>
                     <View style={styles.tableCell}>
-                      <Text style={styles.scoreText}>{korean.standardScore || '-'}</Text>
-                    </View>
-                    <View style={styles.tableCell}>
-                      <Text style={styles.scoreText}>{math.standardScore || '-'}</Text>
-                    </View>
-                    <View style={styles.tableCell}>
-                      {english.standardScore ? (
-                        <Text style={styles.scoreText}>{english.standardScore}</Text>
-                      ) : (
-                        <View style={styles.diagonalCell}>
-                          <View style={styles.diagonalLine} />
-                        </View>
-                      )}
-                    </View>
-                    <View style={styles.tableCell}>
-                      {koreanHistory.standardScore ? (
-                        <Text style={styles.scoreText}>{koreanHistory.standardScore}</Text>
-                      ) : (
-                        <View style={styles.diagonalCell}>
-                          <View style={styles.diagonalLine} />
-                        </View>
-                      )}
-                    </View>
-                    <View style={styles.tableCell}>
-                      <Text style={styles.scoreText}>{science.standardScore || '-'}</Text>
+                      <Text style={styles.scoreText}>{subjectData?.standardScore ?? '-'}</Text>
                     </View>
                   </View>
 
-                  {/* Percentile Row */}
                   <View style={styles.tableRow}>
                     <View style={[styles.tableCell, styles.labelCell]}>
                       <Text style={styles.labelText}>백분위</Text>
                     </View>
                     <View style={styles.tableCell}>
-                      <Text style={styles.scoreText}>{korean.percentile || '-'}</Text>
-                    </View>
-                    <View style={styles.tableCell}>
-                      <Text style={styles.scoreText}>{math.percentile || '-'}</Text>
-                    </View>
-                    <View style={styles.tableCell}>
-                      {english.percentile ? (
-                        <Text style={styles.scoreText}>{english.percentile}</Text>
-                      ) : (
-                        <View style={styles.diagonalCell}>
-                          <View style={styles.diagonalLine} />
-                        </View>
-                      )}
-                    </View>
-                    <View style={styles.tableCell}>
-                      {koreanHistory.percentile ? (
-                        <Text style={styles.scoreText}>{koreanHistory.percentile}</Text>
-                      ) : (
-                        <View style={styles.diagonalCell}>
-                          <View style={styles.diagonalLine} />
-                        </View>
-                      )}
-                    </View>
-                    <View style={styles.tableCell}>
-                      <Text style={styles.scoreText}>{science.percentile || '-'}</Text>
+                      <Text style={styles.scoreText}>{subjectData?.percentile ?? '-'}</Text>
                     </View>
                   </View>
 
-                  {/* Grade Row */}
                   <View style={styles.tableRow}>
                     <View style={[styles.tableCell, styles.labelCell]}>
                       <Text style={styles.labelText}>등급</Text>
                     </View>
                     <View style={styles.tableCell}>
-                      <Text style={styles.scoreText}>{korean.grade || '-'}</Text>
-                    </View>
-                    <View style={styles.tableCell}>
-                      <Text style={styles.scoreText}>{math.grade || '-'}</Text>
-                    </View>
-                    <View style={styles.tableCell}>
-                      <Text style={styles.scoreText}>{english.grade || '-'}</Text>
-                    </View>
-                    <View style={styles.tableCell}>
-                      <Text style={styles.scoreText}>{koreanHistory.grade || '-'}</Text>
-                    </View>
-                    <View style={styles.tableCell}>
-                      <Text style={styles.scoreText}>{science.grade || '-'}</Text>
+                      <Text style={styles.scoreText}>{subjectData?.grade ?? '-'}</Text>
                     </View>
                   </View>
                 </View>
@@ -499,8 +358,8 @@ export default function TestDetailScreen() {
                 {result.answer_sheet_image_url && (
                   <View style={styles.imageSection}>
                     <Text style={styles.imageLabel}>{t('answerSheet')}</Text>
-                    <Image 
-                      source={{ uri: result.answer_sheet_image_url }} 
+                    <Image
+                      source={{ uri: result.answer_sheet_image_url }}
                       style={styles.answerSheetImage}
                       resizeMode="contain"
                     />
