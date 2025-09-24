@@ -100,7 +100,7 @@ import { deleteStudyNoteProcedure } from "./routes/study-notes/delete-study-note
 // User profile routes
 import { getUserProfileProcedure } from "./routes/users/get-user-profile/route";
 import { updateUserProfileProcedure } from "./routes/users/update-user-profile/route";
-import { syncClerkUserProcedure } from "./routes/users/sync-clerk-user/route";
+import { syncSupabaseUserProcedure } from "./routes/users/sync-clerk-user/route";
 
 // Answer sheets routes
 import { createAnswerSheetProcedure } from "./routes/answer-sheets/create-answer-sheet/route";
@@ -232,7 +232,7 @@ export const appRouter = createTRPCRouter({
   users: createTRPCRouter({
     getUserProfile: getUserProfileProcedure,
     updateUserProfile: updateUserProfileProcedure,
-    syncClerkUser: syncClerkUserProcedure,
+    syncSupabaseUser: syncSupabaseUserProcedure,
   }),
   answerSheets: createTRPCRouter({
     createAnswerSheet: createAnswerSheetProcedure,

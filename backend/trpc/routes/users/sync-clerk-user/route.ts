@@ -1,16 +1,21 @@
 import { z } from "zod";
 import { publicProcedure } from "../../../create-context";
 
-export const syncClerkUserProcedure = publicProcedure
+export const syncSupabaseUserProcedure = publicProcedure
   .input(z.object({
-    clerkUserId: z.string(),
+    userId: z.string(),
     email: z.string().email(),
     name: z.string().optional(),
     profilePictureUrl: z.string().optional(),
   }))
   .mutation(async ({ input, ctx }) => {
     const { supabase } = ctx;
-    console.log('🔄 Syncing Clerk user to Supabase:', input);
+    console.log('🔄 Syncing Supabase user to database:', {
+      userId: input.userId,
+      email: input.email,
+      hasName: !!input.name,
+      hasProfilePicture: !!input.profilePictureUrl
+    });
     
     try {
       // First, test the connection
@@ -33,7 +38,7 @@ export const syncClerkUserProcedure = publicProcedure
       const { data: existingUser, error: checkError } = await supabase
         .from('users')
         .select('id')
-        .eq('id', input.clerkUserId)
+        .eq('id', input.userId)
         .single();
 
       if (checkError && checkError.code !== 'PGRST116') {
@@ -43,7 +48,7 @@ export const syncClerkUserProcedure = publicProcedure
           code: checkError.code,
           details: checkError.details,
           hint: checkError.hint,
-          clerkUserId: input.clerkUserId
+          userId: input.userId
         });
         throw new Error(`Failed to check existing user: ${checkError.message}`);
       }
@@ -60,7 +65,7 @@ export const syncClerkUserProcedure = publicProcedure
             profile_picture_url: input.profilePictureUrl,
             updated_at: new Date().toISOString(),
           })
-          .eq('id', input.clerkUserId)
+          .eq('id', input.userId)
           .select()
           .single();
 
@@ -79,17 +84,23 @@ export const syncClerkUserProcedure = publicProcedure
       }
 
       // Create new user
-      console.log('📝 Creating new user in Supabase...');
+      console.log('📝 Creating new user in database...');
+      const userData: any = {
+        id: input.userId,
+        email: input.email,
+        name: input.name || input.email.split('@')[0],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      
+      // Only add profile_picture_url if it exists
+      if (input.profilePictureUrl) {
+        userData.profile_picture_url = input.profilePictureUrl;
+      }
+      
       const { data: newUser, error: insertError } = await supabase
         .from('users')
-        .insert({
-          id: input.clerkUserId,
-          email: input.email,
-          name: input.name || input.email.split('@')[0],
-          profile_picture_url: input.profilePictureUrl,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
+        .insert(userData)
         .select()
         .single();
 
@@ -100,52 +111,46 @@ export const syncClerkUserProcedure = publicProcedure
           details: insertError.details,
           hint: insertError.hint,
           userData: {
-            id: input.clerkUserId,
+            id: input.userId,
             email: input.email,
             name: input.name || input.email.split('@')[0]
           }
         });
         
-        // If the error is due to missing columns, try without profile_picture_url
-        if (insertError.message?.includes('profile_picture_url')) {
-          console.log('🔄 Retrying without profile_picture_url...');
-          const { data: retryUser, error: retryError } = await supabase
-            .from('users')
-            .insert({
-              id: input.clerkUserId,
-              email: input.email,
-              name: input.name || input.email.split('@')[0],
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            })
-            .select()
-            .single();
-
-          if (retryError) {
-            console.error('❌ Retry error:', {
-              message: retryError.message,
-              code: retryError.code,
-              details: retryError.details,
-              hint: retryError.hint
-            });
-            throw new Error(`Failed to create user: ${retryError.message}`);
-          }
-
-          console.log('✅ User created in Supabase (without profile picture):', retryUser);
-          return { user: retryUser, created: true };
+        // Try to provide more helpful error information
+        console.error('❌ Failed to create user. Checking if it\'s a constraint issue...');
+        
+        // Check if user already exists (race condition)
+        const { data: existingUserCheck } = await supabase
+          .from('users')
+          .select('id')
+          .eq('id', input.userId)
+          .single();
+          
+        if (existingUserCheck) {
+          console.log('✅ User was created by another process, returning existing user');
+          return { user: existingUserCheck, created: false };
         }
         
         throw new Error(`Failed to create user: ${insertError.message}`);
       }
 
-      console.log('✅ User created in Supabase:', newUser);
+      console.log('✅ User created in database:', {
+        id: newUser.id,
+        email: newUser.email,
+        name: newUser.name
+      });
+      
+      // The database trigger should automatically create unified subjects for this user
+      console.log('📝 Unified subjects should be created automatically by database trigger');
+      
       return { user: newUser, created: true };
     } catch (error: any) {
-      console.error('❌ Error in syncClerkUser:', {
+      console.error('❌ Error in syncSupabaseUser:', {
         message: error.message,
         stack: error.stack,
         input: {
-          clerkUserId: input.clerkUserId,
+          userId: input.userId,
           email: input.email,
           name: input.name
         }

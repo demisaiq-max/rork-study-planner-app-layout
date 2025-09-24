@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 import createContextHook from '@nkzw/create-context-hook';
+import { trpcClient } from '@/lib/trpc';
 
 export const [AuthProvider, useAuth] = createContextHook(() => {
   const [user, setUser] = useState<User | null>(null);
@@ -19,6 +20,23 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       timestamp: new Date().toISOString()
     });
   }, [user, session, isLoading]);
+
+  // Function to sync user to database
+  const syncUserToDatabase = useCallback(async (user: User) => {
+    try {
+      console.log('🔄 Syncing user to database:', user.email);
+      await trpcClient.users.syncSupabaseUser.mutate({
+        userId: user.id,
+        email: user.email || '',
+        name: user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0],
+        profilePictureUrl: user.user_metadata?.avatar_url || user.user_metadata?.picture,
+      });
+      console.log('✅ User synced to database successfully');
+    } catch (error) {
+      console.error('❌ Failed to sync user to database:', error);
+      // Don't throw error to prevent auth flow interruption
+    }
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -48,6 +66,10 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
           if (session) {
             setSession(session);
             setUser(session.user);
+            // Sync user to database on initial load
+            if (session.user) {
+              syncUserToDatabase(session.user);
+            }
           }
         }
       } catch (error) {
@@ -86,6 +108,10 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
             console.log('✅ User signed in successfully');
             setSession(sessionData);
             setUser(sessionData?.user ?? null);
+            // Sync user to database
+            if (sessionData?.user) {
+              syncUserToDatabase(sessionData.user);
+            }
             break;
           case 'SIGNED_OUT':
             console.log('👋 User signed out');
@@ -106,6 +132,10 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
             // For INITIAL_SESSION and other events
             setSession(sessionData);
             setUser(sessionData?.user ?? null);
+            // Sync user to database for initial session
+            if (sessionData?.user && event === 'INITIAL_SESSION') {
+              syncUserToDatabase(sessionData.user);
+            }
         }
         
         setIsLoading(false);
@@ -117,7 +147,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       clearTimeout(timer);
       subscription.unsubscribe();
     };
-  }, []);
+  }, [syncUserToDatabase]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     if (!email?.trim() || !password?.trim()) {
