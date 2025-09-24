@@ -114,8 +114,19 @@ import { getAnswerSheetStatsProcedure } from "./routes/answer-sheets/get-answer-
 import { getTemplatesProcedure } from "./routes/answer-sheets/get-templates/route";
 import { deleteAnswerProcedure } from "./routes/answer-sheets/delete-answer/route";
 
-
-
+// Answer keys routes imports
+import { getAnswerKeysProcedure } from "./routes/answer-keys/get-answer-keys/route";
+import { getAnswerKeyByIdProcedure } from "./routes/answer-keys/get-answer-key-by-id/route";
+import { createAnswerKeyProcedure } from "./routes/answer-keys/create-answer-key/route";
+import { updateAnswerKeyProcedure } from "./routes/answer-keys/update-answer-key/route";
+import { deleteAnswerKeyProcedure } from "./routes/answer-keys/delete-answer-key/route";
+import { upsertAnswerKeyResponsesProcedure } from "./routes/answer-keys/upsert-answer-key-responses/route";
+import { deleteAnswerKeyResponseProcedure } from "./routes/answer-keys/delete-answer-key-response/route";
+import { getAnswerKeyCategoriesProcedure } from "./routes/answer-keys/get-categories/route";
+import { createAnswerKeyCategoryProcedure } from "./routes/answer-keys/create-category/route";
+import { getAnswerKeyStatsProcedure } from "./routes/answer-keys/get-answer-key-stats/route";
+import { gradeAnswerSheetProcedure } from "./routes/answer-keys/grade-answer-sheet/route";
+import { getGradeHistoryProcedure } from "./routes/answer-keys/grade-history/route";
 
 export const appRouter = createTRPCRouter({
   example: createTRPCRouter({
@@ -234,6 +245,20 @@ export const appRouter = createTRPCRouter({
     submitAnswerSheet: submitAnswerSheetProcedure,
     getAnswerSheetStats: getAnswerSheetStatsProcedure,
     getTemplates: getTemplatesProcedure,
+  }),
+  answerKeys: createTRPCRouter({
+    getAnswerKeys: getAnswerKeysProcedure,
+    getAnswerKeyById: getAnswerKeyByIdProcedure,
+    createAnswerKey: createAnswerKeyProcedure,
+    updateAnswerKey: updateAnswerKeyProcedure,
+    deleteAnswerKey: deleteAnswerKeyProcedure,
+    upsertResponses: upsertAnswerKeyResponsesProcedure,
+    deleteResponse: deleteAnswerKeyResponseProcedure,
+    getCategories: getAnswerKeyCategoriesProcedure,
+    createCategory: createAnswerKeyCategoryProcedure,
+    getStats: getAnswerKeyStatsProcedure,
+    gradeAnswerSheet: gradeAnswerSheetProcedure,
+    getGradeHistory: getGradeHistoryProcedure,
   }),
 });
 
