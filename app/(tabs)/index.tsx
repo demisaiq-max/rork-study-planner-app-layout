@@ -607,8 +607,8 @@ export default function HomeScreen() {
           </View>
           
           <View style={styles.tasksList}>
-            {(dbPriorityTasks || priorityTasks)?.slice(0, 3).map((task, index) => {
-              const taskData = dbPriorityTasks ? task : task;
+            {(dbPriorityTasks && dbPriorityTasks.length > 0 ? dbPriorityTasks : priorityTasks)?.slice(0, 3).map((task: any, index: number) => {
+              const taskData = task;
               const getPriorityColor = (priority: string) => {
                 switch (priority) {
                   case 'high': return '#FF3B30';
@@ -631,7 +631,7 @@ export default function HomeScreen() {
                   key={taskData.id} 
                   style={styles.priorityTaskItem}
                   onPress={() => {
-                    if (dbPriorityTasks && authUser?.id) {
+                    if (dbPriorityTasks && dbPriorityTasks.length > 0 && authUser?.id) {
                       updatePriorityTaskMutation.mutate({
                         id: taskData.id,
                         completed: !taskData.completed
@@ -675,10 +675,7 @@ export default function HomeScreen() {
                 </TouchableOpacity>
               );
             })}
-            
-
-            
-            {((!dbPriorityTasks && !priorityTasks) || (dbPriorityTasks?.length === 0 && priorityTasks?.length === 0)) && (
+            {((!dbPriorityTasks || dbPriorityTasks.length === 0) && (!priorityTasks || priorityTasks.length === 0)) && (
               <View style={styles.emptyPriorityTasks}>
                 <Text style={styles.emptyPriorityText}>{isLoadingPriorityTasks ? 'Loading...' : t('emptyPriorityText')}</Text>
               </View>

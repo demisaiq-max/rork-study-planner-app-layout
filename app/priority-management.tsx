@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -15,10 +15,12 @@ import { Plus, Edit2, Trash2, X, Check, ChevronLeft } from 'lucide-react-native'
 import { useLanguage } from '@/hooks/language-context';
 import { useRouter, Stack } from 'expo-router';
 import { useStudyStore } from '@/hooks/study-store';
+import { useAuth, useIsSignedIn } from '@/hooks/auth-context';
+import { trpc, formatTRPCError } from '@/lib/trpc';
 
 export default function PriorityManagementScreen() {
   const { 
-    priorityTasks, 
+    priorityTasks: localPriorityTasks, 
     addPriorityTask, 
     removePriorityTask, 
     updatePriorityTask, 
@@ -31,6 +33,8 @@ export default function PriorityManagementScreen() {
   const [taskPriority, setTaskPriority] = useState<'high' | 'medium' | 'low'>('high');
   const { language } = useLanguage();
   const router = useRouter();
+  const { user } = useAuth();
+  const { isSignedIn } = useIsSignedIn();
 
   const translations = {
     en: {
@@ -71,6 +75,26 @@ export default function PriorityManagementScreen() {
 
   const t = translations[language];
 
+  const { data: dbTasks, isLoading, error, refetch } = trpc.priorityTasks.getPriorityTasks.useQuery(
+    { userId: user?.id ?? '' },
+    { enabled: !!user?.id, staleTime: 60_000 }
+  );
+
+  const createMutation = trpc.priorityTasks.createPriorityTask.useMutation({
+    onSuccess: () => refetch(),
+  });
+  const updateMutation = trpc.priorityTasks.updatePriorityTask.useMutation({
+    onSuccess: () => refetch(),
+  });
+  const deleteMutation = trpc.priorityTasks.deletePriorityTask.useMutation({
+    onSuccess: () => refetch(),
+  });
+
+  const tasks = useMemo(() => {
+    if (isSignedIn) return dbTasks ?? [];
+    return localPriorityTasks ?? [];
+  }, [isSignedIn, dbTasks, localPriorityTasks]);
+
 
 
   const handleAddTask = () => {
@@ -82,7 +106,7 @@ export default function PriorityManagementScreen() {
   };
 
   const handleEditTask = (taskId: string) => {
-    const task = priorityTasks?.find(t => t.id === taskId);
+    const task = tasks?.find(t => t.id === taskId);
     if (task) {
       setEditingTaskId(taskId);
       setTaskTitle(task.title);
@@ -99,18 +123,17 @@ export default function PriorityManagementScreen() {
     }
 
     if (editingTaskId) {
-      updatePriorityTask(editingTaskId, {
-        title: taskTitle,
-        subject: taskSubject,
-        priority: taskPriority,
-      });
+      if (isSignedIn) {
+        updateMutation.mutate({ id: editingTaskId, title: taskTitle, subject: taskSubject, priority: taskPriority });
+      } else {
+        updatePriorityTask(editingTaskId, { title: taskTitle, subject: taskSubject, priority: taskPriority });
+      }
     } else {
-      addPriorityTask({
-        title: taskTitle,
-        subject: taskSubject,
-        priority: taskPriority,
-        completed: false,
-      });
+      if (isSignedIn && user?.id) {
+        createMutation.mutate({ userId: user.id, title: taskTitle, subject: taskSubject, priority: taskPriority, orderIndex: tasks.length, completed: false });
+      } else {
+        addPriorityTask({ title: taskTitle, subject: taskSubject, priority: taskPriority, completed: false });
+      }
     }
 
     setModalVisible(false);
@@ -125,14 +148,26 @@ export default function PriorityManagementScreen() {
         {
           text: t.delete,
           style: 'destructive',
-          onPress: () => removePriorityTask(taskId),
+          onPress: () => {
+            if (isSignedIn) {
+              deleteMutation.mutate({ id: taskId });
+            } else {
+              removePriorityTask(taskId);
+            }
+          },
         },
       ]
     );
   };
 
   const handleToggleComplete = (taskId: string) => {
-    togglePriorityTask(taskId);
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    if (isSignedIn) {
+      updateMutation.mutate({ id: taskId, completed: !task.completed });
+    } else {
+      togglePriorityTask(taskId);
+    }
   };
 
   const getPriorityColor = (priority: string) => {
@@ -142,6 +177,10 @@ export default function PriorityManagementScreen() {
       case 'low': return '#34C759';
       default: return '#8E8E93';
     }
+  };
+
+  const getPriorityText = (priority: 'high' | 'medium' | 'low') => {
+    return t[priority as 'high' | 'medium' | 'low'] as string;
   };
 
   return (
@@ -164,8 +203,12 @@ export default function PriorityManagementScreen() {
       />
       <View style={styles.container}>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {(!priorityTasks || priorityTasks.length === 0) ? (
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} testID="priorityManagementScroll">
+        {isLoading ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptySubtitle}>Loading...</Text>
+          </View>
+        ) : (!tasks || tasks.length === 0) ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyTitle}>{t.noTasks}</Text>
             <Text style={styles.emptySubtitle}>{t.addFirstTask}</Text>
@@ -175,60 +218,69 @@ export default function PriorityManagementScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          <View style={styles.tasksList}>
-            {priorityTasks.map((task) => (
-              <View key={task.id} style={styles.taskCard}>
-                <TouchableOpacity
-                  style={styles.taskContent}
-                  onPress={() => handleToggleComplete(task.id)}
-                >
-                  <View style={styles.taskLeft}>
-                    <View style={[
-                      styles.checkbox,
-                      task.completed && styles.checkboxCompleted
-                    ]}>
-                      {task.completed && <Check size={16} color="#FFFFFF" />}
-                    </View>
-                    <View style={styles.taskInfo}>
-                      <Text style={[
-                        styles.taskTitle,
-                        task.completed && styles.taskTitleCompleted
+          <View>
+            {error && (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptySubtitle}>{formatTRPCError(error)}</Text>
+              </View>
+            )}
+            <View style={styles.tasksList} testID="priorityTasksList">
+              {tasks.map((task) => (
+                <View key={task.id} style={styles.taskCard}>
+                  <TouchableOpacity
+                    style={styles.taskContent}
+                    onPress={() => handleToggleComplete(task.id)}
+                    testID={`priorityTask-${task.id}`}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.taskLeft}>
+                      <View style={[
+                        styles.checkbox,
+                        task.completed && styles.checkboxCompleted
                       ]}>
-                        {task.title}
-                      </Text>
-                      <View style={styles.taskMeta}>
-                        <Text style={styles.taskSubject}>{task.subject}</Text>
-                        <View style={[
-                          styles.priorityBadge,
-                          { backgroundColor: getPriorityColor(task.priority) + '20' }
+                        {task.completed && <Check size={16} color="#FFFFFF" />}
+                      </View>
+                      <View style={styles.taskInfo}>
+                        <Text style={[
+                          styles.taskTitle,
+                          task.completed && styles.taskTitleCompleted
                         ]}>
-                          <Text style={[
-                            styles.priorityText,
-                            { color: getPriorityColor(task.priority) }
+                          {task.title}
+                        </Text>
+                        <View style={styles.taskMeta}>
+                          <Text style={styles.taskSubject}>{task.subject}</Text>
+                          <View style={[
+                            styles.priorityBadge,
+                            { backgroundColor: getPriorityColor(task.priority) + '20' }
                           ]}>
-                            {t[task.priority]}
-                          </Text>
+                            <Text style={[
+                              styles.priorityText,
+                              { color: getPriorityColor(task.priority) }
+                            ]}>
+                              {getPriorityText(task.priority as 'high' | 'medium' | 'low')}
+                            </Text>
+                          </View>
                         </View>
                       </View>
                     </View>
+                  </TouchableOpacity>
+                  <View style={styles.taskActions}>
+                    <TouchableOpacity
+                      style={styles.actionButton}
+                      onPress={() => handleEditTask(task.id)}
+                    >
+                      <Edit2 size={18} color="#007AFF" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.actionButton}
+                      onPress={() => handleDeleteTask(task.id)}
+                    >
+                      <Trash2 size={18} color="#FF3B30" />
+                    </TouchableOpacity>
                   </View>
-                </TouchableOpacity>
-                <View style={styles.taskActions}>
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => handleEditTask(task.id)}
-                  >
-                    <Edit2 size={18} color="#007AFF" />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => handleDeleteTask(task.id)}
-                  >
-                    <Trash2 size={18} color="#FF3B30" />
-                  </TouchableOpacity>
                 </View>
-              </View>
-            ))}
+              ))}
+            </View>
           </View>
         )}
       </ScrollView>
@@ -311,6 +363,7 @@ export default function PriorityManagementScreen() {
               <TouchableOpacity
                 style={[styles.modalButton, styles.saveButton]}
                 onPress={handleSaveTask}
+                testID="savePriorityTaskButton"
               >
                 <Text style={styles.saveButtonText}>{t.save}</Text>
               </TouchableOpacity>
