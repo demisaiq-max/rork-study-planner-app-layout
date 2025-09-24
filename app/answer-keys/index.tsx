@@ -56,14 +56,14 @@ export default function AnswerKeysHome() {
     else match = undefined;
 
     const defaultNames: Record<AnswerKeySummary['subject'], string> = {
-      korean: 'Korean',
-      mathematics: 'Mathematics',
-      english: 'English',
-      others: 'Others',
+      korean: t('korean'),
+      mathematics: t('mathematics'),
+      english: t('english'),
+      others: t('others'),
     };
 
     return { name: match?.name ?? defaultNames[subjectEnum], color: (match?.color as string) ?? '#EEF2FF' };
-  }, [subjects]);
+  }, [subjects, t]);
 
   const renderItem = useCallback(({ item }: { item: AnswerKeySummary }) => {
     const disp = subjectDisplay(item.subject);
