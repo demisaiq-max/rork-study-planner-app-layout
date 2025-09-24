@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, router } from 'expo-router';
-import { ArrowLeft, Camera, User, Check } from 'lucide-react-native';
+import { ArrowLeft, Camera, User, Check, KeyRound, Shield } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useUser } from '@/hooks/user-context';
 import { useLanguage, Language } from '@/hooks/language-context';
@@ -279,6 +279,45 @@ export default function SettingsScreen() {
           )}
         </View>
 
+        {/* Admin Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{language === 'ko' ? '관리자' : 'Admin'}</Text>
+
+          <TouchableOpacity
+            style={styles.listItem}
+            onPress={() => {
+              console.log('[Settings] Navigate -> /answer-keys');
+              router.push('/answer-keys' as any);
+            }}
+            testID="nav-answer-keys"
+          >
+            <View style={styles.listIconWrap}>
+              <KeyRound color="#2563EB" size={20} />
+            </View>
+            <View style={styles.listTextWrap}>
+              <Text style={styles.listTitle}>{language === 'ko' ? '정답 키 관리' : 'Answer Key Management'}</Text>
+              <Text style={styles.listSubtitle}>{language === 'ko' ? '시험 정답 키 생성/편집' : 'Create and edit answer keys'}</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.listItem}
+            onPress={() => {
+              console.log('[Settings] Navigate -> /answer-keys/categories');
+              router.push('/answer-keys/categories' as any);
+            }}
+            testID="nav-answer-key-categories"
+          >
+            <View style={styles.listIconWrap}>
+              <Shield color="#059669" size={20} />
+            </View>
+            <View style={styles.listTextWrap}>
+              <Text style={styles.listTitle}>{language === 'ko' ? '정답 키 카테고리' : 'Answer Key Categories'}</Text>
+              <Text style={styles.listSubtitle}>{language === 'ko' ? '카테고리 보기/관리' : 'View and manage categories'}</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
         {/* App Info Section */}
         <View style={styles.section}>
           <View style={styles.appInfo}>
@@ -461,6 +500,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 20,
   },
+  listItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  listIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#EEF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  listTextWrap: { flex: 1 },
+  listTitle: { color: '#111827', fontWeight: '600' },
+  listSubtitle: { color: '#6B7280', marginTop: 2 },
   appInfoText: {
     fontSize: 16,
     fontWeight: '600',
