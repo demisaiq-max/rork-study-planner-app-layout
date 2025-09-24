@@ -24,7 +24,7 @@ export const updateAnswerKeyProcedure = protectedProcedure
       id: z.string().uuid(),
       templateName: z.string().min(1).optional(),
       subject: z.enum(['korean', 'mathematics', 'english', 'others']).optional(),
-      testType: z.enum(['practice', 'mock', 'midterm', 'final']).optional(),
+      testType: z.enum(['mock', 'midterm', 'final']).optional(),
       totalQuestions: z.number().int().min(1).max(200).optional(),
       mcqQuestions: z.number().int().min(0).optional(),
       textQuestions: z.number().int().min(0).optional(),

@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, Alert, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { trpc } from '@/lib/trpc';
@@ -20,11 +20,17 @@ export default function AnswerKeyEditor() {
   const id = typeof params.id === 'string' ? params.id : '';
   const { data, isLoading, error } = trpc.answerKeys.getAnswerKeyById.useQuery({ id }, { enabled: !!id });
   const upsertMutation = trpc.answerKeys.upsertResponses.useMutation();
+  const updateMeta = trpc.answerKeys.updateAnswerKey.useMutation();
 
   const [rows, setRows] = useState<ResponseItem[]>([]);
+  const [templateName, setTemplateName] = useState<string>('');
+  const [testType, setTestType] = useState<'mock' | 'midterm' | 'final'>('mock');
 
   React.useEffect(() => {
     if (data) {
+      setTemplateName(String(data.template_name ?? ''));
+      const tt = (data.test_type as 'mock' | 'midterm' | 'final' | undefined) ?? 'mock';
+      setTestType(tt);
       const existing: ResponseItem[] = (data.answer_key_responses || []).map((r: any) => ({
         questionNumber: r.question_number,
         questionType: r.question_type,
@@ -68,6 +74,15 @@ export default function AnswerKeyEditor() {
     }
   };
 
+  const onSaveMeta = async () => {
+    try {
+      await updateMeta.mutateAsync({ id, templateName: templateName.trim(), testType });
+      Alert.alert('Updated', 'Template updated');
+    } catch (e: any) {
+      Alert.alert('Error', e?.message || 'Failed to update template');
+    }
+  };
+
   const renderItem = useCallback(({ item, index }: { item: ResponseItem; index: number }) => (
     <View style={styles.row}>
       <Text style={styles.qn}>#{item.questionNumber}</Text>
@@ -99,6 +114,22 @@ export default function AnswerKeyEditor() {
       <SafeAreaView style={styles.container} edges={['bottom']}>
         <Stack.Screen options={{ title: data?.template_name || 'Answer Key', headerShown: true }} />
 
+        <View style={styles.headerCard}>
+          <Text style={styles.headerLabel}>Template Name</Text>
+          <TextInput value={templateName} onChangeText={setTemplateName} style={styles.headerInput} placeholder="Template name" placeholderTextColor="#9CA3AF" testID="template-name-edit" />
+          <Text style={[styles.headerLabel, { marginTop: 10 }]}>Test Type</Text>
+          <View style={styles.typeSwitch}>
+            {(['mock','midterm','final'] as const).map((t) => (
+              <TouchableOpacity key={t} style={[styles.chip, testType === t && styles.chipActive]} onPress={() => setTestType(t)} testID={`meta-type-${t}`}>
+                <Text style={[styles.chipText, testType === t && styles.chipTextActive]}>{t}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <TouchableOpacity style={styles.updateBtn} onPress={onSaveMeta} testID="save-meta">
+            {updateMeta.isPending ? <ActivityIndicator color="#fff" /> : <Text style={styles.updateBtnText}>Save Template</Text>}
+          </TouchableOpacity>
+        </View>
+
         <FlatList
           data={rows}
           keyExtractor={(i) => String(i.questionNumber)}
@@ -116,6 +147,9 @@ export default function AnswerKeyEditor() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB' },
+  headerCard: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 12, margin: 12 },
+  headerLabel: { color: '#111827', fontWeight: '700', marginBottom: 6 },
+  headerInput: { backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, color: '#111827' },
   list: { padding: 12, paddingBottom: 100 },
   row: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 12, marginVertical: 6 },
   qn: { fontWeight: '700', color: '#111827', marginBottom: 8 },
@@ -126,6 +160,8 @@ const styles = StyleSheet.create({
   chipTextActive: { color: '#1D4ED8', fontWeight: '700' },
   mcqInput: { backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8 },
   textInput: { backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8 },
+  updateBtn: { alignSelf: 'flex-start', backgroundColor: '#111827', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, marginTop: 10 },
+  updateBtnText: { color: '#fff', fontWeight: '700' },
   primary: { position: 'absolute', left: 16, right: 16, bottom: 20, backgroundColor: '#10B981', paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
   primaryText: { color: '#fff', fontWeight: '700' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },

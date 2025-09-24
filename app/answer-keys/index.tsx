@@ -12,7 +12,7 @@ interface AnswerKeySummary {
   id: string;
   template_name: string;
   subject: 'korean' | 'mathematics' | 'english' | 'others';
-  test_type: 'practice' | 'mock' | 'midterm' | 'final';
+  test_type: 'mock' | 'midterm' | 'final';
   total_questions: number;
   mcq_questions: number;
   text_questions: number;
@@ -27,7 +27,6 @@ const SUBJECT_LABEL: Record<AnswerKeySummary['subject'], string> = {
 };
 
 const TEST_LABEL: Record<AnswerKeySummary['test_type'], string> = {
-  practice: 'Practice',
   mock: 'Mock',
   midterm: 'Midterm',
   final: 'Final',

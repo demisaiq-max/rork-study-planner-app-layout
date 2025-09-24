@@ -23,7 +23,7 @@ export const createAnswerKeyProcedure = protectedProcedure
     z.object({
       templateName: z.string().min(1),
       subject: z.enum(['korean', 'mathematics', 'english', 'others']),
-      testType: z.enum(['practice', 'mock', 'midterm', 'final']).default('practice'),
+      testType: z.enum(['mock', 'midterm', 'final']).default('mock'),
       totalQuestions: z.number().int().min(1).max(200),
       mcqQuestions: z.number().int().min(0).default(0),
       textQuestions: z.number().int().min(0).default(0),
