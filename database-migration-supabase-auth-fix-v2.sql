@@ -2,28 +2,53 @@
 -- SUPABASE AUTH INTEGRATION FIX V2
 -- ============================================
 -- Run this SQL in your Supabase SQL Editor to fix user sync issues
--- This version handles the view dependency issue
+-- This version handles the view dependency issue and fixes all foreign key constraints
 
 -- First, drop the view that depends on user_id columns
 DROP VIEW IF EXISTS answer_sheet_summary;
 
 -- Fix answer_sheets table to reference the custom users table instead of auth.users
 ALTER TABLE answer_sheets DROP CONSTRAINT IF EXISTS answer_sheets_user_id_fkey;
-ALTER TABLE answer_sheets ALTER COLUMN user_id TYPE VARCHAR(255);
+-- Convert UUID to VARCHAR(255) by casting to text first
+ALTER TABLE answer_sheets ALTER COLUMN user_id TYPE VARCHAR(255) USING user_id::text;
 ALTER TABLE answer_sheets ADD CONSTRAINT answer_sheets_user_id_fkey 
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 -- Fix answer_key_templates table to reference the custom users table
 ALTER TABLE answer_key_templates DROP CONSTRAINT IF EXISTS answer_key_templates_created_by_fkey;
-ALTER TABLE answer_key_templates ALTER COLUMN created_by TYPE VARCHAR(255);
+-- Convert UUID to VARCHAR(255) by casting to text first
+ALTER TABLE answer_key_templates ALTER COLUMN created_by TYPE VARCHAR(255) USING created_by::text;
 ALTER TABLE answer_key_templates ADD CONSTRAINT answer_key_templates_created_by_fkey 
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE;
 
 -- Fix answer_key_usage_logs table to reference the custom users table
 ALTER TABLE answer_key_usage_logs DROP CONSTRAINT IF EXISTS answer_key_usage_logs_graded_by_fkey;
-ALTER TABLE answer_key_usage_logs ALTER COLUMN graded_by TYPE VARCHAR(255);
+-- Convert UUID to VARCHAR(255) by casting to text first
+ALTER TABLE answer_key_usage_logs ALTER COLUMN graded_by TYPE VARCHAR(255) USING graded_by::text;
 ALTER TABLE answer_key_usage_logs ADD CONSTRAINT answer_key_usage_logs_graded_by_fkey 
     FOREIGN KEY (graded_by) REFERENCES users(id) ON DELETE CASCADE;
+
+-- Fix answer_comments table if it exists
+DO $
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'answer_comments') THEN
+        ALTER TABLE answer_comments DROP CONSTRAINT IF EXISTS answer_comments_user_id_fkey;
+        ALTER TABLE answer_comments ALTER COLUMN user_id TYPE VARCHAR(255) USING user_id::text;
+        ALTER TABLE answer_comments ADD CONSTRAINT answer_comments_user_id_fkey 
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+    END IF;
+END $;
+
+-- Fix answer_comment_likes table if it exists
+DO $
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'answer_comment_likes') THEN
+        ALTER TABLE answer_comment_likes DROP CONSTRAINT IF EXISTS answer_comment_likes_user_id_fkey;
+        ALTER TABLE answer_comment_likes ALTER COLUMN user_id TYPE VARCHAR(255) USING user_id::text;
+        ALTER TABLE answer_comment_likes ADD CONSTRAINT answer_comment_likes_user_id_fkey 
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+    END IF;
+END $;
 
 -- Ensure all other tables use VARCHAR(255) for user_id (should already be done by Clerk migration)
 -- But let's double-check the most important ones
