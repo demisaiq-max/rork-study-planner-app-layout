@@ -175,14 +175,14 @@ INSERT INTO answer_key_categories (name, description, color) VALUES
 ON CONFLICT (name) DO NOTHING;
 
 -- Make the test user an admin for testing purposes
-UPDATE users SET role = 'admin' WHERE id = '550e8400-e29b-41d4-a716-446655440000';
+UPDATE users SET role = 'admin' WHERE id = 'bdfd8c34-a28f-4101-97e0-894c3fa5c7a6';
 
 -- Insert sample answer key templates
 INSERT INTO answer_key_templates (created_by, template_name, subject, test_type, total_questions, mcq_questions, text_questions, description) VALUES
-('550e8400-e29b-41d4-a716-446655440000', '2025 수능 국어 모의고사 1회', 'korean', 'mock', 45, 34, 11, '2025학년도 수능 대비 국어 모의고사 1회차 정답지'),
-('550e8400-e29b-41d4-a716-446655440000', '2025 수능 수학 모의고사 1회', 'mathematics', 'mock', 30, 30, 0, '2025학년도 수능 대비 수학 모의고사 1회차 정답지'),
-('550e8400-e29b-41d4-a716-446655440000', '2025 수능 영어 모의고사 1회', 'english', 'mock', 45, 45, 0, '2025학년도 수능 대비 영어 모의고사 1회차 정답지'),
-('550e8400-e29b-41d4-a716-446655440000', '기타 과목 중간고사', 'others', 'midterm', 20, 20, 0, '기타 과목 중간고사 정답지')
+('bdfd8c34-a28f-4101-97e0-894c3fa5c7a6', '2025 수능 국어 모의고사 1회', 'korean', 'mock', 45, 34, 11, '2025학년도 수능 대비 국어 모의고사 1회차 정답지'),
+('bdfd8c34-a28f-4101-97e0-894c3fa5c7a6', '2025 수능 수학 모의고사 1회', 'mathematics', 'mock', 30, 30, 0, '2025학년도 수능 대비 수학 모의고사 1회차 정답지'),
+('bdfd8c34-a28f-4101-97e0-894c3fa5c7a6', '2025 수능 영어 모의고사 1회', 'english', 'mock', 45, 45, 0, '2025학년도 수능 대비 영어 모의고사 1회차 정답지'),
+('bdfd8c34-a28f-4101-97e0-894c3fa5c7a6', '기타 과목 중간고사', 'others', 'midterm', 20, 20, 0, '기타 과목 중간고사 정답지')
 ON CONFLICT (template_name, subject, test_type) DO NOTHING;
 
 -- Insert sample answer key responses
