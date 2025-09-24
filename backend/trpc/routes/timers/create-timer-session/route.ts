@@ -1,5 +1,6 @@
 import { protectedProcedure } from '@/backend/trpc/create-context';
 import { z } from 'zod';
+import { ensureUserExists } from '@/backend/lib/user-utils';
 
 export const createTimerSessionProcedure = protectedProcedure
   .input(z.object({
@@ -11,6 +12,9 @@ export const createTimerSessionProcedure = protectedProcedure
   .mutation(async ({ input, ctx }) => {
     try {
       console.log('Creating timer session for user:', ctx.userId);
+      
+      // Ensure user exists in the database first
+      await ensureUserExists(ctx.supabase, ctx.userId, ctx.user);
       
       const { data, error } = await ctx.supabase
         .from('timer_sessions')

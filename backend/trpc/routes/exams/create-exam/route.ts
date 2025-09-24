@@ -1,5 +1,6 @@
 import { protectedProcedure } from '@/backend/trpc/create-context';
 import { z } from 'zod';
+import { ensureUserExists } from '@/backend/lib/user-utils';
 
 export const createExam = protectedProcedure
   .input(z.object({
@@ -9,6 +10,9 @@ export const createExam = protectedProcedure
     priority: z.boolean().optional().default(false),
   }))
   .mutation(async ({ input, ctx }) => {
+    // Ensure user exists in the database first
+    await ensureUserExists(ctx.supabase, ctx.userId, ctx.user);
+    
     const { data, error } = await ctx.supabase
       .from('exams')
       .insert({

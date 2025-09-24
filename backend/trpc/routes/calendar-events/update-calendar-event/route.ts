@@ -1,12 +1,10 @@
 import { z } from "zod";
-import { publicProcedure } from "@/backend/trpc/create-context";
-import { supabase } from "@/lib/supabase";
+import { protectedProcedure } from "@/backend/trpc/create-context";
 
-export const updateCalendarEventProcedure = publicProcedure
+export const updateCalendarEventProcedure = protectedProcedure
   .input(
     z.object({
       id: z.string(),
-      userId: z.string(),
       title: z.string(),
       date: z.string(),
       startTime: z.string(),
@@ -16,11 +14,11 @@ export const updateCalendarEventProcedure = publicProcedure
       color: z.string(),
     })
   )
-  .mutation(async ({ input }) => {
+  .mutation(async ({ input, ctx }) => {
     console.log("[updateCalendarEvent] Starting with input:", input);
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await ctx.supabase
         .from("calendar_events")
         .update({
           title: input.title,
@@ -32,7 +30,7 @@ export const updateCalendarEventProcedure = publicProcedure
           color: input.color,
         })
         .eq("id", input.id)
-        .eq("user_id", input.userId)
+        .eq("user_id", ctx.userId)
         .select()
         .single();
 

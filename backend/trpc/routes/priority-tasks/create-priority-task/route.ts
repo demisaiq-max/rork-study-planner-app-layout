@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { protectedProcedure } from '@/backend/trpc/create-context';
+import { ensureUserExists } from '@/backend/lib/user-utils';
 
 export const createPriorityTaskProcedure = protectedProcedure
   .input(z.object({
@@ -10,6 +11,9 @@ export const createPriorityTaskProcedure = protectedProcedure
     completed: z.boolean().optional().default(false),
   }))
   .mutation(async ({ ctx, input }) => {
+    // Ensure user exists in the database first
+    await ensureUserExists(ctx.supabase, ctx.userId, ctx.user);
+
     const { data, error } = await ctx.supabase
       .from('priority_tasks')
       .insert({

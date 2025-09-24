@@ -243,7 +243,6 @@ export default function CalendarScreen() {
     if (!selectedDate || !user?.id) return;
 
     const eventData = {
-      userId: user.id,
       title: eventForm.title,
       date: formatDate(selectedDate),
       startTime: eventForm.startTime,

@@ -1,11 +1,10 @@
 import { z } from "zod";
-import { publicProcedure } from "@/backend/trpc/create-context";
-import { supabase } from "@/lib/supabase";
+import { protectedProcedure } from "@/backend/trpc/create-context";
+import { ensureUserExists } from "@/backend/lib/user-utils";
 
-export const createCalendarEventProcedure = publicProcedure
+export const createCalendarEventProcedure = protectedProcedure
   .input(
     z.object({
-      userId: z.string(),
       title: z.string(),
       date: z.string(),
       startTime: z.string(),
@@ -15,14 +14,17 @@ export const createCalendarEventProcedure = publicProcedure
       color: z.string(),
     })
   )
-  .mutation(async ({ input }) => {
+  .mutation(async ({ input, ctx }) => {
     console.log("[createCalendarEvent] Starting with input:", input);
 
     try {
-      const { data, error } = await supabase
+      // Ensure user exists in the database first
+      await ensureUserExists(ctx.supabase, ctx.userId, ctx.user);
+      
+      const { data, error } = await ctx.supabase
         .from("calendar_events")
         .insert({
-          user_id: input.userId,
+          user_id: ctx.userId,
           title: input.title,
           date: input.date,
           start_time: input.startTime,

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { protectedProcedure } from "../../../create-context";
 import { supabase } from "@/lib/supabase";
+import { ensureUserExists } from "@/backend/lib/user-utils";
 
 export const createStudyNoteProcedure = protectedProcedure
   .input(
@@ -15,6 +16,9 @@ export const createStudyNoteProcedure = protectedProcedure
   )
   .mutation(async ({ ctx, input }) => {
     const { userId } = ctx;
+    
+    // Ensure user exists in the database first
+    await ensureUserExists(ctx.supabase, userId, ctx.user);
     
     const { data, error } = await supabase
       .from("study_notes")
