@@ -1,16 +1,11 @@
-import { z } from 'zod';
 import { protectedProcedure } from '@/backend/trpc/create-context';
-import { supabase } from '@/lib/supabase';
 
 export const getPriorityTasksProcedure = protectedProcedure
-  .input(z.object({
-    userId: z.string(),
-  }))
-  .query(async ({ input }) => {
-    const { data, error } = await supabase
+  .query(async ({ ctx }) => {
+    const { data, error } = await ctx.supabase
       .from('priority_tasks')
       .select('*')
-      .eq('user_id', input.userId)
+      .eq('user_id', ctx.userId)
       .order('created_at', { ascending: false });
 
     if (error) {

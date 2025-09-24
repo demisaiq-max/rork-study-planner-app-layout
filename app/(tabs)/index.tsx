@@ -112,7 +112,7 @@ export default function HomeScreen() {
   );
   
   const { data: dbPriorityTasks, isLoading: isLoadingPriorityTasks, refetch: refetchPriorityTasks } = trpc.priorityTasks.getPriorityTasks.useQuery(
-    { userId: authUser?.id || '' },
+    undefined,
     { 
       enabled: enableQueries && !!userProfile, // Only after profile is loaded
       retry: false,
@@ -350,6 +350,8 @@ export default function HomeScreen() {
     setShowAddTaskModal(false);
   };
 
+  const isAuthed = isSignedIn && !!authUser?.id;
+  const tasksForDisplay = (isAuthed ? (dbPriorityTasks ?? []) : (priorityTasks ?? []));
   return (
     <>
       {!isSignedIn ? (
@@ -607,7 +609,7 @@ export default function HomeScreen() {
           </View>
           
           <View style={styles.tasksList}>
-            {(dbPriorityTasks && dbPriorityTasks.length > 0 ? dbPriorityTasks : priorityTasks)?.slice(0, 3).map((task: any, index: number) => {
+            {tasksForDisplay.slice(0, 3).map((task: any, index: number) => {
               const taskData = task;
               const getPriorityColor = (priority: string) => {
                 switch (priority) {
@@ -675,7 +677,7 @@ export default function HomeScreen() {
                 </TouchableOpacity>
               );
             })}
-            {((!dbPriorityTasks || dbPriorityTasks.length === 0) && (!priorityTasks || priorityTasks.length === 0)) && (
+            {(tasksForDisplay.length === 0) && (
               <View style={styles.emptyPriorityTasks}>
                 <Text style={styles.emptyPriorityText}>{isLoadingPriorityTasks ? 'Loading...' : t('emptyPriorityText')}</Text>
               </View>
