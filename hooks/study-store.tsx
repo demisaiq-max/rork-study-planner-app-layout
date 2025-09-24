@@ -1,8 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import createContextHook from "@nkzw/create-context-hook";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { trpc } from "@/lib/trpc";
-import { useAuth } from "@/hooks/auth-context";
 
 interface Task {
   id: string;
@@ -102,67 +100,44 @@ const defaultData: StudyData = {
 
 export const [StudyProvider, useStudyStore] = createContextHook(() => {
   const [data, setData] = useState<StudyData>(defaultData);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const { session, isLoading: authLoading } = useAuth();
-  const userId = session?.user?.id ?? "";
-
-  const { data: unifiedSubjects, isLoading: isLoadingSubjects, error: subjectsError } = trpc.tests.getUserSubjects.useQuery(
-    { userId },
-    {
-      enabled: true,
-      retry: false,
-      staleTime: 5 * 60 * 1000,
-    }
-  );
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Delay data loading to prevent hydration timeout
     const timer = setTimeout(() => {
       loadData();
     }, 500);
+    
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    if (authLoading) return;
-    if (!unifiedSubjects || unifiedSubjects.length === 0) return;
-    const names = unifiedSubjects.map((s: any) => String(s.name));
-    const same = JSON.stringify(data.subjects) === JSON.stringify(names);
-    if (same) return;
-    const newGrades: Record<string, number> = {};
-    names.forEach((n) => {
-      const prev = data.subjectGrades?.[n];
-      newGrades[n] = typeof prev === 'number' ? prev : 2;
-    });
-    const newVisible = names.slice(0, Math.min(3, names.length));
-    const newData: StudyData = {
-      ...data,
-      subjects: names,
-      visibleSubjects: newVisible,
-      subjectGrades: newGrades,
-    };
-    saveData(newData);
-  }, [authLoading, unifiedSubjects]);
-
   const loadData = async () => {
     try {
+      // Add timeout to AsyncStorage operation
       const storagePromise = AsyncStorage.getItem(STORAGE_KEY);
-      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Storage timeout')), 2000));
-      const stored = (await Promise.race([storagePromise, timeoutPromise])) as string | null;
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Storage timeout')), 2000)
+      );
+      
+      const stored = await Promise.race([storagePromise, timeoutPromise]) as string | null;
+      
       if (stored) {
-        const parsedData = JSON.parse(stored) as Partial<StudyData>;
-        const mergedData: StudyData = {
+        const parsedData = JSON.parse(stored);
+        // Ensure all required properties exist
+        const mergedData = {
           ...defaultData,
           ...parsedData,
-          priorityTasks: parsedData.priorityTasks ?? defaultData.priorityTasks,
-          visibleSubjects: parsedData.visibleSubjects ?? defaultData.visibleSubjects,
-          subjects: parsedData.subjects ?? defaultData.subjects,
-          subjectGrades: parsedData.subjectGrades ?? defaultData.subjectGrades,
-          brainDumpItems: parsedData.brainDumpItems ?? defaultData.brainDumpItems,
+          priorityTasks: parsedData.priorityTasks || [],
+          visibleSubjects: parsedData.visibleSubjects || defaultData.visibleSubjects,
+          subjects: parsedData.subjects || defaultData.subjects,
+          subjectGrades: parsedData.subjectGrades || defaultData.subjectGrades,
+          brainDumpItems: parsedData.brainDumpItems || defaultData.brainDumpItems,
         };
         setData(mergedData);
       }
     } catch (error) {
       console.error("Failed to load study data:", error);
+      // Use default data on error to prevent blocking
     } finally {
       setIsLoading(false);
     }
@@ -170,8 +145,11 @@ export const [StudyProvider, useStudyStore] = createContextHook(() => {
 
   const saveData = async (newData: StudyData) => {
     try {
+      // Update state immediately for better UX
       setData(newData);
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newData)).catch((error) => {
+      
+      // Save to storage asynchronously without blocking
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newData)).catch(error => {
         console.error("Failed to save study data:", error);
       });
     } catch (error) {
@@ -180,22 +158,29 @@ export const [StudyProvider, useStudyStore] = createContextHook(() => {
   };
 
   const toggleTask = useCallback((taskId: string) => {
-    const updatedTasks = data.tasks.map((task) => (task.id === taskId ? { ...task, completed: !task.completed } : task));
+    const updatedTasks = data.tasks.map(task =>
+      task.id === taskId ? { ...task, completed: !task.completed } : task
+    );
     saveData({ ...data, tasks: updatedTasks });
   }, [data]);
 
   const addTask = useCallback((task: Omit<Task, "id">) => {
-    const newTask: Task = { ...task, id: Date.now().toString() };
+    const newTask: Task = {
+      ...task,
+      id: Date.now().toString(),
+    };
     saveData({ ...data, tasks: [...data.tasks, newTask] });
   }, [data]);
 
   const updateTask = useCallback((taskId: string, updates: Partial<Task>) => {
-    const updatedTasks = data.tasks.map((task) => (task.id === taskId ? { ...task, ...updates } : task));
+    const updatedTasks = data.tasks.map(task =>
+      task.id === taskId ? { ...task, ...updates } : task
+    );
     saveData({ ...data, tasks: updatedTasks });
   }, [data]);
 
   const deleteTask = useCallback((taskId: string) => {
-    const updatedTasks = data.tasks.filter((task) => task.id !== taskId);
+    const updatedTasks = data.tasks.filter(task => task.id !== taskId);
     saveData({ ...data, tasks: updatedTasks });
   }, [data]);
 
@@ -204,84 +189,108 @@ export const [StudyProvider, useStudyStore] = createContextHook(() => {
   }, [data]);
 
   const addDDay = useCallback((dDay: Omit<DDay, "id">) => {
-    const newDDay: DDay = { ...dDay, id: Date.now().toString() };
+    const newDDay: DDay = {
+      ...dDay,
+      id: Date.now().toString(),
+    };
     saveData({ ...data, dDays: [...data.dDays, newDDay] });
   }, [data]);
 
   const updateDDay = useCallback((dDayId: string, updates: Partial<DDay>) => {
-    const updatedDDays = data.dDays.map((d) => (d.id === dDayId ? { ...d, ...updates } : d));
+    const updatedDDays = data.dDays.map(dDay =>
+      dDay.id === dDayId ? { ...dDay, ...updates } : dDay
+    );
     saveData({ ...data, dDays: updatedDDays });
   }, [data]);
 
   const removeDDay = useCallback((dDayId: string) => {
-    const updatedDDays = data.dDays.filter((d) => d.id !== dDayId);
+    const updatedDDays = data.dDays.filter(dDay => dDay.id !== dDayId);
     saveData({ ...data, dDays: updatedDDays });
   }, [data]);
 
   const toggleSubjectVisibility = useCallback((subject: string) => {
-    const currentVisibleSubjects = data.visibleSubjects ?? [];
+    const currentVisibleSubjects = data.visibleSubjects || [];
     const updatedVisibleSubjects = currentVisibleSubjects.includes(subject)
-      ? currentVisibleSubjects.filter((s) => s !== subject)
+      ? currentVisibleSubjects.filter(s => s !== subject)
       : [...currentVisibleSubjects, subject];
     saveData({ ...data, visibleSubjects: updatedVisibleSubjects });
   }, [data]);
 
   const addPriorityTask = useCallback((task: Omit<PriorityTask, 'id'>) => {
-    const currentPriorityTasks = data.priorityTasks ?? [];
-    const newTask: PriorityTask = { ...task, id: `p_${Date.now()}` };
+    const currentPriorityTasks = data.priorityTasks || [];
+    const newTask: PriorityTask = {
+      ...task,
+      id: `p_${Date.now()}`,
+    };
     saveData({ ...data, priorityTasks: [...currentPriorityTasks, newTask] });
   }, [data]);
 
   const removePriorityTask = useCallback((taskId: string) => {
-    const currentPriorityTasks = data.priorityTasks ?? [];
-    const updatedPriorityTasks = currentPriorityTasks.filter((t) => t.id !== taskId);
+    const currentPriorityTasks = data.priorityTasks || [];
+    const updatedPriorityTasks = currentPriorityTasks.filter(task => task.id !== taskId);
     saveData({ ...data, priorityTasks: updatedPriorityTasks });
   }, [data]);
 
   const updatePriorityTask = useCallback((taskId: string, updates: Partial<PriorityTask>) => {
-    const currentPriorityTasks = data.priorityTasks ?? [];
-    const updatedPriorityTasks = currentPriorityTasks.map((t) => (t.id === taskId ? { ...t, ...updates } : t));
+    const currentPriorityTasks = data.priorityTasks || [];
+    const updatedPriorityTasks = currentPriorityTasks.map(task =>
+      task.id === taskId ? { ...task, ...updates } : task
+    );
     saveData({ ...data, priorityTasks: updatedPriorityTasks });
   }, [data]);
 
   const togglePriorityTask = useCallback((taskId: string) => {
-    const currentPriorityTasks = data.priorityTasks ?? [];
-    const updatedPriorityTasks = currentPriorityTasks.map((t) => (t.id === taskId ? { ...t, completed: !t.completed } : t));
+    const currentPriorityTasks = data.priorityTasks || [];
+    const updatedPriorityTasks = currentPriorityTasks.map(task =>
+      task.id === taskId ? { ...task, completed: !task.completed } : task
+    );
     saveData({ ...data, priorityTasks: updatedPriorityTasks });
   }, [data]);
 
   const addBrainDumpItem = useCallback((title: string) => {
-    const newItem: BrainDumpItem = { id: Date.now().toString(), title, completed: false, createdAt: new Date().toISOString() };
-    const currentItems = data.brainDumpItems ?? [];
+    const newItem: BrainDumpItem = {
+      id: Date.now().toString(),
+      title,
+      completed: false,
+      createdAt: new Date().toISOString(),
+    };
+    const currentItems = data.brainDumpItems || [];
     saveData({ ...data, brainDumpItems: [...currentItems, newItem] });
   }, [data]);
 
   const updateBrainDumpItem = useCallback((id: string, title: string) => {
-    const currentItems = data.brainDumpItems ?? [];
-    const updatedItems = currentItems.map((it) => (it.id === id ? { ...it, title } : it));
+    const currentItems = data.brainDumpItems || [];
+    const updatedItems = currentItems.map(item =>
+      item.id === id ? { ...item, title } : item
+    );
     saveData({ ...data, brainDumpItems: updatedItems });
   }, [data]);
 
   const deleteBrainDumpItem = useCallback((id: string) => {
-    const currentItems = data.brainDumpItems ?? [];
-    const updatedItems = currentItems.filter((it) => it.id !== id);
+    const currentItems = data.brainDumpItems || [];
+    const updatedItems = currentItems.filter(item => item.id !== id);
     saveData({ ...data, brainDumpItems: updatedItems });
   }, [data]);
 
   const toggleBrainDumpItem = useCallback((id: string) => {
-    const currentItems = data.brainDumpItems ?? [];
-    const updatedItems = currentItems.map((it) => (it.id === id ? { ...it, completed: !it.completed } : it));
+    const currentItems = data.brainDumpItems || [];
+    const updatedItems = currentItems.map(item =>
+      item.id === id ? { ...item, completed: !item.completed } : item
+    );
     saveData({ ...data, brainDumpItems: updatedItems });
   }, [data]);
 
   const updateSubjectGrade = useCallback((subject: string, grade: number) => {
-    const updatedGrades: Record<string, number> = { ...data.subjectGrades, [subject]: grade };
+    const updatedGrades = {
+      ...data.subjectGrades,
+      [subject]: grade
+    };
     saveData({ ...data, subjectGrades: updatedGrades });
   }, [data]);
 
   return useMemo(() => ({
     ...data,
-    isLoading: isLoading || authLoading || isLoadingSubjects,
+    isLoading,
     toggleTask,
     addTask,
     updateTask,
@@ -300,5 +309,5 @@ export const [StudyProvider, useStudyStore] = createContextHook(() => {
     updateBrainDumpItem,
     deleteBrainDumpItem,
     toggleBrainDumpItem,
-  }), [data, isLoading, authLoading, isLoadingSubjects, toggleTask, addTask, updateTask, deleteTask, updateStudyTime, addDDay, updateDDay, removeDDay, toggleSubjectVisibility, updateSubjectGrade, addPriorityTask, removePriorityTask, updatePriorityTask, togglePriorityTask, addBrainDumpItem, updateBrainDumpItem, deleteBrainDumpItem, toggleBrainDumpItem]);
+  }), [data, isLoading, toggleTask, addTask, updateTask, deleteTask, updateStudyTime, addDDay, updateDDay, removeDDay, toggleSubjectVisibility, updateSubjectGrade, addPriorityTask, removePriorityTask, updatePriorityTask, togglePriorityTask, addBrainDumpItem, updateBrainDumpItem, deleteBrainDumpItem, toggleBrainDumpItem]);
 });
