@@ -286,6 +286,9 @@ const translations: Record<Language, Translation> = {
     answerKeySaved: '답안 키가 저장되었습니다',
     templateUpdated: '템플릿이 업데이트되었습니다',
     saveTemplate: '템플릿 저장',
+    deleteAnswerKey: '답안 키 삭제',
+    deleteAnswerKeyConfirm: '이 답안 키를 삭제하시겠습니까?',
+    failedToDelete: '삭제에 실패했습니다',
   },
   en: {
     // Header
@@ -564,6 +567,9 @@ const translations: Record<Language, Translation> = {
     answerKeySaved: 'Answer key saved',
     templateUpdated: 'Template updated',
     saveTemplate: 'Save Template',
+    deleteAnswerKey: 'Delete Answer Key',
+    deleteAnswerKeyConfirm: 'Are you sure you want to delete this answer key?',
+    failedToDelete: 'Failed to delete',
   },
 };
 

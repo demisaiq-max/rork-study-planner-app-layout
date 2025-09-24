@@ -1,11 +1,11 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, TextInput, ActivityIndicator, Platform, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, router } from 'expo-router';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/hooks/auth-context';
 import { useUser } from '@/hooks/user-context';
-import { Plus, Lock, KeyRound } from 'lucide-react-native';
+import { Plus, Lock, KeyRound, Trash2 } from 'lucide-react-native';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { useLanguage } from '@/hooks/language-context';
 
@@ -29,6 +29,14 @@ export default function AnswerKeysHome() {
   const { t } = useLanguage();
   const [search, setSearch] = useState<string>('');
   const query = trpc.answerKeys.getAnswerKeys.useQuery({ includeStats: true, search, limit: 50 }, { enabled: !authLoading });
+  const deleteMutation = trpc.answerKeys.deleteAnswerKey.useMutation({
+    onSuccess: () => {
+      query.refetch();
+    },
+    onError: (error) => {
+      Alert.alert(t('error'), error.message || t('failedToDelete'));
+    }
+  });
 
   // Use auth user ID for consistency with backend
   const userId = authUser?.id || user?.id || null;
@@ -68,27 +76,57 @@ export default function AnswerKeysHome() {
     return { name: match?.name ?? defaultNames[subjectEnum], color: (match?.color as string) ?? '#EEF2FF' };
   }, [subjects, t]);
 
+  const handleDelete = useCallback((item: AnswerKeySummary) => {
+    Alert.alert(
+      t('deleteAnswerKey'),
+      t('deleteAnswerKeyConfirm'),
+      [
+        { text: t('cancel'), style: 'cancel' },
+        {
+          text: t('delete'),
+          style: 'destructive',
+          onPress: () => {
+            deleteMutation.mutate({ id: item.id });
+          }
+        }
+      ]
+    );
+  }, [deleteMutation, t]);
+
   const renderItem = useCallback(({ item }: { item: AnswerKeySummary }) => {
     const disp = subjectDisplay(item.subject);
     return (
-      <TouchableOpacity
-        style={styles.card}
-        onPress={() => router.push(`/answer-keys/${item.id}` as any)}
-        testID={`answer-key-${item.id}`}
-      >
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>{item.template_name}</Text>
-          <View style={[styles.badgeWrap, { backgroundColor: disp.color + '22', borderColor: disp.color }]}> 
-            <Text style={styles.badgeText}>{disp.name}</Text>
+      <View style={styles.cardContainer}>
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => router.push(`/answer-keys/${item.id}` as any)}
+          testID={`answer-key-${item.id}`}
+        >
+          <View style={styles.cardContent}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>{item.template_name}</Text>
+              <View style={[styles.badgeWrap, { backgroundColor: disp.color + '22', borderColor: disp.color }]}> 
+                <Text style={styles.badgeText}>{disp.name}</Text>
+              </View>
+            </View>
+            <View style={styles.cardRow}>
+              <Text style={styles.meta}>{t(item.test_type)}</Text>
+              <Text style={styles.meta}>{item.total_questions} {t('qsShort')} • {item.mcq_questions} {t('mcq')} • {item.text_questions} {t('textQuestion')}</Text>
+            </View>
           </View>
-        </View>
-        <View style={styles.cardRow}>
-          <Text style={styles.meta}>{t(item.test_type)}</Text>
-          <Text style={styles.meta}>{item.total_questions} {t('qsShort')} • {item.mcq_questions} {t('mcq')} • {item.text_questions} {t('textQuestion')}</Text>
-        </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
+        {isAdmin && (
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={() => handleDelete(item)}
+            testID={`delete-answer-key-${item.id}`}
+          >
+            <Trash2 color="#DC2626" size={18} />
+          </TouchableOpacity>
+        )}
+      </View>
     );
-  }, [subjectDisplay, t]);
+  }, [subjectDisplay, t, isAdmin, handleDelete]);
 
   return (
     <ErrorBoundary>
@@ -156,9 +194,12 @@ const styles = StyleSheet.create({
   searchInput: { backgroundColor: '#fff', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderColor: '#E5E7EB', color: '#111827' },
   iconButton: { backgroundColor: '#007AFF', padding: 12, borderRadius: 10 },
   listContent: { paddingHorizontal: 16, paddingBottom: 80 },
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginVertical: 8, borderWidth: 1, borderColor: '#E5E7EB' },
+  cardContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 8 },
+  card: { flex: 1, backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB' },
+  cardContent: { padding: 14 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cardTitle: { fontSize: 16, fontWeight: '700', color: '#111827' },
+  deleteButton: { marginLeft: 12, padding: 12, backgroundColor: '#FEF2F2', borderRadius: 10, borderWidth: 1, borderColor: '#FECACA' },
   badgeWrap: { backgroundColor: '#EEF2FF', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#EEF2FF' },
   badgeText: { color: '#111827', fontSize: 12 },
   cardRow: { marginTop: 6, flexDirection: 'row', justifyContent: 'space-between' },
