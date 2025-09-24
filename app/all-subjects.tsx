@@ -15,10 +15,12 @@ import {
 import { router } from 'expo-router';
 import { ArrowLeft, ChevronRight, Plus, Edit2, Trash2, X } from 'lucide-react-native';
 import { useUser } from '@/hooks/user-context';
+import { useAuth } from '@/hooks/auth-context';
 import { useLanguage } from '@/hooks/language-context';
 import { trpc } from '@/lib/trpc';
 
 export default function AllSubjectsScreen() {
+  const { user: authUser } = useAuth();
   const { user } = useUser();
   const { t } = useLanguage();
   const [isLoading, setIsLoading] = useState(true);
@@ -29,9 +31,12 @@ export default function AllSubjectsScreen() {
   const [editedSubjectName, setEditedSubjectName] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
 
+  // Use auth user ID for consistency with backend
+  const userId = authUser?.id || user?.id || null;
+  
   // Fetch all user subjects
   const subjectsQuery = trpc.tests.getUserSubjects.useQuery(
-    { userId: user?.id || null },
+    { userId },
     { enabled: true }
   );
 
@@ -106,7 +111,7 @@ export default function AllSubjectsScreen() {
       return;
     }
 
-    if (!user?.id) {
+    if (!userId) {
       Alert.alert('Error', 'User not found');
       return;
     }
@@ -136,13 +141,13 @@ export default function AllSubjectsScreen() {
     }
 
     createSubjectMutation.mutate({
-      userId: user.id,
+      userId: userId,
       name: newSubjectName.trim(),
       mcqQuestions,
       textQuestions,
       totalQuestions,
     });
-  }, [newSubjectName, user?.id, createSubjectMutation]);
+  }, [newSubjectName, userId, createSubjectMutation]);
 
   const handleEditSubject = useCallback((subject: {id: string, name: string}) => {
     setEditingSubject(subject);
@@ -156,17 +161,17 @@ export default function AllSubjectsScreen() {
       return;
     }
 
-    if (!user?.id || !editingSubject) {
+    if (!userId || !editingSubject) {
       Alert.alert('Error', 'Invalid request');
       return;
     }
 
     updateSubjectMutation.mutate({
       id: editingSubject!.id,
-      userId: user.id,
+      userId: userId,
       name: editedSubjectName.trim(),
     });
-  }, [editedSubjectName, user?.id, editingSubject, updateSubjectMutation]);
+  }, [editedSubjectName, userId, editingSubject, updateSubjectMutation]);
 
   const handleDeleteSubject = useCallback((subject: {id: string, name: string}) => {
     Alert.alert(
@@ -178,16 +183,16 @@ export default function AllSubjectsScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            if (!user?.id) return;
+            if (!userId) return;
             deleteSubjectMutation.mutate({
               id: subject.id,
-              userId: user.id,
+              userId: userId,
             });
           },
         },
       ]
     );
-  }, [user?.id, deleteSubjectMutation]);
+  }, [userId, deleteSubjectMutation]);
 
   if (isLoading) {
     return (

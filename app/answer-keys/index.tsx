@@ -24,22 +24,25 @@ type UserSubject = { id: string; name: string; color?: string | null };
 
 
 export default function AnswerKeysHome() {
+  const { user: authUser, isLoading: authLoading } = useAuth();
   const { user } = useUser();
-  const { isLoading: authLoading } = useAuth();
   const { t } = useLanguage();
   const [search, setSearch] = useState<string>('');
   const query = trpc.answerKeys.getAnswerKeys.useQuery({ includeStats: true, search, limit: 50 }, { enabled: !authLoading });
 
+  // Use auth user ID for consistency with backend
+  const userId = authUser?.id || user?.id || null;
+  
   // Load unified subjects for current user
   const subjectsQuery = trpc.tests.getUserSubjects.useQuery(
-    { userId: (user as any)?.id || null },
+    { userId },
     { enabled: true }
   );
   const subjects: UserSubject[] = (subjectsQuery.data as UserSubject[] | undefined) ?? [];
 
   const isAdmin = useMemo(() => {
-    return !!user;
-  }, [user]);
+    return !!(authUser || user);
+  }, [authUser, user]);
 
   const subjectDisplay = useCallback((subjectEnum: AnswerKeySummary['subject']): { name: string; color: string } => {
     const lower = (s: string) => s.toLowerCase();
