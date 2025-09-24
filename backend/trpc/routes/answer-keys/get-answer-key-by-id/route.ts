@@ -9,7 +9,7 @@ export const getAnswerKeyByIdProcedure = publicProcedure
 
     const { data, error } = await supabase
       .from('answer_key_templates')
-      .select('*, answer_key_responses(*), answer_key_template_categories(*, answer_key_categories(*))')
+      .select('*, answer_key_responses(*)')
       .eq('id', input.id)
       .single();
 

@@ -12,7 +12,7 @@ export default function CreateAnswerKey() {
   const { t } = useLanguage();
   const [templateName, setTemplateName] = useState<string>('');
   const [subject, setSubject] = useState<'korean' | 'mathematics' | 'english' | 'others'>('mathematics');
-  const [testType, setTestType] = useState<'practice' | 'mock' | 'midterm' | 'final'>('mock');
+  const [testType, setTestType] = useState<'mock' | 'midterm' | 'final'>('mock');
   const [mcq, setMcq] = useState<string>('20');
   const [textQ, setTextQ] = useState<string>('0');
   const [desc, setDesc] = useState<string>('');
@@ -96,7 +96,7 @@ export default function CreateAnswerKey() {
 
         <Text style={styles.label}>{t('answerKeyTestType')}</Text>
         <View style={styles.row}>
-          {(['practice','mock','midterm','final'] as const).map(s => (
+          {(['mock','midterm','final'] as const).map(s => (
             <TouchableOpacity key={s} style={[styles.chip, testType === s && styles.chipActive]} onPress={() => setTestType(s)} testID={`type-${s}`}>
               <Text style={[styles.chipText, testType === s && styles.chipTextActive]}>{t(s)}</Text>
             </TouchableOpacity>
