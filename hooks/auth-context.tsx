@@ -3,14 +3,13 @@ import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 import createContextHook from '@nkzw/create-context-hook';
-import { trpcClient } from '@/lib/trpc';
+import { trpcClient, formatTRPCError } from '@/lib/trpc';
 
 export const [AuthProvider, useAuth] = createContextHook(() => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Add debug logging for state changes
   useEffect(() => {
     console.log('🔐 Auth State Update:', {
       hasUser: !!user,
@@ -21,69 +20,68 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     });
   }, [user, session, isLoading]);
 
-  // Function to sync user to database
-  const syncUserToDatabase = useCallback(async (user: User) => {
-    try {
-      console.log('🔄 Syncing user to database:', user.email);
-      await trpcClient.users.syncSupabaseUser.mutate({
-        userId: user.id,
-        email: user.email || '',
-        name: user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0],
-        profilePictureUrl: user.user_metadata?.avatar_url || user.user_metadata?.picture,
-      });
-      console.log('✅ User synced to database successfully');
-    } catch (error) {
-      console.error('❌ Failed to sync user to database:', error);
-      // Don't throw error to prevent auth flow interruption
+  const syncUserToDatabase = useCallback(async (u: User) => {
+    let attempt = 0;
+    const maxAttempts = 2;
+    let lastError: unknown = null;
+    while (attempt < maxAttempts) {
+      try {
+        attempt += 1;
+        console.log(`🔄 Syncing user to database (attempt ${attempt}/${maxAttempts}):`, u.email);
+        await trpcClient.users.syncSupabaseUser.mutate({
+          userId: u.id,
+          email: u.email || '',
+          name: u.user_metadata?.name || u.user_metadata?.full_name || u.email?.split('@')[0],
+          profilePictureUrl: (u.user_metadata as any)?.avatar_url || (u.user_metadata as any)?.picture,
+        });
+        console.log('✅ User synced to database successfully');
+        return;
+      } catch (error) {
+        lastError = error;
+        const msg = formatTRPCError(error);
+        console.error('❌ Failed to sync user to database:', msg);
+        if (msg.includes('Failed to fetch') || msg.includes('timeout')) {
+          await new Promise((r) => setTimeout(r, 600));
+          continue;
+        }
+        break;
+      }
+    }
+    if (lastError) {
+      console.error('❌ Giving up syncing user after retries. Non-blocking.');
     }
   }, []);
 
   useEffect(() => {
     let mounted = true;
     
-    // Get initial session with timeout to prevent hydration issues
     const getInitialSession = async () => {
       try {
         console.log('🔐 Getting initial session...');
-        
-        // Add timeout to prevent hanging during hydration
-        const sessionPromise = supabase.auth.getSession();
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Session timeout')), 2000)
-        );
-        
-        const { data: { session }, error } = await Promise.race([
-          sessionPromise,
-          timeoutPromise
-        ]) as any;
-        
+        const { data, error } = await supabase.auth.getSession();
         if (!mounted) return;
-        
+        const sessionData = data?.session ?? null;
         if (error) {
           console.error('❌ Error getting initial session:', error);
         } else {
-          console.log('✅ Initial session:', session ? `Found for user ${session.user?.email}` : 'None');
-          if (session) {
-            setSession(session);
-            setUser(session.user);
-            // Sync user to database on initial load
-            if (session.user) {
-              syncUserToDatabase(session.user);
+          console.log('✅ Initial session:', sessionData ? `Found for user ${sessionData.user?.email}` : 'None');
+          if (sessionData) {
+            setSession(sessionData);
+            setUser(sessionData.user);
+            if (sessionData.user) {
+              syncUserToDatabase(sessionData.user);
             }
           }
         }
       } catch (error) {
         console.error('❌ Error in getInitialSession:', error);
-        // Continue without session rather than blocking
       } finally {
         if (mounted) {
-          // Reduce loading time to prevent hydration timeout
           setIsLoading(false);
         }
       }
     };
 
-    // Delay initial session check to allow hydration to complete
     const timer = setTimeout(() => {
       if (mounted) {
         getInitialSession();
