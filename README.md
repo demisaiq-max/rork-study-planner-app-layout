@@ -1,2 +1,2 @@
 # study-planner
-Created by Demi Saiq
+Created by Rork
