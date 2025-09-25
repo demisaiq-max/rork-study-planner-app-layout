@@ -486,7 +486,7 @@ export default function HomeScreen() {
                 <Text style={styles.loadingText}>Loading exams...</Text>
               </View>
             ) : gradedExamsError ? (
-              <View style={styles.noResultsCard}>
+              <View style={styles.noResultsCard} testID="gradedExamsError">
                 <Text style={styles.noResultsText}>Connection Error</Text>
                 <Text style={styles.noResultsSubtext}>
                   {formatTRPCError(gradedExamsError)}
@@ -499,7 +499,7 @@ export default function HomeScreen() {
                 </TouchableOpacity>
               </View>
             ) : !gradedExams || gradedExams.length === 0 ? (
-              <View style={styles.noResultsCard}>
+              <View style={styles.noResultsCard} testID="noGradedExams">
                 <Text style={styles.noResultsText}>
                   No Graded Exams
                 </Text>

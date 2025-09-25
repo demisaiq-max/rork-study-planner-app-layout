@@ -52,7 +52,8 @@ export const trpcClient = trpc.createClient({
           
           const { data: { session } } = await Promise.race([
             sessionPromise,
-            timeoutPromise
+            // Extend timeout to avoid dropping auth header on slow startups
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Session timeout')), 5000))
           ]) as any;
           
           if (session?.access_token) {
@@ -106,7 +107,8 @@ export const createAuthenticatedTRPCClient = () => {
             
             const { data: { session } } = await Promise.race([
               sessionPromise,
-              timeoutPromise
+              // Extend timeout to avoid dropping auth header on slow startups
+              new Promise((_, reject) => setTimeout(() => reject(new Error('Session timeout')), 5000))
             ]) as any;
             
             if (session?.access_token) {
