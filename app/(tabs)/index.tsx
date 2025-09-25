@@ -102,9 +102,9 @@ export default function HomeScreen() {
   );
   
   const { data: brainDumps, isLoading: isLoadingBrainDumps, error: brainDumpsError, refetch: refetchBrainDumps } = trpc.brainDumps.getBrainDumps.useQuery(
-    { limit: 10 },
+    { limit: 10, userId: authUser?.id || undefined },
     { 
-      enabled: enableQueries && !!userProfile, // Only after profile is loaded
+      enabled: enableQueries && !!userProfile && !!authUser?.id, // Only after profile is loaded and we have a user id
       retry: false,
       staleTime: 5 * 60 * 1000,
       refetchOnMount: false,

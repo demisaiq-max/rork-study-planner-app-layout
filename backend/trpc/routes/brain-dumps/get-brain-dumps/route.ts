@@ -5,6 +5,7 @@ export const getBrainDumpsProcedure = protectedProcedure
   .input(z.object({
     limit: z.number().optional().default(10),
     offset: z.number().optional().default(0),
+    userId: z.string().uuid().optional(),
   }).optional())
   .query(async ({ ctx, input }) => {
     const limit = input?.limit ?? 10;

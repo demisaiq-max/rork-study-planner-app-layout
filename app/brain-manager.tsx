@@ -41,7 +41,7 @@ export default function BrainManagerScreen() {
 
   // Fetch brain dumps
   const { data: brainDumps, isLoading, error, refetch } = trpc.brainDumps.getBrainDumps.useQuery(
-    { limit: 100 },
+    { limit: 100, userId: user?.id },
     { 
       enabled: !!user?.id
     }
