@@ -12,26 +12,34 @@ DROP VIEW IF EXISTS answer_sheet_summary;
 --    Create/replace the sync trigger that copies rows from auth.users
 --    into public.users with the SAME UUID id.
 CREATE OR REPLACE FUNCTION sync_auth_user_to_users_table()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $
 BEGIN
-  INSERT INTO users (id, email, name, created_at, updated_at)
-  VALUES (
-    NEW.id,                                      -- UUID, no cast
-    NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'name',
-             NEW.raw_user_meta_data->>'full_name',
-             split_part(NEW.email, '@', 1)),
-    NOW(),
-    NOW()
-  )
-  ON CONFLICT (id) DO UPDATE SET
-    email = EXCLUDED.email,
-    name = COALESCE(EXCLUDED.name, users.name),
-    updated_at = NOW();
+  BEGIN
+    INSERT INTO public.users (id, email, name, created_at, updated_at)
+    VALUES (
+      NEW.id,
+      NEW.email,
+      COALESCE(NEW.raw_user_meta_data->>'name',
+               NEW.raw_user_meta_data->>'full_name',
+               split_part(NEW.email, '@', 1)),
+      NOW(),
+      NOW()
+    )
+    ON CONFLICT (id) DO UPDATE SET
+      email = EXCLUDED.email,
+      name = COALESCE(EXCLUDED.name, public.users.name),
+      updated_at = NOW();
+  EXCEPTION WHEN others THEN
+    RAISE NOTICE 'sync_auth_user_to_users_table: swallowed error %', SQLERRM;
+  END;
 
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$;
 
 DROP TRIGGER IF EXISTS sync_auth_user_trigger ON auth.users;
 CREATE TRIGGER sync_auth_user_trigger
