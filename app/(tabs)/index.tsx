@@ -273,16 +273,6 @@ export default function HomeScreen() {
 
   const progressPercentage = (todayStudyTime / targetStudyTime) * 100;
 
-  if (isLoading) {
-    return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>{t('loading')}</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   const handleAddExam = () => {
     if (!newExamTitle.trim() || !newExamDate.trim()) {
       Alert.alert(t('error'), t('examFormError'));
@@ -352,6 +342,18 @@ export default function HomeScreen() {
 
   const isAuthed = isSignedIn && !!authUser?.id;
   const tasksForDisplay = (isAuthed ? (dbPriorityTasks ?? []) : (priorityTasks ?? []));
+  
+  // Show loading state
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>{t('loading')}</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+  
   return (
     <>
       {!isSignedIn ? (
