@@ -16,7 +16,7 @@ RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $
+AS $$
 BEGIN
   BEGIN
     INSERT INTO public.users (id, email, name, created_at, updated_at)
@@ -39,7 +39,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$;
+$$;
 
 DROP TRIGGER IF EXISTS sync_auth_user_trigger ON auth.users;
 CREATE TRIGGER sync_auth_user_trigger
