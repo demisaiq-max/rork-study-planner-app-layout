@@ -112,9 +112,9 @@ export default function HomeScreen() {
   );
   
   const { data: dbPriorityTasks, isLoading: isLoadingPriorityTasks, refetch: refetchPriorityTasks } = trpc.priorityTasks.getPriorityTasks.useQuery(
-    undefined,
+    { userId: authUser?.id || '' },
     { 
-      enabled: enableQueries && !!userProfile, // Only after profile is loaded
+      enabled: enableQueries && !!userProfile && !!authUser?.id, // Only after profile is loaded and we have auth user id
       retry: false,
       staleTime: 5 * 60 * 1000,
       refetchOnMount: false,

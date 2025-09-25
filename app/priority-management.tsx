@@ -76,7 +76,7 @@ export default function PriorityManagementScreen() {
   const t = translations[language];
 
   const { data: dbTasks, isLoading, error, refetch } = trpc.priorityTasks.getPriorityTasks.useQuery(
-    undefined,
+    { userId: user?.id ?? '' },
     { enabled: !!user?.id, staleTime: 60_000 }
   );
 
