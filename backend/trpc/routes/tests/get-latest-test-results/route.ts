@@ -1,10 +1,10 @@
 import { protectedProcedure } from '@/backend/trpc/create-context';
+import { z } from 'zod';
 
 const getLatestTestResults = protectedProcedure
+  .input(z.object({ userId: z.string().uuid().optional() }).optional())
   .query(async ({ ctx }) => {
     try {
-      // Return the latest result per test (not per subject), so multiple tests of the
-      // same subject like Mock 1, Midterm 1, etc. all show up on the home screen.
       const { data, error } = await ctx.supabase
         .from('test_results')
         .select(`
@@ -29,7 +29,6 @@ const getLatestTestResults = protectedProcedure
         return [];
       }
 
-      // Group by test id to keep only the latest submission per specific test
       const latestByTestId: Record<string, any> = {};
 
       data.forEach((result: any) => {
@@ -41,7 +40,6 @@ const getLatestTestResults = protectedProcedure
         }
       });
 
-      // Sort by test_date desc then created_at desc for stable UI ordering
       const results = Object.values(latestByTestId).sort((a: any, b: any) => {
         const aDate = new Date(a?.tests?.test_date ?? a.created_at).getTime();
         const bDate = new Date(b?.tests?.test_date ?? b.created_at).getTime();

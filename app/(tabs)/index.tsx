@@ -71,9 +71,9 @@ export default function HomeScreen() {
   
   // Primary queries (essential data)
   const { data: exams, isLoading: isLoadingExams, refetch: refetchExams } = trpc.exams.getUserExams.useQuery(
-    undefined,
+    { userId: authUser?.id ?? '' },
     { 
-      enabled: enableQueries,
+      enabled: enableQueries && !!authUser?.id,
       retry: false,
       staleTime: 5 * 60 * 1000, // 5 minutes
       refetchOnMount: false,
@@ -92,9 +92,9 @@ export default function HomeScreen() {
   
   // Secondary queries (nice to have data)
   const { data: gradedExams, isLoading: isLoadingGradedExams, error: gradedExamsError, refetch: refetchGradedExams } = trpc.tests.getLatestTestResults.useQuery(
-    undefined,
+    { userId: authUser?.id ?? '' },
     { 
-      enabled: enableQueries && !!exams, // Only after exams are loaded
+      enabled: enableQueries && !!authUser?.id && !!exams, // Only after exams are loaded
       retry: false,
       staleTime: 5 * 60 * 1000,
       refetchOnMount: false,
