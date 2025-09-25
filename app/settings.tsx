@@ -279,45 +279,47 @@ export default function SettingsScreen() {
           )}
         </View>
 
-        {/* Admin Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{language === 'ko' ? '관리자' : 'Admin'}</Text>
+        {/* Admin Section - Only show for admin users */}
+        {user?.role === 'admin' && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{language === 'ko' ? '관리자' : 'Admin'}</Text>
 
-          <TouchableOpacity
-            style={styles.listItem}
-            onPress={() => {
-              console.log('[Settings] Navigate -> /answer-keys');
-              router.push('/answer-keys' as any);
-            }}
-            testID="nav-answer-keys"
-          >
-            <View style={styles.listIconWrap}>
-              <KeyRound color="#2563EB" size={20} />
-            </View>
-            <View style={styles.listTextWrap}>
-              <Text style={styles.listTitle}>{language === 'ko' ? '정답 키 관리' : 'Answer Key Management'}</Text>
-              <Text style={styles.listSubtitle}>{language === 'ko' ? '시험 정답 키 생성/편집' : 'Create and edit answer keys'}</Text>
-            </View>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.listItem}
+              onPress={() => {
+                console.log('[Settings] Navigate -> /answer-keys');
+                router.push('/answer-keys' as any);
+              }}
+              testID="nav-answer-keys"
+            >
+              <View style={styles.listIconWrap}>
+                <KeyRound color="#2563EB" size={20} />
+              </View>
+              <View style={styles.listTextWrap}>
+                <Text style={styles.listTitle}>{language === 'ko' ? '정답 키 관리' : 'Answer Key Management'}</Text>
+                <Text style={styles.listSubtitle}>{language === 'ko' ? '시험 정답 키 생성/편집' : 'Create and edit answer keys'}</Text>
+              </View>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.listItem}
-            onPress={() => {
-              console.log('[Settings] Navigate -> /(auth)/sign-in');
-              router.push('/(auth)/sign-in' as any);
-            }}
-            testID="nav-admin-login"
-          >
-            <View style={styles.listIconWrap}>
-              <Lock color="#2563EB" size={20} />
-            </View>
-            <View style={styles.listTextWrap}>
-              <Text style={styles.listTitle}>{language === 'ko' ? '관리자 로그인' : 'Admin Login'}</Text>
-              <Text style={styles.listSubtitle}>{language === 'ko' ? '관리자 권한으로 로그인' : 'Sign in with admin privileges'}</Text>
-            </View>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.listItem}
+              onPress={() => {
+                console.log('[Settings] Navigate -> /(auth)/sign-in');
+                router.push('/(auth)/sign-in' as any);
+              }}
+              testID="nav-admin-login"
+            >
+              <View style={styles.listIconWrap}>
+                <Lock color="#2563EB" size={20} />
+              </View>
+              <View style={styles.listTextWrap}>
+                <Text style={styles.listTitle}>{language === 'ko' ? '관리자 로그인' : 'Admin Login'}</Text>
+                <Text style={styles.listSubtitle}>{language === 'ko' ? '관리자 권한으로 로그인' : 'Sign in with admin privileges'}</Text>
+              </View>
+            </TouchableOpacity>
 
-        </View>
+          </View>
+        )}
 
         {/* App Info Section */}
         <View style={styles.section}>

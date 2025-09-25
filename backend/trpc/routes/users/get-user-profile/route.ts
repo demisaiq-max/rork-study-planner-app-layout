@@ -10,10 +10,10 @@ export const getUserProfileProcedure = protectedProcedure
     console.log('Getting user profile for userId:', input.userId);
     
     try {
-      // First try with profile_picture_url
+      // First try with profile_picture_url and role
       let { data, error } = await supabase
         .from('users')
-        .select('id, name, email, profile_picture_url')
+        .select('id, name, email, profile_picture_url, role')
         .eq('id', input.userId)
         .single();
 
@@ -26,7 +26,7 @@ export const getUserProfileProcedure = protectedProcedure
           
           const { data: retryData, error: retryError } = await supabase
             .from('users')
-            .select('id, name, email')
+            .select('id, name, email, role')
             .eq('id', input.userId)
             .single();
             
@@ -44,6 +44,7 @@ export const getUserProfileProcedure = protectedProcedure
             name: retryData.name,
             email: retryData.email,
             profilePictureUrl: null,
+            role: retryData.role || 'student',
           };
         }
         
@@ -59,6 +60,7 @@ export const getUserProfileProcedure = protectedProcedure
         name: data.name,
         email: data.email,
         profilePictureUrl: data.profile_picture_url || null,
+        role: data.role || 'student',
       };
     } catch (error: any) {
       console.error('Error in getUserProfile:', error);
