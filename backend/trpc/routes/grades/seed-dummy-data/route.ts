@@ -40,7 +40,7 @@ export const seedDummyDataProcedure = publicProcedure
       },
       {
         user_id: userId,
-        subject: 'Science',
+        subject: '그외',
         grades: JSON.stringify({
           mock: 2,
           midterm: 2,

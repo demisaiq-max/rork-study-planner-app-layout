@@ -12,7 +12,7 @@ export const getUserSubjects = publicProcedure
       { key: 'korean', name: '국어', color: '#FF6B6B', mcq: 34, text: 11 },
       { key: 'mathematics', name: '수학', color: '#4ECDC4', mcq: 30, text: 0 },
       { key: 'english', name: '영어', color: '#45B7D1', mcq: 45, text: 0 },
-      { key: 'exploration', name: '탐구', color: '#96CEB4', mcq: 20, text: 0 },
+      { key: 'others', name: '그외', color: '#96CEB4', mcq: 20, text: 0 },
       { key: 'history', name: '한국사', color: '#9B59B6', mcq: 20, text: 0 },
     ] as const;
 
